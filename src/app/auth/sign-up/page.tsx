@@ -1,4 +1,3 @@
-// /app/(auth)/sign-up/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -10,37 +9,48 @@ export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    const { data, error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
-      router.push('/dashboard');
+      return;
     }
+
+    // If email confirmations are enabled, Supabase returns no session here.
+    // Show instruction and do NOT redirect to /dashboard.
+    setInfo('Check your email to confirm your account, then come back to sign in.');
+    setLoading(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <h1 className="text-3xl font-bold mb-8 text-center">Sign Up</h1>
+
+        {info && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded text-sm">
+            {info} You can then <Link className="underline" href="/auth/sign-in">sign in here</Link>.
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSignUp} className="space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
-              {error}
-            </div>
-          )}
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
               Email
@@ -73,9 +83,10 @@ export default function SignUpPage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing up...' : 'Sign Up'}
+            {loading ? 'Creating account…' : 'Sign Up'}
           </button>
         </form>
+
         <p className="mt-4 text-center text-sm">
           Already have an account?{' '}
           <Link href="/auth/sign-in" className="text-blue-600 hover:underline">
