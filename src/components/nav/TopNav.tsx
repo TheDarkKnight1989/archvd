@@ -1,0 +1,42 @@
+// /components/nav/TopNav.tsx
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+
+export default function TopNav() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return (
+    <nav className="border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <Link href="/" className="text-xl font-bold">
+          archvd.io
+        </Link>
+        {isLoggedIn && (
+          <Link
+            href="/dashboard"
+            className="text-sm hover:text-blue-600 transition-colors"
+          >
+            Dashboard
+          </Link>
+        )}
+      </div>
+    </nav>
+  );
+}
