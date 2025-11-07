@@ -1,11 +1,24 @@
-// /app/layout.tsx
 import type { Metadata } from 'next';
-import TopNav from '@/components/nav/TopNav';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { Providers } from './providers';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter'
+});
+
+const jetmono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-jetmono'
+});
 
 export const metadata: Metadata = {
   title: 'archvd.io',
-  description: 'archvd.io application',
+  description: 'Premium sneaker inventory management',
+  themeColor: '#050807',
 };
 
 export default function RootLayout({
@@ -14,10 +27,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <TopNav />
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#050807" media="(prefers-color-scheme: dark)" />
+        <link rel="icon" href="/favicon.ico" />
+      </head>
+      <body className={`${inter.variable} ${jetmono.variable} font-sans min-h-screen bg-bg text-fg`}>
+        <a href="#main" className="skip-link">Skip to content</a>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

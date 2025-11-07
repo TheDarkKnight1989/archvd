@@ -29,12 +29,32 @@ export default function TopNav() {
           archvd.io
         </Link>
         {isLoggedIn && (
-          <Link
-            href="/dashboard"
-            className="text-sm hover:text-blue-600 transition-colors"
-          >
-            Dashboard
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard"
+              className="text-sm hover:text-blue-600 transition-colors"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/dashboard/inventory"
+              className="text-sm hover:text-blue-600 transition-colors"
+            >
+              Inventory
+            </Link>
+            <Link
+              href="/dashboard/expenses"
+              className="text-sm hover:text-blue-600 transition-colors"
+            >
+              Expenses
+            </Link>
+            <Link
+              href="/settings"
+              className="text-sm hover:text-blue-600 transition-colors"
+            >
+              Settings
+            </Link>
+          </div>
         )}
       </div>
     </nav>

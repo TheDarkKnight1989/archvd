@@ -1,0 +1,727 @@
+'use client'
+
+import { useEffect, useState, FormEvent, useMemo } from 'react'
+import { supabase } from '@/lib/supabase/client'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { gbp2, pct1 } from '@/lib/utils/format'
+import { exportTaxCsv, exportInsuranceCsv } from '@/lib/portfolio/exports'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Search, Filter, Plus, Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { cn } from '@/lib/utils/cn'
+
+const TABLE = 'Inventory'
+
+type Category = 'sneaker' | 'apparel' | 'accessory' | 'other'
+type Platform = 'StockX' | 'eBay' | 'Vinted' | 'Instagram' | 'Other'
+
+type InventoryItem = {
+  id: string
+  user_id: string
+  sku: string
+  brand: string
+  model: string
+  size: string
+  category?: Category
+  purchase_price: number
+  purchase_date?: string
+  sale_price?: number | null
+  sold_price?: number | null
+  sold_date?: string | null
+  platform?: Platform | null
+  sales_fee?: number | null
+  market_value?: number | null
+  market_updated_at?: string | null
+  market_meta?: {
+    sources_used?: string[]
+    confidence?: 'high' | 'medium' | 'low'
+  } | null
+  status: 'in_stock' | 'sold' | 'reserved'
+  location: string
+  image_url?: string | null
+  created_at: string
+}
+
+type MarketPreview = {
+  price: number
+  source: string
+  as_of: Date
+}
+
+// Column width constants
+const COLS = {
+  SKU: 'w-[110px]',
+  SIZE: 'w-[72px]',
+  STATUS: 'w-[100px]',
+  MONEY: 'w-[110px]',
+}
+
+export default function InventoryPage() {
+  useRequireAuth()
+  const [items, setItems] = useState<InventoryItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Form state
+  const [sku, setSku] = useState('')
+  const [brand, setBrand] = useState('')
+  const [model, setModel] = useState('')
+  const [size, setSize] = useState('')
+  const [category, setCategory] = useState<Category>('sneaker')
+  const [purchasePrice, setPurchasePrice] = useState('')
+  const [salePrice, setSalePrice] = useState('')
+  const [status, setStatus] = useState<'in_stock' | 'sold' | 'reserved'>('in_stock')
+  const [location, setLocation] = useState('')
+  const [marketPreview, setMarketPreview] = useState<MarketPreview | null>(null)
+  const [loadingMarket, setLoadingMarket] = useState(false)
+
+  // Filter state
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterCategory, setFilterCategory] = useState<string>('all')
+  const [filterSize, setFilterSize] = useState<string>('')
+  const [searchQuery, setSearchQuery] = useState<string>('')
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<Partial<InventoryItem>>({})
+
+  const fetchItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setItems(data || [])
+      setError(null)
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch items')
+      setItems([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatRelativeTime = (dateString: string): string => {
+    const now = new Date()
+    const date = new Date(dateString)
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+
+    if (diffMins < 1) return 'just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays === 1) return 'yesterday'
+    if (diffDays < 7) return `${diffDays}d ago`
+
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
+  const handleSkuBlur = async () => {
+    const trimmedSku = sku.trim()
+    if (!trimmedSku) {
+      setMarketPreview(null)
+      return
+    }
+
+    setLoadingMarket(true)
+    try {
+      const response = await fetch('/api/pricing/quick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: trimmedSku, category }),
+      })
+
+      if (response.status === 204) {
+        setMarketPreview(null)
+        return
+      }
+
+      if (response.status === 429) {
+        console.log('Rate limited on SKU lookup')
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch pricing')
+      }
+
+      const data = await response.json()
+
+      if (data.product) {
+        if (!brand && data.product.brand) {
+          setBrand(data.product.brand)
+        }
+        if (!model && data.product.name) {
+          setModel(data.product.name)
+        }
+      }
+
+      if (data.price !== undefined && data.source && data.as_of) {
+        setMarketPreview({
+          price: data.price,
+          source: data.source,
+          as_of: new Date(data.as_of),
+        })
+      }
+    } catch (err: any) {
+      console.error('Quick pricing lookup failed:', err.message)
+      setMarketPreview(null)
+    } finally {
+      setLoadingMarket(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchItems()
+  }, [])
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const userId = sessionData.session?.user?.id
+
+      if (!userId) {
+        throw new Error('No authenticated user found')
+      }
+
+      const insertData: any = {
+        user_id: userId,
+        sku,
+        brand,
+        model,
+        size,
+        category,
+        purchase_price: parseFloat(purchasePrice),
+        status,
+        location,
+      }
+
+      if (salePrice) {
+        insertData.sale_price = parseFloat(salePrice)
+      }
+
+      const { error } = await supabase.from(TABLE).insert(insertData)
+
+      if (error) throw error
+
+      // Reset form
+      setSku('')
+      setBrand('')
+      setModel('')
+      setSize('')
+      setPurchasePrice('')
+      setSalePrice('')
+      setStatus('in_stock')
+      setLocation('')
+      setMarketPreview(null)
+
+      setSuccess('Item added successfully!')
+      setTimeout(() => setSuccess(null), 3000)
+
+      await fetchItems()
+    } catch (err: any) {
+      setError(err.message || 'Failed to add item')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleEdit = (item: InventoryItem) => {
+    setEditingId(item.id)
+    setEditForm({
+      status: item.status,
+      location: item.location,
+      purchase_price: item.purchase_price,
+      sale_price: item.sale_price,
+    })
+    setError(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditForm({})
+  }
+
+  const handleSaveEdit = async (id: string) => {
+    setError(null)
+    try {
+      const updateData: any = {
+        status: editForm.status,
+        location: editForm.location,
+      }
+
+      if (editForm.purchase_price !== undefined) {
+        updateData.purchase_price = editForm.purchase_price
+      }
+
+      if (editForm.sale_price !== undefined && editForm.sale_price !== null) {
+        updateData.sale_price = editForm.sale_price
+      }
+
+      const { error } = await supabase.from(TABLE).update(updateData).eq('id', id)
+
+      if (error) throw error
+
+      setEditingId(null)
+      setEditForm({})
+      await fetchItems()
+    } catch (err: any) {
+      setError(err.message || 'Failed to update item')
+    }
+  }
+
+  const handleDelete = async (id: string, sku: string) => {
+    if (!window.confirm(`Delete item ${sku}? This cannot be undone.`)) {
+      return
+    }
+
+    setError(null)
+    try {
+      const { error } = await supabase.from(TABLE).delete().eq('id', id)
+
+      if (error) throw error
+
+      await fetchItems()
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete item')
+    }
+  }
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      if (filterStatus !== 'all' && item.status !== filterStatus) return false
+      if (filterCategory !== 'all' && item.category !== filterCategory) return false
+      if (filterSize && item.size !== filterSize) return false
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matches =
+          item.sku.toLowerCase().includes(q) ||
+          item.brand.toLowerCase().includes(q) ||
+          item.model.toLowerCase().includes(q)
+        if (!matches) return false
+      }
+      return true
+    })
+  }, [items, filterStatus, filterCategory, filterSize, searchQuery])
+
+  const exportCSV = () => {
+    const headers = ['sku', 'brand', 'model', 'size', 'purchase_price', 'sale_price', 'status', 'location', 'created_at']
+    const rows = filteredItems.map((item) =>
+      [
+        item.sku,
+        item.brand,
+        item.model,
+        item.size,
+        item.purchase_price,
+        item.sale_price ?? '',
+        item.status,
+        item.location,
+        item.created_at,
+      ].map((field) => `"${field}"`)
+    )
+
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const date = new Date().toISOString().split('T')[0]
+    a.download = `archvd-inventory-${date}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="mx-auto max-w-[1280px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-fg">
+      {/* Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto snap-x">
+          <div className="relative shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dim" />
+            <Input
+              placeholder="Search SKU, brand, model"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-[260px] bg-bg border-border"
+            />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[140px] bg-surface border-border shrink-0">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-surface2 border-border">
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="in_stock">In Stock</SelectItem>
+              <SelectItem value="sold">Sold</SelectItem>
+              <SelectItem value="reserved">Reserved</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-[140px] bg-surface border-border shrink-0">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent className="bg-surface2 border-border">
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="sneaker">Sneaker</SelectItem>
+              <SelectItem value="apparel">Apparel</SelectItem>
+              <SelectItem value="accessory">Accessory</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            placeholder="Size"
+            value={filterSize}
+            onChange={(e) => setFilterSize(e.target.value)}
+            className="w-20 bg-surface border-border shrink-0"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="border-border max-md:hidden" onClick={() => exportTaxCsv(items)}>
+            <Download className="h-4 w-4 mr-2" /> Tax
+          </Button>
+          <Button variant="outline" className="border-border max-md:hidden" onClick={() => exportInsuranceCsv(items)}>
+            <Download className="h-4 w-4 mr-2" /> Insurance
+          </Button>
+          <Button variant="outline" className="border-border max-md:hidden" onClick={exportCSV} disabled={filteredItems.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> CSV
+          </Button>
+        </div>
+      </div>
+
+      {/* Success/Error Alerts */}
+      {success && (
+        <Alert variant="success">
+          <AlertTitle>Success</AlertTitle>
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-3 md:gap-4">
+        {/* Add Item Card */}
+        <Card className="bg-surface border border-border rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-sm text-muted font-normal">Add Item</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <form onSubmit={handleSubmit} className="grid gap-3">
+              <Input
+                placeholder="SKU"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                onBlur={handleSkuBlur}
+                required
+                className="bg-bg border-border font-mono"
+              />
+              {loadingMarket && <p className="text-xs text-dim">Checking market price...</p>}
+              {marketPreview && (
+                <div className="p-2 bg-surface2 border border-border rounded-lg">
+                  <div className="text-xs font-medium text-accent">Market: {gbp2.format(marketPreview.price)}</div>
+                  <div className="text-xs text-dim mt-0.5">
+                    {marketPreview.source} • {formatRelativeTime(marketPreview.as_of.toISOString())}
+                  </div>
+                </div>
+              )}
+
+              <Input
+                placeholder="Brand"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                required
+                className="bg-bg border-border"
+              />
+
+              <Input
+                placeholder="Model"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                required
+                className="bg-bg border-border"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  placeholder="Size (UK)"
+                  value={size}
+                  onChange={(e) => setSize(e.target.value)}
+                  required
+                  className="bg-bg border-border"
+                />
+                <Select value={category} onValueChange={(val) => setCategory(val as Category)}>
+                  <SelectTrigger className="bg-bg border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-surface2 border-border">
+                    <SelectItem value="sneaker">Sneaker</SelectItem>
+                    <SelectItem value="apparel">Apparel</SelectItem>
+                    <SelectItem value="accessory">Accessory</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  placeholder="Purchase (£)"
+                  type="number"
+                  inputMode="decimal"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  required
+                  step="0.01"
+                  min="0"
+                  className="bg-bg border-border num text-right"
+                />
+                <Input
+                  placeholder="Sale (£) – optional"
+                  type="number"
+                  inputMode="decimal"
+                  value={salePrice}
+                  onChange={(e) => setSalePrice(e.target.value)}
+                  step="0.01"
+                  min="0"
+                  className="bg-bg border-border num text-right"
+                />
+              </div>
+
+              <Select value={status} onValueChange={(val) => setStatus(val as any)}>
+                <SelectTrigger className="bg-bg border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-surface2 border-border">
+                  <SelectItem value="in_stock">In Stock</SelectItem>
+                  <SelectItem value="sold">Sold</SelectItem>
+                  <SelectItem value="reserved">Reserved</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Input
+                placeholder="Location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                required
+                className="bg-bg border-border"
+              />
+
+              <Button type="submit" disabled={submitting} className="bg-accent text-black hover:bg-accent-600">
+                {submitting ? 'Adding...' : 'Add Item'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Table */}
+        <Card className="bg-surface border border-border rounded-2xl overflow-hidden">
+          {loading ? (
+            <div className="p-3 space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-12 rounded-lg bg-surface2 animate-pulse" />
+              ))}
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="text-center py-10 text-dim">
+              <p className="font-mono text-sm">
+                {items.length === 0 ? 'No items yet • Add your first pair!' : 'No results • Try adjusting your filters.'}
+              </p>
+              {items.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 border-border"
+                  onClick={() => {
+                    setFilterStatus('all')
+                    setFilterCategory('all')
+                    setFilterSize('')
+                    setSearchQuery('')
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="max-h-[70vh] overflow-auto">
+              <Table className="min-w-[920px]">
+                <TableHeader className="text-muted text-xs bg-bg sticky top-0 z-10">
+                  <TableRow className="border-border">
+                    <TableHead className={cn('px-3 md:px-4 py-3', COLS.SKU)}>SKU</TableHead>
+                    <TableHead className="px-3 md:px-4 py-3">Brand</TableHead>
+                    <TableHead className="px-3 md:px-4 py-3">Model</TableHead>
+                    <TableHead className={cn('px-3 md:px-4 py-3', COLS.SIZE)}>Size</TableHead>
+                    <TableHead className={cn('px-3 md:px-4 py-3 text-right', COLS.MONEY)}>Purchase</TableHead>
+                    <TableHead className={cn('px-3 md:px-4 py-3 text-right', COLS.MONEY)}>Market</TableHead>
+                    <TableHead className={cn('px-3 md:px-4 py-3 text-right', COLS.MONEY)}>Sale</TableHead>
+                    <TableHead className={cn('px-3 md:px-4 py-3 text-right', COLS.MONEY)}>P/L</TableHead>
+                    <TableHead className={cn('px-3 md:px-4 py-3', COLS.STATUS)}>Status</TableHead>
+                    <TableHead className="px-3 md:px-4 py-3">Location</TableHead>
+                    <TableHead className="px-3 md:px-4 py-3">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredItems.map((item) => {
+                    const isEditing = editingId === item.id
+                    const pl = item.market_value && item.purchase_price ? item.market_value - item.purchase_price : null
+                    const plPct = pl !== null && item.purchase_price > 0 ? pl / item.purchase_price : null
+                    const gain = pl !== null && pl > 0
+                    const loss = pl !== null && pl < 0
+
+                    return (
+                      <TableRow key={item.id} className="border-border hover:bg-surface/70 h-12">
+                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-xs', COLS.SKU)}>{item.sku}</TableCell>
+                        <TableCell className="px-3 md:px-4 py-3 text-sm">{item.brand}</TableCell>
+                        <TableCell className="px-3 md:px-4 py-3 text-sm">{item.model}</TableCell>
+                        <TableCell className={cn('px-3 md:px-4 py-3 text-sm', COLS.SIZE)}>{item.size}</TableCell>
+                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-sm text-right', COLS.MONEY)}>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editForm.purchase_price ?? ''}
+                              onChange={(e) =>
+                                setEditForm({ ...editForm, purchase_price: parseFloat(e.target.value) })
+                              }
+                              className="w-20 h-8 px-2 py-1 text-xs bg-bg border-border"
+                            />
+                          ) : (
+                            gbp2.format(item.purchase_price)
+                          )}
+                        </TableCell>
+                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-sm text-right', COLS.MONEY)}>
+                          {item.market_value ? (
+                            <div>
+                              <div>{gbp2.format(item.market_value)}</div>
+                              {item.market_meta?.sources_used?.[0] && item.market_updated_at && (
+                                <div className="mt-0.5 text-[10px] text-dim font-mono flex items-center justify-end gap-1">
+                                  <span className="h-1 w-1 rounded-full bg-accent" />
+                                  {item.market_meta.sources_used[0]} • {formatRelativeTime(item.market_updated_at)}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-dim">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-sm text-right', COLS.MONEY)}>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editForm.sale_price ?? ''}
+                              onChange={(e) =>
+                                setEditForm({ ...editForm, sale_price: e.target.value ? parseFloat(e.target.value) : null })
+                              }
+                              className="w-20 h-8 px-2 py-1 text-xs bg-bg border-border"
+                            />
+                          ) : item.sale_price ? (
+                            gbp2.format(item.sale_price)
+                          ) : (
+                            <span className="text-dim">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-sm text-right', COLS.MONEY)}>
+                          {pl === null || pl === 0 ? (
+                            <span className="text-dim">—</span>
+                          ) : (
+                            <div className={cn('inline-flex items-center gap-1', gain && 'text-accent', loss && 'text-danger')}>
+                              {gain && <TrendingUp className="h-3.5 w-3.5" />}
+                              {loss && <TrendingDown className="h-3.5 w-3.5" />}
+                              <span>{gbp2.format(pl)}</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className={cn('px-3 md:px-4 py-3', COLS.STATUS)}>
+                          {isEditing ? (
+                            <Select
+                              value={editForm.status}
+                              onValueChange={(val) => setEditForm({ ...editForm, status: val as any })}
+                            >
+                              <SelectTrigger className="h-8 px-2 py-1 text-xs bg-bg border-border">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-surface2 border-border">
+                                <SelectItem value="in_stock">In Stock</SelectItem>
+                                <SelectItem value="sold">Sold</SelectItem>
+                                <SelectItem value="reserved">Reserved</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant="outline" className="border-border text-xs capitalize">
+                              {item.status.replace('_', ' ')}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 md:px-4 py-3 text-sm">
+                          {isEditing ? (
+                            <Input
+                              value={editForm.location ?? ''}
+                              onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                              className="w-24 h-8 px-2 py-1 text-xs bg-bg border-border"
+                            />
+                          ) : (
+                            item.location
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 md:px-4 py-3">
+                          {isEditing ? (
+                            <div className="flex gap-1">
+                              <button onClick={() => handleSaveEdit(item.id)} className="px-2 py-1 text-xs text-accent hover:text-accent-600 font-medium">
+                                Save
+                              </button>
+                              <button onClick={handleCancelEdit} className="px-2 py-1 text-xs text-dim hover:text-fg font-medium">
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1">
+                              <button onClick={() => handleEdit(item)} className="px-2 py-1 text-xs text-accent hover:text-accent-600 font-medium">
+                                Edit
+                              </button>
+                              <button onClick={() => handleDelete(item.id, item.sku)} className="px-2 py-1 text-xs text-danger hover:text-danger/80 font-medium">
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  )
+}

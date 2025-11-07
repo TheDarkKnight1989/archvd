@@ -1,24 +1,131 @@
-/* /styles/globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* archvd Matrix Design System */
+@import "tailwindcss";
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+/* Matrix Theme Tokens */
+:root[data-theme="matrix"] {
+  /* Backgrounds */
+  --archvd-bg: #050807;
+  --archvd-bg-elev-1: #08100C;
+  --archvd-bg-elev-2: #0B1510;
+  --archvd-overlay: #0D1B14CC;
+
+  /* Borders & dividers */
+  --archvd-border: #15251B;
+  --archvd-border-strong: #233A2B;
+
+  /* Text */
+  --archvd-fg: #E8F6EE;
+  --archvd-fg-muted: #B7D0C2;
+  --archvd-fg-dim: #7FA08F;
+
+  /* Accent (Matrix green) */
+  --archvd-accent: #00FF94;
+  --archvd-accent-600: #18D38B;
+  --archvd-accent-500: #12B07A;
+  --archvd-accent-400: #0F8D65;
+  --archvd-accent-300: #0C6C51;
+  --archvd-accent-200: #0A5240;
+
+  /* Success / Warning / Danger */
+  --archvd-success: #22DA6E;
+  --archvd-warning: #D9B949;
+  --archvd-danger: #FF4D5E;
+  --archvd-danger-200: #3A1519;
+
+  /* Data Series (Charts) */
+  --archvd-series-1: var(--archvd-accent);
+  --archvd-series-2: #7AA97A;
+  --archvd-series-3: #8AA39E;
+  --archvd-series-4: #6E7F78;
+
+  /* Focus ring */
+  --archvd-focus: #1FEBA1;
+  --archvd-ring: #1FEBA11F;
+
+  /* Shadows / glows */
+  --archvd-shadow-soft: 0 6px 24px rgba(0,0,0,.5);
+  --archvd-glow-accent: 0 0 0 1px #0C6C51, 0 0 24px #00FF9440;
+
+  /* Font families */
+  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-jetmono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
+/* High contrast mode */
+:root[data-contrast="high"] {
+  --archvd-series-1: #FFFFFF;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+  :root[data-theme="matrix"] {
+    --archvd-glow-accent: 0 0 0 1px #0C6C51;
+  }
+}
+
+/* Base resets */
+@layer base {
+  * {
+    border-color: var(--archvd-border);
+  }
+
+  body {
+    background-color: var(--archvd-bg);
+    color: var(--archvd-fg);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  .num {
+    font-family: var(--font-jetmono);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums slashed-zero ordinal;
+  }
+  
+  .transition-terminal {
+    transition-timing-function: cubic-bezier(.22,.61,.36,1);
+  }
+}
+
+/* Skip link */
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--archvd-bg-elev-1);
+  color: var(--archvd-fg);
+  border-radius: 0.875rem;
+  z-index: 9999;
+  transform: translateY(-200%);
+  transition: transform 200ms cubic-bezier(.22,.61,.36,1);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--archvd-bg-elev-1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--archvd-border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--archvd-accent-400);
 }

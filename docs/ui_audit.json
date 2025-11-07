@@ -1,0 +1,142 @@
+{
+  "version": "1.0",
+  "date": "2025-11-07",
+  "description": "Matrix UI Design System compliance audit for dashboard routes and shared components",
+  "routes": {
+    "/dashboard": {
+      "matrixTokens": "pass",
+      "navigation": "pass",
+      "tables": "pass",
+      "forms": "n/a",
+      "states": "pass",
+      "accessibility": "pass",
+      "pnlFormatting": "pass",
+      "notes": "Main dashboard with KPI cards, quick add FAB, recent items table"
+    },
+    "/dashboard/inventory": {
+      "matrixTokens": "pass",
+      "navigation": "pass",
+      "tables": "pass",
+      "forms": "pass",
+      "states": "pass",
+      "accessibility": "pass",
+      "pnlFormatting": "pass",
+      "notes": "Inventory table with filters, add/edit forms, P/L icons in margin column"
+    },
+    "/dashboard/expenses": {
+      "matrixTokens": "pass",
+      "navigation": "pass",
+      "tables": "pass",
+      "forms": "pass",
+      "states": "pass",
+      "accessibility": "pass",
+      "pnlFormatting": "n/a",
+      "notes": "Expense tracking with category filter, linked item select using sentinel pattern"
+    },
+    "/dashboard/pnl": {
+      "matrixTokens": "pass",
+      "navigation": "pass",
+      "tables": "pass",
+      "forms": "n/a",
+      "states": "pass",
+      "accessibility": "pass",
+      "pnlFormatting": "pass",
+      "notes": "P&L KPIs, VAT summary, sold items table with TrendingUp/Down icons, CSV exports"
+    }
+  },
+  "components": {
+    "Sidebar": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "notes": "Fixed left nav with icon buttons, focus rings, active state indicators"
+    },
+    "MobileDock": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "notes": "Bottom nav with safe area insets, 4-tab grid, FAB for quick add"
+    },
+    "Table": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "notes": "Sticky header, h-12 rows, px-3 md:px-4 py-3 cells, subtle hover, font-mono for numbers"
+    },
+    "Button": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "notes": "Primary (bg-accent text-black), outline (border-border bg-surface), destructive variants"
+    },
+    "Select": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "notes": "Radix-based with dev guard for empty values, sentinel pattern (__none__) for clearable"
+    },
+    "Card": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "notes": "rounded-2xl shadow-soft bg-surface2 border-border"
+    },
+    "Alert": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "notes": "Destructive variant for errors, proper ARIA roles"
+    },
+    "Skeleton": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "notes": "6-row default, h-12 matching table rows, animate-pulse, respects prefers-reduced-motion"
+    }
+  },
+  "designSystem": {
+    "colorTokens": {
+      "status": "pass",
+      "tokens": [
+        "bg-bg",
+        "bg-surface",
+        "bg-surface2",
+        "text-fg",
+        "text-muted",
+        "text-dim",
+        "text-accent",
+        "text-success",
+        "text-danger",
+        "border-border"
+      ]
+    },
+    "pnlFormatting": {
+      "status": "pass",
+      "rules": {
+        "gains": "text-success + TrendingUp icon",
+        "losses": "text-danger + TrendingDown icon",
+        "zero": "em dash (—) in text-dim"
+      }
+    },
+    "accessibility": {
+      "focusRings": "pass",
+      "reducedMotion": "pass",
+      "ariaLabels": "pass",
+      "semanticHTML": "pass"
+    },
+    "pwa": {
+      "themeColor": "pass",
+      "manifest": "pass",
+      "fonts": "pass",
+      "notes": "Inter + JetBrains Mono with display:swap, theme-color #050807"
+    }
+  },
+  "dataLayer": {
+    "supabaseImports": "pass",
+    "rls": "pass",
+    "views": [
+      "profit_loss_monthly_view",
+      "vat_margin_monthly_view",
+      "vat_margin_detail_view"
+    ],
+    "notes": "All imports use @/lib/supabase/client, no direct createClient usage"
+  },
+  "exports": {
+    "csvGeneration": "pass",
+    "clientSide": "pass",
+    "utilities": "/src/lib/export/csv.ts",
+    "notes": "UTF-8 BOM for Excel, proper escaping, numeric formatting"
+  }
+}

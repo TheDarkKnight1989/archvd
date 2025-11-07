@@ -1,0 +1,8 @@
+sku,brand,model,size_uk,purchase_price,purchase_date,condition,status,location
+DD1391-100,Nike,Dunk Low Panda,9,120,01/09/2025,deadstock,in_stock,Unit A
+DZ5485-612,Jordan,AJ1 Low,10.5,130,2025-09-10,worn,in_stock,Shelf 3
+CT8527-016,Jordan,AJ4 Retro,8.5,250,,deadstock,in_stock,Main
+FD0774-001,Nike,Air Max 1 '86 OG G,10,140,15/09/2025,ds,in_stock,Unit B
+DV0833-101,Nike,Dunk Low Championship Red,9.5,£115,2025-09-20,new,in_stock,Shelf 1
+FB2207-200,Jordan,AJ3 Retro Craft,11,180.50,25/09/2025,deadstock,in_stock,Main
+DM9652-102,Nike,Air Force 1 Low,8,95,2025-10-01,BNIB,in_stock,Unit A
