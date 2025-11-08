@@ -10,8 +10,8 @@ BEGIN
   END IF;
 END$$;
 
--- 2. Items table: drop legacy boolean instock if it exists
-ALTER TABLE items
+-- 2. Inventory table: drop legacy boolean instock if it exists
+ALTER TABLE "Inventory"
   DROP COLUMN IF EXISTS instock;
 
 -- 3. Ensure status column exists and uses enum
@@ -19,16 +19,16 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name='items' AND column_name='status'
+    WHERE table_name='Inventory' AND column_name='status'
   ) THEN
-    ALTER TABLE items ADD COLUMN status item_status NOT NULL DEFAULT 'active';
+    ALTER TABLE "Inventory" ADD COLUMN status item_status NOT NULL DEFAULT 'active';
   ELSE
     -- Convert existing text status to enum if needed
     IF EXISTS (
       SELECT 1 FROM information_schema.columns
-      WHERE table_name='items' AND column_name='status' AND udt_name <> 'item_status'
+      WHERE table_name='Inventory' AND column_name='status' AND udt_name <> 'item_status'
     ) THEN
-      ALTER TABLE items
+      ALTER TABLE "Inventory"
         ALTER COLUMN status TYPE item_status USING status::item_status;
     END IF;
   END IF;
@@ -78,7 +78,7 @@ SELECT
     THEN ((COALESCE(i.sold_price, 0) - COALESCE(i.purchase_price, 0) - COALESCE(i.tax, 0) - COALESCE(i.shipping, 0) - COALESCE(i.sold_fees, 0)) / (COALESCE(i.purchase_price, 0) + COALESCE(i.tax, 0) + COALESCE(i.shipping, 0)) * 100)::numeric(12,2)
     ELSE 0
   END AS margin_percent
-FROM items i
+FROM "Inventory" i
 WHERE i.status = 'sold';
 
 -- 5. Create inventory_active_view for non-sold items
@@ -116,33 +116,33 @@ SELECT
   i.updated_at,
   -- Derived metrics
   (COALESCE(i.market_value, i.custom_market_value, 0) - COALESCE(i.purchase_price, 0) - COALESCE(i.tax, 0) - COALESCE(i.shipping, 0))::numeric(12,2) AS unrealised_profit_gbp
-FROM items i
+FROM "Inventory" i
 WHERE i.status IN ('active', 'listed', 'worn');
 
 -- 6. Ensure RLS is enabled and policies exist
-ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Inventory" ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist (to recreate cleanly)
-DROP POLICY IF EXISTS "Users can view own items" ON items;
-DROP POLICY IF EXISTS "Users can insert own items" ON items;
-DROP POLICY IF EXISTS "Users can update own items" ON items;
-DROP POLICY IF EXISTS "Users can delete own items" ON items;
+DROP POLICY IF EXISTS "Users can view own items" ON "Inventory";
+DROP POLICY IF EXISTS "Users can insert own items" ON "Inventory";
+DROP POLICY IF EXISTS "Users can update own items" ON "Inventory";
+DROP POLICY IF EXISTS "Users can delete own items" ON "Inventory";
 
 -- Recreate RLS policies
 CREATE POLICY "Users can view own items"
-  ON items FOR SELECT
+  ON "Inventory" FOR SELECT
   USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert own items"
-  ON items FOR INSERT
+  ON "Inventory" FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own items"
-  ON items FOR UPDATE
+  ON "Inventory" FOR UPDATE
   USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete own items"
-  ON items FOR DELETE
+  ON "Inventory" FOR DELETE
   USING (auth.uid() = user_id);
 
 -- 7. Ensure views use security_invoker
@@ -150,11 +150,11 @@ ALTER VIEW sales_view SET (security_invoker = on);
 ALTER VIEW inventory_active_view SET (security_invoker = on);
 
 -- 8. Add indexes for performance
-CREATE INDEX IF NOT EXISTS idx_items_status ON items(status);
-CREATE INDEX IF NOT EXISTS idx_items_user_status ON items(user_id, status);
-CREATE INDEX IF NOT EXISTS idx_items_sold_date ON items(sold_date) WHERE status = 'sold';
+CREATE INDEX IF NOT EXISTS idx_inventory_status ON "Inventory"(status);
+CREATE INDEX IF NOT EXISTS idx_inventory_user_status ON "Inventory"(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_inventory_sold_date ON "Inventory"(sold_date) WHERE status = 'sold';
 
 -- 9. Comment documentation
 COMMENT ON VIEW sales_view IS 'Shows only sold items with calculated margin metrics';
 COMMENT ON VIEW inventory_active_view IS 'Shows only active inventory (active, listed, worn) excluding sold items';
-COMMENT ON COLUMN items.status IS 'Item status: active (owned), listed (for sale), worn (used but owned), sold (completed transaction)';
+COMMENT ON COLUMN "Inventory".status IS 'Item status: active (owned), listed (for sale), worn (used but owned), sold (completed transaction)';
