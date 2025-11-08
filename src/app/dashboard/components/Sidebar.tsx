@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard,
+  LayoutGrid,
   Boxes,
   TrendingUp,
   BarChart3,
@@ -12,21 +12,21 @@ import {
   User,
   CandlestickChart,
   ReceiptText,
-  Calendar,
+  CalendarRange,
   Pin,
   PinOff,
-  Upload,
-  MessageCircle,
+  UploadCloud,
   Search,
   Moon,
   Sun,
+  Package,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useSidebar } from '@/contexts/SidebarContext'
 
-// Navigation structure (trimmed - removed Browse, Sets, Products)
+// Navigation structure
 const primaryNav = [
-  { id: 'dashboard', icon: LayoutDashboard, href: '/dashboard', label: 'Dashboard' },
+  { id: 'portfolio', icon: LayoutGrid, href: '/dashboard', label: 'Portfolio' },
   { id: 'inventory', icon: Boxes, href: '/dashboard/inventory', label: 'Inventory' },
   { id: 'sales', icon: TrendingUp, href: '/dashboard/sales', label: 'Sales', badge: 'BETA' },
   { id: 'analytics', icon: BarChart3, href: '/dashboard/analytics', label: 'Analytics', badge: 'ALPHA' },
@@ -34,19 +34,15 @@ const primaryNav = [
 
 const secondaryNav = [
   { id: 'market', icon: CandlestickChart, href: '/dashboard/market', label: 'Market' },
-  { id: 'releases', icon: Calendar, href: '/dashboard/releases', label: 'Releases' },
+  { id: 'releases', icon: CalendarRange, href: '/dashboard/releases', label: 'Releases' },
   { id: 'expenses', icon: ReceiptText, href: '/dashboard/expenses', label: 'Expenses' },
-  { id: 'packages', icon: Boxes, href: '/dashboard/packages', label: 'Packages', badge: 'BETA' },
-]
-
-const utilityNav = [
-  { id: 'help', icon: MessageCircle, href: '/help', label: 'Help' },
+  { id: 'packages', icon: Package, href: '/dashboard/packages', label: 'Packages', badge: 'BETA' },
 ]
 
 // Footer utilities (Settings, Import, Profile, Theme)
 const footerNav = [
   { id: 'settings', icon: Settings, href: '/settings', label: 'Settings' },
-  { id: 'import', icon: Upload, href: '/dashboard/import', label: 'Import' },
+  { id: 'import', icon: UploadCloud, href: '/dashboard/import', label: 'Import' },
   { id: 'profile', icon: User, href: '/profile', label: 'Profile' },
 ]
 
@@ -128,7 +124,6 @@ export function Sidebar() {
 
   const filteredPrimaryNav = filterItems(primaryNav)
   const filteredSecondaryNav = filterItems(secondaryNav)
-  const filteredUtilityNav = filterItems(utilityNav)
 
   return (
     <nav
@@ -252,33 +247,8 @@ export function Sidebar() {
               </div>
             )}
 
-            {/* Utility Group */}
-            {filteredUtilityNav.length > 0 && (
-              <div className="mt-2">
-                <h3
-                  className={cn(
-                    "px-3 pt-2 pb-1 text-[10px] tracking-widest uppercase transition-all duration-120",
-                    isExpanded ? "text-accent-200/60 opacity-100" : "opacity-0 pointer-events-none"
-                  )}
-                >
-                  Utilities
-                </h3>
-                <ul className="flex flex-col gap-0.5">
-                  {filteredUtilityNav.map((item, index) => (
-                    <NavItem
-                      key={item.id}
-                      item={item}
-                      pathname={pathname}
-                      isExpanded={isExpanded}
-                      index={index}
-                    />
-                  ))}
-                </ul>
-              </div>
-            )}
-
             {/* No Results */}
-            {searchQuery && filteredPrimaryNav.length === 0 && filteredSecondaryNav.length === 0 && filteredUtilityNav.length === 0 && (
+            {searchQuery && filteredPrimaryNav.length === 0 && filteredSecondaryNav.length === 0 && (
               <div className="px-3 py-8 text-center text-sm text-dim">
                 No results for "{searchQuery}"
               </div>
@@ -290,9 +260,10 @@ export function Sidebar() {
         <div
           className={cn(
             "border-t border-border/30 bg-elev-1/90 backdrop-blur-sm",
-            "h-[44px] md:h-[48px] px-3",
+            "h-[48px] px-3",
             "flex items-center",
-            isExpanded ? "justify-between gap-2" : "justify-center gap-1"
+            isExpanded ? "justify-between gap-2" : "justify-center gap-1",
+            "pb-[env(safe-area-inset-bottom)]"
           )}
         >
           {/* Settings */}
@@ -431,6 +402,7 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
         className={cn(
           'group relative h-11 px-3 rounded-xl',
           'grid grid-cols-[24px,1fr,auto] items-center gap-3',
+          'whitespace-nowrap overflow-hidden',
           'transition-all duration-120 ease-terminal',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
           isActive
