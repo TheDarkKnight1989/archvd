@@ -217,6 +217,7 @@ export default function SalesPage() {
 
             <div className="flex items-center gap-2">
               <Button
+                variant="default"
                 onClick={handleExportCSV}
                 disabled={items.length === 0}
                 size="sm"
