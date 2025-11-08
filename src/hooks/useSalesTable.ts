@@ -9,10 +9,7 @@ export interface SalesItem {
   sku: string
   brand?: string | null
   model?: string | null
-  variant?: string | null
-  colorway?: string | null
   size_uk?: string | null
-  size_alt?: string | null
   condition?: 'New' | 'Used' | 'Worn' | 'Defect' | null
   category?: string | null
   purchase_price: number
@@ -23,18 +20,10 @@ export interface SalesItem {
   order_number?: string | null
   sold_price?: number | null
   sold_date?: string | null
-  sold_platform?: string | null
-  sold_fees?: number | null
-  market_value?: number | null
-  market_updated_at?: string | null
-  market_meta?: {
-    sources_used?: string[]
-    confidence?: string
-  } | null
+  platform?: string | null
   location?: string | null
   image_url?: string | null
   tags?: string[] | null
-  watchlist_id?: string | null
   custom_market_value?: number | null
   notes?: string | null
   status: 'sold'
@@ -93,7 +82,7 @@ export function useSalesTable(params: SalesTableParams = {}) {
 
       // Platform filter
       if (params.platform) {
-        query = query.eq('sold_platform', params.platform)
+        query = query.eq('platform', params.platform)
       }
 
       // Date range filter
@@ -179,15 +168,15 @@ export function exportSalesToCSV(items: SalesItem[], filename = 'sales-export.cs
     item.sku || '',
     item.brand || '',
     item.model || '',
-    item.colorway || '',
-    item.size_uk || item.size_alt || '',
+    '',
+    item.size_uk || '',
     item.condition || '',
     item.purchase_price?.toFixed(2) || '0.00',
     item.purchase_date || '',
     item.sold_price?.toFixed(2) || '0.00',
     item.sold_date || '',
-    item.sold_platform || '',
-    item.sold_fees?.toFixed(2) || '0.00',
+    item.platform || '',
+    '0.00',
     item.margin_gbp?.toFixed(2) || '0.00',
     item.margin_percent?.toFixed(2) || '0.00',
     item.location || '',

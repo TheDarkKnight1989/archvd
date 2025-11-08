@@ -28,6 +28,7 @@ export function usePortfolioInventory() {
       const { data, error } = await supabase
         .from('Inventory')
         .select('*')
+        .in('status', ['active', 'listed', 'worn'])
         .order('created_at', { ascending: false })
 
       if (error) throw error

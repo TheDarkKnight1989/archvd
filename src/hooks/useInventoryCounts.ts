@@ -23,11 +23,12 @@ export function useInventoryCounts(userId?: string) {
     setLoading(true)
     ;(async () => {
       try {
-        // Fetch all inventory items for the user
+        // Fetch active inventory items for the user (exclude sold items)
         const { data: items, error } = await supabase
           .from('Inventory')
           .select('status, category, size_uk')
           .eq('user_id', userId)
+          .in('status', ['active', 'listed', 'worn'])
 
         if (error) throw error
 
