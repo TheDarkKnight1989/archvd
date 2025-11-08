@@ -32,7 +32,7 @@ export default function SignInPage() {
       return;
     }
 
-    router.replace('/dashboard');
+    router.replace('/portfolio');
   };
 
   return (

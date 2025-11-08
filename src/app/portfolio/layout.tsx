@@ -5,11 +5,11 @@ import { Sidebar } from './components/Sidebar'
 import { MobileDock } from './components/MobileDock'
 import { SidebarStateProvider } from '@/contexts/SidebarContext'
 
-interface DashboardLayoutProps {
+interface PortfolioLayoutProps {
   children: ReactNode
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
   return (
     <SidebarStateProvider>
       <div className="min-h-screen bg-bg" data-theme="matrix">

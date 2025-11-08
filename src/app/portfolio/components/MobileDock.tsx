@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard,
+  LayoutGrid,
   Boxes,
   BarChart3,
   User,
@@ -13,42 +13,40 @@ import {
   X,
   TrendingUp,
   Settings,
-  LineChart,
+  CandlestickChart,
   Package,
   ReceiptText,
-  Calendar,
-  Upload,
-  MessageCircle,
+  CalendarRange,
+  UploadCloud,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useSidebar } from '@/contexts/SidebarContext'
 
 const dockItems = [
-  { icon: LayoutDashboard, href: '/dashboard', label: 'Dashboard' },
-  { icon: Boxes, href: '/dashboard/inventory', label: 'Inventory' },
-  { icon: BarChart3, href: '/dashboard/expenses', label: 'Analytics' },
+  { icon: LayoutGrid, href: '/portfolio', label: 'Portfolio' },
+  { icon: Boxes, href: '/portfolio/inventory', label: 'Inventory' },
+  { icon: BarChart3, href: '/portfolio/expenses', label: 'Analytics' },
   { icon: User, href: '/profile', label: 'Profile' },
 ]
 
 // Full nav for drawer (same as sidebar)
 const primaryNav = [
-  { id: 'dashboard', icon: LayoutDashboard, href: '/dashboard', label: 'Dashboard' },
-  { id: 'inventory', icon: Boxes, href: '/dashboard/inventory', label: 'Inventory' },
-  { id: 'sales', icon: TrendingUp, href: '/dashboard/sales', label: 'Sales', badge: 'BETA' },
-  { id: 'analytics', icon: BarChart3, href: '/dashboard/analytics', label: 'Analytics', badge: 'ALPHA' },
+  { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Portfolio' },
+  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Inventory' },
+  { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
+  { id: 'analytics', icon: BarChart3, href: '/portfolio/analytics', label: 'Analytics', badge: 'ALPHA' },
 ]
 
 const secondaryNav = [
-  { id: 'market', icon: LineChart, href: '/dashboard/market', label: 'Market' },
-  { id: 'releases', icon: Calendar, href: '/dashboard/releases', label: 'Releases' },
-  { id: 'expenses', icon: ReceiptText, href: '/dashboard/expenses', label: 'Expenses' },
-  { id: 'packages', icon: Package, href: '/dashboard/packages', label: 'Packages', badge: 'BETA' },
+  { id: 'market', icon: CandlestickChart, href: '/portfolio/market', label: 'Market' },
+  { id: 'releases', icon: CalendarRange, href: '/portfolio/releases', label: 'Releases' },
+  { id: 'expenses', icon: ReceiptText, href: '/portfolio/expenses', label: 'Expenses' },
+  { id: 'packages', icon: Package, href: '/portfolio/packages', label: 'Packages', badge: 'BETA' },
 ]
 
 const footerNav = [
-  { id: 'import', icon: Upload, href: '/dashboard/import', label: 'Import' },
-  { id: 'help', icon: MessageCircle, href: '/help', label: 'Help' },
   { id: 'settings', icon: Settings, href: '/settings', label: 'Settings' },
+  { id: 'import', icon: UploadCloud, href: '/portfolio/import', label: 'Import' },
   { id: 'profile', icon: User, href: '/profile', label: 'Profile' },
 ]
 

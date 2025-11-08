@@ -26,23 +26,23 @@ import { useSidebar } from '@/contexts/SidebarContext'
 
 // Navigation structure
 const primaryNav = [
-  { id: 'portfolio', icon: LayoutGrid, href: '/dashboard', label: 'Portfolio' },
-  { id: 'inventory', icon: Boxes, href: '/dashboard/inventory', label: 'Inventory' },
-  { id: 'sales', icon: TrendingUp, href: '/dashboard/sales', label: 'Sales', badge: 'BETA' },
-  { id: 'analytics', icon: BarChart3, href: '/dashboard/analytics', label: 'Analytics', badge: 'ALPHA' },
+  { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Portfolio' },
+  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Inventory' },
+  { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
+  { id: 'analytics', icon: BarChart3, href: '/portfolio/analytics', label: 'Analytics', badge: 'ALPHA' },
 ]
 
 const secondaryNav = [
-  { id: 'market', icon: CandlestickChart, href: '/dashboard/market', label: 'Market' },
-  { id: 'releases', icon: CalendarRange, href: '/dashboard/releases', label: 'Releases' },
-  { id: 'expenses', icon: ReceiptText, href: '/dashboard/expenses', label: 'Expenses' },
-  { id: 'packages', icon: Package, href: '/dashboard/packages', label: 'Packages', badge: 'BETA' },
+  { id: 'market', icon: CandlestickChart, href: '/portfolio/market', label: 'Market' },
+  { id: 'releases', icon: CalendarRange, href: '/portfolio/releases', label: 'Releases' },
+  { id: 'expenses', icon: ReceiptText, href: '/portfolio/expenses', label: 'Expenses' },
+  { id: 'packages', icon: Package, href: '/portfolio/packages', label: 'Packages', badge: 'BETA' },
 ]
 
 // Footer utilities (Settings, Import, Profile, Theme)
 const footerNav = [
   { id: 'settings', icon: Settings, href: '/settings', label: 'Settings' },
-  { id: 'import', icon: UploadCloud, href: '/dashboard/import', label: 'Import' },
+  { id: 'import', icon: UploadCloud, href: '/portfolio/import', label: 'Import' },
   { id: 'profile', icon: User, href: '/profile', label: 'Profile' },
 ]
 
@@ -382,9 +382,9 @@ interface NavItemProps {
 
 function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
   const Icon = item.icon
-  // Dashboard should only be active on exact match, other routes can match sub-paths
-  const isActive = item.href === '/dashboard'
-    ? pathname === '/dashboard'
+  // Portfolio should only be active on exact match, other routes can match sub-paths
+  const isActive = item.href === '/portfolio'
+    ? pathname === '/portfolio'
     : pathname === item.href || pathname?.startsWith(item.href + '/')
   const [isHovered, setIsHovered] = useState(false)
 
