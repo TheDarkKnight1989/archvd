@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Search, Download, Plus, Bookmark } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { AddItemModal } from '@/components/modals/AddItemModal'
+import { MarkAsSoldModal } from '@/components/modals/MarkAsSoldModal'
 import type { SortingState } from '@tanstack/react-table'
 
 // Matrix V2 Phase 3 Components
@@ -34,6 +35,11 @@ export default function InventoryPage() {
 
   // Data fetching via portfolio hook
   const { items, loading, error: fetchError, refetch } = usePortfolioInventory()
+
+  // Filter out sold items (they belong in Sales page now)
+  const activeItems = useMemo(() => {
+    return items.filter(item => item.status !== 'sold')
+  }, [items])
 
   // Get counts for filter tabs
   const { data: counts } = useInventoryCounts(user?.id)
@@ -71,6 +77,8 @@ export default function InventoryPage() {
   const [editItem, setEditItem] = useState<EnrichedInventoryItem | null>(null)
   const [marketModalOpen, setMarketModalOpen] = useState(false)
   const [selectedMarketItem, setSelectedMarketItem] = useState<EnrichedInventoryItem | null>(null)
+  const [markAsSoldModalOpen, setMarkAsSoldModalOpen] = useState(false)
+  const [itemToSell, setItemToSell] = useState<EnrichedInventoryItem | null>(null)
 
   // Update URL params
   const updateParams = (updates: Partial<TableParams>) => {
@@ -128,7 +136,7 @@ export default function InventoryPage() {
 
   // Filtered items
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    return activeItems.filter((item) => {
       // Status filter
       if (selectedStatus.length > 0 && !selectedStatus.includes(item.status || '')) {
         return false
@@ -157,7 +165,7 @@ export default function InventoryPage() {
 
       return true
     })
-  }, [items, selectedStatus, selectedCategory, selectedSize, searchQuery])
+  }, [activeItems, selectedStatus, selectedCategory, selectedSize, searchQuery])
 
   // Export CSV
   const exportCSV = () => {
@@ -223,8 +231,8 @@ export default function InventoryPage() {
   }
 
   const handleToggleSold = async (item: EnrichedInventoryItem) => {
-    // TODO: Implement toggle sold status
-    console.log('Toggle sold:', item.sku)
+    setItemToSell(item)
+    setMarkAsSoldModalOpen(true)
   }
 
   const handleAddExpense = (item: EnrichedInventoryItem) => {
@@ -247,11 +255,11 @@ export default function InventoryPage() {
     }, {} as Record<string, boolean>)
   }, [columnConfig])
 
-  // Build filter tab configs
+  // Build filter tab configs - Updated to use new status enum
   const statusTabs = [
-    { key: 'in_stock', label: 'In Stock', count: counts.status['in_stock'] ?? 0 },
-    { key: 'sold', label: 'Sold', count: counts.status['sold'] ?? 0 },
-    { key: 'reserved', label: 'Reserved', count: counts.status['reserved'] ?? 0 },
+    { key: 'active', label: 'Active', count: counts.status['active'] ?? 0 },
+    { key: 'listed', label: 'Listed', count: counts.status['listed'] ?? 0 },
+    { key: 'worn', label: 'Worn', count: counts.status['worn'] ?? 0 },
   ]
 
   const categoryTabs = [
@@ -267,12 +275,12 @@ export default function InventoryPage() {
     .map(([key, count]) => ({ key, label: key, count }))
 
   return (
-    <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-[#E8F6EE]">
+    <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-fg">
       {/* Page Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#E8F6EE] relative inline-block">
+        <h1 className="text-2xl font-bold text-fg relative inline-block">
           Inventory
-          <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-[#0F8D65] opacity-40"></span>
+          <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent opacity-40"></span>
         </h1>
 
         {/* Saved Views */}
@@ -290,12 +298,12 @@ export default function InventoryPage() {
       </div>
 
       {/* Toolbar - Sticky with glowing tabs */}
-      <div className="sticky top-0 z-30 -mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-3 bg-[#050807]/90 backdrop-blur border-b border-[#15251B]/40">
+      <div className="sticky top-0 z-30 -mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-3 bg-bg/90 backdrop-blur border-b border-border/40">
         <div className="flex flex-col gap-3">
           {/* Row 1: Search + Add Button */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7FA08F]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
               <Input
                 placeholder="Search SKU, brand, model..."
                 value={searchQuery}
@@ -307,8 +315,8 @@ export default function InventoryPage() {
                   }
                 }}
                 className={cn(
-                  'pl-9 bg-[#050807] border-[#15251B] transition-all duration-120 text-[#E8F6EE]',
-                  searchQuery && 'ring-2 ring-[#00FF94]/40'
+                  'pl-9 bg-elev-0 border-border transition-all duration-120 text-fg',
+                  searchQuery && 'ring-2 ring-accent/40'
                 )}
               />
             </div>
@@ -317,7 +325,7 @@ export default function InventoryPage() {
               onClick={() => setAddItemModalOpen(true)}
               variant="default"
               size="sm"
-              className="ml-auto bg-[#00FF94] text-[#000000] hover:bg-[#18D38B]"
+              className="ml-auto bg-accent text-black hover:bg-accent-600"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Item
@@ -335,7 +343,7 @@ export default function InventoryPage() {
             />
 
             {/* Divider */}
-            <div className="h-6 w-px bg-[#15251B]/40" />
+            <div className="h-6 w-px bg-border/40" />
 
             {/* Category Tabs (single-select) */}
             <FilterTabs
@@ -348,7 +356,7 @@ export default function InventoryPage() {
             {/* Size Tabs (multi-select) - Only show if we have sizes */}
             {sizeTabs.length > 0 && (
               <>
-                <div className="h-6 w-px bg-[#15251B]/40" />
+                <div className="h-6 w-px bg-border/40" />
                 <FilterTabs
                   tabs={sizeTabs}
                   value={selectedSize}
@@ -371,7 +379,7 @@ export default function InventoryPage() {
                     setSearchQuery('')
                     updateParams({ status: [], category: ['sneaker'], size_uk: [], search: undefined })
                   }}
-                  className="text-xs text-[#7FA08F] hover:text-[#E8F6EE]"
+                  className="text-xs text-muted hover:text-fg"
                 >
                   Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
                 </Button>
@@ -381,7 +389,7 @@ export default function InventoryPage() {
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                className="border-[#15251B] max-md:hidden"
+                className="border-border max-md:hidden"
                 onClick={() => exportTaxCsv(items as any)}
                 disabled={items.length === 0}
                 size="sm"
@@ -390,7 +398,7 @@ export default function InventoryPage() {
               </Button>
               <Button
                 variant="outline"
-                className="border-[#15251B] max-md:hidden"
+                className="border-border max-md:hidden"
                 onClick={() => exportInsuranceCsv(items as any)}
                 disabled={items.length === 0}
                 size="sm"
@@ -399,7 +407,7 @@ export default function InventoryPage() {
               </Button>
               <Button
                 variant="outline"
-                className="border-[#15251B] max-md:hidden"
+                className="border-border max-md:hidden"
                 onClick={exportCSV}
                 disabled={filteredItems.length === 0}
                 size="sm"
@@ -409,7 +417,7 @@ export default function InventoryPage() {
               {activeFilterCount > 0 && (
                 <Button
                   variant="outline"
-                  className="border-[#15251B] max-md:hidden border-[#00FF94]/40 text-[#00FF94] hover:bg-[#00FF94]/10"
+                  className="border-border max-md:hidden border-accent/40 text-accent hover:bg-accent/10"
                   onClick={() => {
                     const name = prompt('Enter a name for this view:')
                     if (name) saveCurrentView(name)
@@ -437,8 +445,8 @@ export default function InventoryPage() {
 
       {/* Fetch Error Alert */}
       {fetchError && (
-        <div className="border-l-4 border-l-[#FF4D5E] bg-[#08100C] p-4 rounded-lg">
-          <p className="text-sm text-[#FF4D5E] font-medium">Error: {fetchError}</p>
+        <div className="border-l-4 border-l-danger bg-elev-1 p-4 rounded-lg">
+          <p className="text-sm text-danger font-medium">Error: {fetchError}</p>
         </div>
       )}
 
@@ -459,6 +467,22 @@ export default function InventoryPage() {
       <AddItemModal
         open={addItemModalOpen}
         onOpenChange={setAddItemModalOpen}
+        onSuccess={handleItemAdded}
+      />
+
+      {/* Mark as Sold Modal */}
+      <MarkAsSoldModal
+        open={markAsSoldModalOpen}
+        onOpenChange={setMarkAsSoldModalOpen}
+        item={itemToSell ? {
+          id: itemToSell.id,
+          sku: itemToSell.sku,
+          brand: itemToSell.brand,
+          model: itemToSell.model,
+          purchase_price: itemToSell.purchase_price,
+          tax: itemToSell.tax,
+          shipping: itemToSell.shipping,
+        } : null}
         onSuccess={handleItemAdded}
       />
 
