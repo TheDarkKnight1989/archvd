@@ -13,15 +13,16 @@ END$$;
 -- 2. Drop ALL constraints on Inventory table FIRST to avoid type comparison issues during any table modifications
 DO $$
 DECLARE
-  constraint_name TEXT;
+  r RECORD;
 BEGIN
-  FOR constraint_name IN
-    SELECT conname
-    FROM pg_constraint
-    WHERE conrelid = '"Inventory"'::regclass
-    AND contype = 'c'  -- check constraints only
+  FOR r IN
+    SELECT constraint_name
+    FROM information_schema.table_constraints
+    WHERE table_schema = 'public'
+    AND table_name = 'Inventory'
+    AND constraint_type = 'CHECK'
   LOOP
-    EXECUTE 'ALTER TABLE "Inventory" DROP CONSTRAINT IF EXISTS ' || quote_ident(constraint_name);
+    EXECUTE 'ALTER TABLE "Inventory" DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
   END LOOP;
 END$$;
 
