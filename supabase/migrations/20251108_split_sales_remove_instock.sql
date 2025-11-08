@@ -19,32 +19,40 @@ DROP VIEW IF EXISTS profit_loss_monthly_view CASCADE;
 DROP VIEW IF EXISTS vat_margin_monthly_view CASCADE;
 DROP VIEW IF EXISTS vat_margin_detail_view CASCADE;
 
--- 4. Ensure status column exists and uses enum
+-- 4. Update existing status values to match new enum
+-- Map old values to new enum values
+UPDATE "Inventory" SET status = 'active' WHERE status IN ('in_stock', 'deadstock', 'reserved');
+UPDATE "Inventory" SET status = 'sold' WHERE status = 'sold';
+-- 'listed' and 'worn' should already be correct if they exist
+
+-- 5. Convert status column to use new enum type
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name='Inventory' AND column_name='status'
   ) THEN
+    -- Column doesn't exist, add it
     ALTER TABLE "Inventory" ADD COLUMN status item_status NOT NULL DEFAULT 'active';
   ELSE
-    -- Convert existing text status to enum if needed
+    -- Column exists, check if it needs type conversion
     IF EXISTS (
       SELECT 1 FROM information_schema.columns
       WHERE table_name='Inventory' AND column_name='status' AND udt_name <> 'item_status'
     ) THEN
-      -- Drop default first to avoid casting issues
+      -- It's text or another type, convert to enum
       ALTER TABLE "Inventory" ALTER COLUMN status DROP DEFAULT;
-      -- Convert the column type
       ALTER TABLE "Inventory"
         ALTER COLUMN status TYPE item_status USING status::item_status;
-      -- Re-add default as enum
+      ALTER TABLE "Inventory" ALTER COLUMN status SET DEFAULT 'active'::item_status;
+    ELSE
+      -- It's already item_status enum, just ensure default is set correctly
       ALTER TABLE "Inventory" ALTER COLUMN status SET DEFAULT 'active'::item_status;
     END IF;
   END IF;
 END$$;
 
--- 5. Create sales_view for sold items only
+-- 6. Create sales_view for sold items only
 CREATE OR REPLACE VIEW sales_view
 WITH (security_invoker = on) AS
 SELECT
@@ -91,7 +99,7 @@ SELECT
 FROM "Inventory" i
 WHERE i.status = 'sold';
 
--- 6. Create inventory_active_view for non-sold items
+-- 7. Create inventory_active_view for non-sold items
 CREATE OR REPLACE VIEW inventory_active_view
 WITH (security_invoker = on) AS
 SELECT
@@ -129,7 +137,7 @@ SELECT
 FROM "Inventory" i
 WHERE i.status IN ('active', 'listed', 'worn');
 
--- 7. Ensure RLS is enabled and policies exist
+-- 8. Ensure RLS is enabled and policies exist
 ALTER TABLE "Inventory" ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist (to recreate cleanly)
@@ -155,21 +163,21 @@ CREATE POLICY "Users can delete own items"
   ON "Inventory" FOR DELETE
   USING (auth.uid() = user_id);
 
--- 8. Ensure views use security_invoker
+-- 9. Ensure views use security_invoker
 ALTER VIEW sales_view SET (security_invoker = on);
 ALTER VIEW inventory_active_view SET (security_invoker = on);
 
--- 9. Add indexes for performance
+-- 10. Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_inventory_status ON "Inventory"(status);
 CREATE INDEX IF NOT EXISTS idx_inventory_user_status ON "Inventory"(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_inventory_sold_date ON "Inventory"(sold_date) WHERE status = 'sold';
 
--- 10. Comment documentation
+-- 11. Comment documentation
 COMMENT ON VIEW sales_view IS 'Shows only sold items with calculated margin metrics';
 COMMENT ON VIEW inventory_active_view IS 'Shows only active inventory (active, listed, worn) excluding sold items';
 COMMENT ON COLUMN "Inventory".status IS 'Item status: active (owned), listed (for sale), worn (used but owned), sold (completed transaction)';
 
--- 11. Recreate P&L and VAT views (dropped in step 3)
+-- 12. Recreate P&L and VAT views (dropped in step 3)
 CREATE OR REPLACE VIEW profit_loss_monthly_view AS
 WITH sold_items AS (
   SELECT
