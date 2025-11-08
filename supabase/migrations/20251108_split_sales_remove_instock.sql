@@ -10,19 +10,7 @@ BEGIN
   END IF;
 END$$;
 
--- 2. Drop status default FIRST to avoid enum-to-text comparison issues during table modifications
-ALTER TABLE "Inventory" ALTER COLUMN status DROP DEFAULT;
-
--- 3. Inventory table: drop legacy boolean instock if it exists
-ALTER TABLE "Inventory"
-  DROP COLUMN IF EXISTS instock;
-
--- 4. Drop dependent views temporarily (they'll be recreated later in this migration)
-DROP VIEW IF EXISTS profit_loss_monthly_view CASCADE;
-DROP VIEW IF EXISTS vat_margin_monthly_view CASCADE;
-DROP VIEW IF EXISTS vat_margin_detail_view CASCADE;
-
--- 5. Drop ALL constraints on Inventory table to avoid type comparison issues
+-- 2. Drop ALL constraints on Inventory table FIRST to avoid type comparison issues during any table modifications
 DO $$
 DECLARE
   constraint_name TEXT;
@@ -37,6 +25,18 @@ BEGIN
   END LOOP;
 END$$;
 
+-- 3. Drop status default to avoid enum-to-text comparison issues during table modifications
+ALTER TABLE "Inventory" ALTER COLUMN status DROP DEFAULT;
+
+-- 4. Inventory table: drop legacy boolean instock if it exists
+ALTER TABLE "Inventory"
+  DROP COLUMN IF EXISTS instock;
+
+-- 5. Drop dependent views temporarily (they'll be recreated later in this migration)
+DROP VIEW IF EXISTS profit_loss_monthly_view CASCADE;
+DROP VIEW IF EXISTS vat_margin_monthly_view CASCADE;
+DROP VIEW IF EXISTS vat_margin_detail_view CASCADE;
+
 -- 6. Convert status column to TEXT temporarily (if it's currently an enum)
 ALTER TABLE "Inventory" ALTER COLUMN status TYPE TEXT;
 
@@ -46,7 +46,7 @@ UPDATE "Inventory" SET status = 'active' WHERE status IN ('in_stock', 'deadstock
 UPDATE "Inventory" SET status = 'sold' WHERE status = 'sold';
 -- 'listed' and 'worn' should already be correct if they exist
 
--- 8. Convert status column back to item_status enum
+-- 8. Convert status column back to item_status enum with new default
 ALTER TABLE "Inventory"
   ALTER COLUMN status TYPE item_status USING status::item_status;
 ALTER TABLE "Inventory"
@@ -177,7 +177,7 @@ COMMENT ON VIEW sales_view IS 'Shows only sold items with calculated margin metr
 COMMENT ON VIEW inventory_active_view IS 'Shows only active inventory (active, listed, worn) excluding sold items';
 COMMENT ON COLUMN "Inventory".status IS 'Item status: active (owned), listed (for sale), worn (used but owned), sold (completed transaction)';
 
--- 15. Recreate P&L and VAT views (dropped in step 4)
+-- 15. Recreate P&L and VAT views (dropped in step 5)
 CREATE OR REPLACE VIEW profit_loss_monthly_view AS
 WITH sold_items AS (
   SELECT
