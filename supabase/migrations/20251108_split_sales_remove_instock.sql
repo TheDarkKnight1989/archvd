@@ -45,10 +45,7 @@ SELECT
   i.sku,
   i.brand,
   i.model,
-  i.variant,
-  i.colorway,
   i.size_uk,
-  i.size_alt,
   i.condition,
   i.category,
   i.purchase_price,
@@ -61,9 +58,6 @@ SELECT
   i.sold_date,
   i.sold_platform,
   i.sold_fees,
-  i.market_value,
-  i.market_updated_at,
-  i.market_meta,
   i.location,
   i.image_url,
   i.tags,
@@ -92,10 +86,7 @@ SELECT
   i.sku,
   i.brand,
   i.model,
-  i.variant,
-  i.colorway,
   i.size_uk,
-  i.size_alt,
   i.condition,
   i.category,
   i.purchase_price,
@@ -104,9 +95,6 @@ SELECT
   i.shipping,
   i.place_of_purchase,
   i.order_number,
-  i.market_value,
-  i.market_updated_at,
-  i.market_meta,
   i.location,
   i.image_url,
   i.tags,
@@ -117,7 +105,7 @@ SELECT
   i.created_at,
   i.updated_at,
   -- Derived metrics
-  (COALESCE(i.market_value, i.custom_market_value, 0) - COALESCE(i.purchase_price, 0) - COALESCE(i.tax, 0) - COALESCE(i.shipping, 0))::numeric(12,2) AS unrealised_profit_gbp
+  (COALESCE(i.custom_market_value, 0) - COALESCE(i.purchase_price, 0) - COALESCE(i.tax, 0) - COALESCE(i.shipping, 0))::numeric(12,2) AS unrealised_profit_gbp
 FROM "Inventory" i
 WHERE i.status IN ('active', 'listed', 'worn');
 
