@@ -64,12 +64,11 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
 
     try {
       const { error } = await supabase
-        .from('items')
+        .from('Inventory')
         .update({
           status: 'sold',
           sold_price: parseFloat(soldPrice),
-          sold_platform: soldPlatform || null,
-          sold_fees: soldFees ? parseFloat(soldFees) : null,
+          platform: soldPlatform || null,
           sold_date: soldDate,
           updated_at: new Date().toISOString(),
         })

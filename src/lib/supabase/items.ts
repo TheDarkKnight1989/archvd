@@ -37,7 +37,7 @@ export async function insertItem(input: NewItemInput) {
     watchlist_id: input.watchlist_id ?? null,
     custom_market_value: input.custom_market_value ?? null,
     notes: input.notes ?? null,
-    status: 'in_stock',
+    status: 'active',
   };
 
   // purchase_total is a generated column in the DB
@@ -80,7 +80,7 @@ export async function insertBatch(
     watchlist_id: null,
     custom_market_value: null,
     notes: null,
-    status: input.status ?? 'in_stock',
+    status: input.status ?? 'active',
   }));
 
   const { data, error } = await supabase
