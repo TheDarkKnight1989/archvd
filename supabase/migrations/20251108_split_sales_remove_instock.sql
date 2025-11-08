@@ -56,8 +56,7 @@ SELECT
   i.order_number,
   i.sold_price,
   i.sold_date,
-  i.sold_platform,
-  i.sold_fees,
+  i.platform,
   i.location,
   i.image_url,
   i.tags,
@@ -68,10 +67,10 @@ SELECT
   i.created_at,
   i.updated_at,
   -- Derived metrics
-  (COALESCE(i.sold_price, 0) - COALESCE(i.purchase_price, 0) - COALESCE(i.tax, 0) - COALESCE(i.shipping, 0) - COALESCE(i.sold_fees, 0))::numeric(12,2) AS margin_gbp,
+  (COALESCE(i.sold_price, 0) - COALESCE(i.purchase_price, 0) - COALESCE(i.tax, 0) - COALESCE(i.shipping, 0))::numeric(12,2) AS margin_gbp,
   CASE
     WHEN COALESCE(i.purchase_price, 0) + COALESCE(i.tax, 0) + COALESCE(i.shipping, 0) > 0
-    THEN ((COALESCE(i.sold_price, 0) - COALESCE(i.purchase_price, 0) - COALESCE(i.tax, 0) - COALESCE(i.shipping, 0) - COALESCE(i.sold_fees, 0)) / (COALESCE(i.purchase_price, 0) + COALESCE(i.tax, 0) + COALESCE(i.shipping, 0)) * 100)::numeric(12,2)
+    THEN ((COALESCE(i.sold_price, 0) - COALESCE(i.purchase_price, 0) - COALESCE(i.tax, 0) - COALESCE(i.shipping, 0)) / (COALESCE(i.purchase_price, 0) + COALESCE(i.tax, 0) + COALESCE(i.shipping, 0)) * 100)::numeric(12,2)
     ELSE 0
   END AS margin_percent
 FROM "Inventory" i
@@ -211,7 +210,7 @@ WITH sold_items_margin AS (
     sold_date,
     purchase_price,
     sold_price,
-    sold_platform AS platform,
+    platform,
     (sold_price - purchase_price) AS margin,
     CASE
       WHEN (sold_price - purchase_price) > 0
@@ -250,7 +249,7 @@ SELECT
   sold_date,
   purchase_price,
   sold_price,
-  sold_platform AS platform,
+  platform,
   (sold_price - purchase_price) AS margin,
   CASE
     WHEN (sold_price - purchase_price) > 0
