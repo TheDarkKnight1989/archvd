@@ -23,32 +23,33 @@ export function SizeSelector({ value, onChange, category = 'shoes' }: SizeSelect
 
   return (
     <div>
-      <label className="block text-sm font-medium text-[#B7D0C2] mb-3">
+      <label className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
         Size {category === 'shoes' && '(UK)'}
       </label>
-      <div className={cn(
-        "grid gap-3",
-        category === 'shoes' ? "grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10" : "grid-cols-3 sm:grid-cols-5 md:grid-cols-7"
-      )}>
-        {sizes.map((size) => {
-          const isSelected = value === size
-          return (
-            <button
-              key={size}
-              type="button"
-              onClick={() => onChange(size)}
-              className={cn(
-                "h-12 rounded-lg border text-base font-medium transition-all duration-[120ms]",
-                "hover:border-[#0F8D65]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F8D65]/25",
-                isSelected
-                  ? "bg-[#00FF94] text-[#000000] border-[#00FF94] glow-accent-hover shadow-sm"
-                  : "bg-[#08100C] text-[#B7D0C2] border-[#15251B] hover:bg-[#0B1510] hover:text-[#E8F6EE]"
-              )}
-            >
-              {size}
-            </button>
-          )
-        })}
+      {/* Scrollable panel with Matrix V2 styling */}
+      <div className="max-h-[144px] overflow-y-auto bg-elev-1 border border-border/40 rounded-lg p-2">
+        <div className="grid grid-cols-7 gap-1.5">
+          {sizes.map((size) => {
+            const isSelected = value === size
+            return (
+              <button
+                key={size}
+                type="button"
+                onClick={() => onChange(size)}
+                className={cn(
+                  "h-8 min-w-[42px] rounded-md border text-sm font-medium transition-all duration-120",
+                  "flex items-center justify-center",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                  isSelected
+                    ? "bg-elev-2 border-accent ring-1 ring-accent-400/40 text-fg"
+                    : "border-border/40 text-muted hover:bg-elev-2 hover:text-fg hover:glow-accent-hover"
+                )}
+              >
+                {size}
+              </button>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
