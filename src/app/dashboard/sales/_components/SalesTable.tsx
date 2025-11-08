@@ -44,16 +44,16 @@ export function SalesTable({
           return (
             <div className="flex items-center gap-3 min-w-[220px]">
               {/* Thumb */}
-              <div className="h-10 w-10 rounded-lg bg-elev-1 flex items-center justify-center shrink-0 text-xs font-medium text-muted border border-border">
+              <div className="h-10 w-10 rounded-lg bg-[#0E1A15] flex items-center justify-center shrink-0 text-xs font-medium text-[#7FA08F]">
                 {initials}
               </div>
 
               {/* Title stack */}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-fg truncate">
+                <div className="text-sm font-medium text-[#E8F6EE] truncate">
                   {item.brand} {item.model}
                 </div>
-                <div className="text-xs text-muted font-mono">{item.sku}</div>
+                <div className="text-xs text-[#7FA08F] font-mono">{item.sku}</div>
               </div>
             </div>
           )
@@ -65,8 +65,8 @@ export function SalesTable({
         id: 'size',
         header: 'Size',
         cell: (info) => (
-          <div className="text-sm text-fg">
-            {info.getValue() || info.row.original.size_alt || '—'}
+          <div className="text-sm text-[#E8F6EE]">
+            {info.getValue() || info.row.original.size_alt || <span className="text-[#7FA08F]">—</span>}
           </div>
         ),
         enableSorting: false,
@@ -83,7 +83,7 @@ export function SalesTable({
 
           return (
             <div className="text-right">
-              <div className="text-sm font-mono font-medium text-fg">
+              <div className="text-sm font-mono font-medium text-[#E8F6EE]">
                 {gbp2.format(total)}
               </div>
             </div>
@@ -98,11 +98,11 @@ export function SalesTable({
         cell: (info) => {
           const price = info.getValue()
           return price !== null && price !== undefined ? (
-            <div className="text-right text-sm font-mono font-medium text-fg">
+            <div className="text-right text-sm font-mono font-medium text-[#E8F6EE]">
               {gbp2.format(price)}
             </div>
           ) : (
-            <div className="text-right text-muted">—</div>
+            <div className="text-right text-[#7FA08F]">—</div>
           )
         },
         enableSorting: true,
@@ -121,7 +121,7 @@ export function SalesTable({
               {margin >= 0 ? '+' : ''}{gbp2.format(margin)}
             </div>
           ) : (
-            <div className="text-right text-muted">—</div>
+            <div className="text-right text-[#7FA08F]">—</div>
           )
         },
         enableSorting: true,
@@ -147,7 +147,7 @@ export function SalesTable({
               </span>
             </div>
           ) : (
-            <div className="text-right text-muted">—</div>
+            <div className="text-right text-[#7FA08F]">—</div>
           )
         },
         enableSorting: true,
@@ -159,7 +159,7 @@ export function SalesTable({
         cell: (info) => {
           const date = info.getValue()
           return date ? (
-            <div className="text-sm text-fg">
+            <div className="text-sm text-[#E8F6EE]">
               {new Date(date).toLocaleDateString('en-GB', {
                 day: 'numeric',
                 month: 'short',
@@ -167,21 +167,21 @@ export function SalesTable({
               })}
             </div>
           ) : (
-            <span className="text-muted">—</span>
+            <span className="text-[#7FA08F]">—</span>
           )
         },
         enableSorting: true,
       }),
 
-      columnHelper.accessor('sold_platform', {
+      columnHelper.accessor('platform', {
         id: 'platform',
         header: 'Platform',
         cell: (info) => {
           const platform = info.getValue()
           return platform ? (
-            <div className="text-sm text-fg">{platform}</div>
+            <div className="text-sm text-[#E8F6EE]">{platform}</div>
           ) : (
-            <span className="text-muted">—</span>
+            <span className="text-[#7FA08F]">—</span>
           )
         },
         enableSorting: false,
@@ -204,21 +204,21 @@ export function SalesTable({
 
   if (loading) {
     return (
-      <div className="border border-border rounded-xl overflow-hidden">
+      <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-elev-2 border-b border-border">
+            <thead className="bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
               <tr>
                 {columns.map((col, i) => (
-                  <th key={i} className="px-4 py-3 text-left text-xs text-dim uppercase tracking-wider">
+                  <th key={i} className="px-4 py-3 text-left text-xs text-[#B7D0C2] uppercase tracking-wider">
                     <Skeleton className="h-4 w-20" />
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-elev-1">
+            <tbody className="bg-[#08100C]">
               {[...Array(5)].map((_, i) => (
-                <tr key={i} className="border-b border-border">
+                <tr key={i} className="border-b border-[#15251B]/40">
                   {columns.map((_, j) => (
                     <td key={j} className="px-4 py-4">
                       <Skeleton className="h-4 w-full" />
@@ -234,21 +234,21 @@ export function SalesTable({
   }
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
+    <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-elev-2 border-b border-border">
+          <thead className="sticky top-0 z-10 bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs text-dim uppercase tracking-wider font-semibold"
+                    className="px-4 py-3 text-left text-xs text-[#B7D0C2] uppercase tracking-wider font-medium"
                   >
                     {header.isPlaceholder ? null : (
                       <div
                         className={cn(
-                          header.column.getCanSort() && 'cursor-pointer select-none flex items-center gap-1 hover:text-fg transition-colors',
+                          header.column.getCanSort() && 'cursor-pointer select-none flex items-center gap-1 hover:text-[#E8F6EE] transition-colors',
                           !header.column.getCanSort() && 'flex items-center'
                         )}
                         onClick={header.column.getToggleSortingHandler()}
@@ -257,8 +257,10 @@ export function SalesTable({
                           header.column.columnDef.header,
                           header.getContext()
                         )}
-                        {header.column.getCanSort() && (
-                          <ArrowUpDown className="h-3 w-3" />
+                        {header.column.getIsSorted() && (
+                          <span className="text-[#00FF94]">
+                            {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
+                          </span>
                         )}
                       </div>
                     )}
@@ -267,11 +269,14 @@ export function SalesTable({
               </tr>
             ))}
           </thead>
-          <tbody className="bg-elev-1 divide-y divide-border">
-            {table.getRowModel().rows.map((row) => (
+          <tbody className="divide-y divide-[#15251B]/40">
+            {table.getRowModel().rows.map((row, idx) => (
               <tr
                 key={row.id}
-                className="hover:bg-elev-2 transition-colors duration-120"
+                className={cn(
+                  "transition-all duration-120 hover:bg-[#0B1510]",
+                  idx % 2 === 0 && "bg-[#08100C]/30"
+                )}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="px-4 py-4">

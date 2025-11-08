@@ -217,8 +217,8 @@ export default function SalesPage() {
 
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                className="border-border/40 hover:border-border max-md:hidden"
+                variant="default"
+                className="bg-accent text-black hover:bg-accent-600 max-md:hidden"
                 onClick={handleExportCSV}
                 disabled={items.length === 0}
                 size="sm"
