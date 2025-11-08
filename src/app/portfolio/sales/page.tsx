@@ -50,7 +50,7 @@ export default function SalesPage() {
     })
 
     const query = params.toString()
-    router.replace(`/dashboard/sales${query ? `?${query}` : ''}`)
+    router.replace(`/portfolio/sales${query ? `?${query}` : ''}`)
   }
 
   // Calculate KPIs
@@ -257,7 +257,7 @@ export default function SalesPage() {
           </p>
           <Button
             variant="outline"
-            onClick={() => router.push('/dashboard/inventory')}
+            onClick={() => router.push('/portfolio/inventory')}
             className="border-accent text-accent hover:bg-accent/10"
           >
             Go to Inventory

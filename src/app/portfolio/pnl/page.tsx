@@ -72,7 +72,7 @@ export default function PnLPage() {
       params.set('from', customFrom)
       params.set('to', customTo)
     }
-    router.replace(`/dashboard/pnl?${params.toString()}`, { scroll: false })
+    router.replace(`/portfolio/pnl?${params.toString()}`, { scroll: false })
   }, [preset, customFrom, customTo, router])
 
   // Fetch ALL data (no server-side date filtering)

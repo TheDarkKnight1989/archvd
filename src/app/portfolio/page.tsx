@@ -101,7 +101,7 @@ export default function DashboardPage() {
   const handleParamsChange = (newParams: TableParams) => {
     setTableParams(newParams)
     const queryString = buildQuery(newParams)
-    router.replace(`/dashboard${queryString}`, { scroll: false })
+    router.replace(`/portfolio${queryString}`, { scroll: false })
   }
 
   // Handle item added

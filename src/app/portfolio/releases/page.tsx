@@ -290,7 +290,7 @@ export default function ReleasesPage() {
                       {selectedRelease.skus.map((sku, idx) => (
                         <Link
                           key={idx}
-                          href={`/dashboard/market?sku=${sku}`}
+                          href={`/portfolio/market?sku=${sku}`}
                           onClick={() => setModalOpen(false)}
                           className="group flex items-center justify-between p-3 bg-elev-2 hover:bg-elev-1 border border-border hover:border-accent-400/50 rounded-lg transition-all"
                         >

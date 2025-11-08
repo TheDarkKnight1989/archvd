@@ -285,16 +285,16 @@ export function Sidebar() {
 
           {/* Import */}
           <Link
-            href="/dashboard/import"
+            href="/portfolio/import"
             className={cn(
               "group h-9 rounded-lg flex items-center transition-all duration-120 ease-terminal",
               "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
-              pathname === '/dashboard/import' ? 'text-accent' : 'text-muted hover:text-fg',
+              pathname === '/portfolio/import' ? 'text-accent' : 'text-muted hover:text-fg',
               isExpanded ? "gap-2 px-2 flex-1" : "w-9 justify-center"
             )}
             title={!isExpanded ? 'Import' : undefined}
           >
-            <Upload className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+            <UploadCloud className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
             {isExpanded && (
               <span className="text-xs font-medium truncate">Import</span>
             )}
@@ -401,7 +401,7 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
           'group relative h-11 px-3 rounded-xl',
-          'grid grid-cols-[24px,1fr,auto] items-center gap-3',
+          'flex items-center gap-3',
           'whitespace-nowrap overflow-hidden',
           'transition-all duration-120 ease-terminal',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
@@ -431,7 +431,7 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
         {/* Icon */}
         <Icon
           className={cn(
-            'h-5 w-5 flex-shrink-0 justify-self-start',
+            'h-5 w-5 flex-shrink-0',
             isActive ? 'text-accent' : 'text-muted group-hover:text-accent'
           )}
           strokeWidth={1.75}
@@ -440,7 +440,7 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
         {/* Label - opacity transition with translateX */}
         <span
           className={cn(
-            "text-sm font-medium truncate transition-all duration-120",
+            "flex-1 min-w-0 text-sm font-medium truncate transition-all duration-120",
             isExpanded
               ? "opacity-100 translate-x-0"
               : "opacity-0 translate-x-1 pointer-events-none"
@@ -457,7 +457,7 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
         {item.badge && (
           <span
             className={cn(
-              "bg-accent-200 text-fg text-[10px] px-1.5 py-0.5 rounded font-medium justify-self-end",
+              "flex-shrink-0 bg-accent-200 text-fg text-[10px] px-1.5 py-0.5 rounded font-medium",
               "transition-all duration-120",
               isExpanded
                 ? "opacity-100 translate-x-0"

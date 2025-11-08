@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/releases/ingest/thedropdate?pages=5",
+      "schedule": "0 6 * * *",
+      "description": "Daily sync of releases from thedropdate.com at 06:00 UTC"
+    }
+  ]
+}

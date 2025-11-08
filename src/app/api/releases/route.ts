@@ -1,71 +1,77 @@
 // Releases API - Returns upcoming/past releases with optional filtering
+// Updated to use simplified releases table with Matrix V2 pipeline
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const month = searchParams.get('month'); // YYYY-MM format
+
+    // Filters
     const brand = searchParams.get('brand');
-    const status = searchParams.get('status') || 'upcoming';
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const q = searchParams.get('q'); // Search query
+    const month = searchParams.get('month'); // YYYY-MM format
+    const status = searchParams.get('status'); // upcoming | dropped | tba
+    const retailer = searchParams.get('retailer');
+    const cursor = searchParams.get('cursor'); // For pagination
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
 
     const supabase = await createClient();
 
+    // Build query - use new releases table
     let query = supabase
       .from('releases')
-      .select(`
-        *,
-        release_products (
-          sku,
-          product_catalog (
-            brand,
-            model,
-            colorway,
-            image_url
-          )
-        )
-      `)
-      .order('release_date', { ascending: status === 'upcoming' });
+      .select('*', { count: 'exact' })
+      .order('release_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-    // Filter by status
+    // Apply filters
+    if (brand && brand !== 'All Brands') {
+      query = query.eq('brand', brand);
+    }
+
     if (status) {
       query = query.eq('status', status);
     }
 
     // Filter by month
     if (month) {
-      const startDate = `${month}-01`;
-      const endDate = `${month}-31`; // Simplified, works for all months
+      const [year, monthNum] = month.split('-').map(Number);
+      const startDate = new Date(year, monthNum - 1, 1).toISOString();
+      const endDate = new Date(year, monthNum, 0, 23, 59, 59).toISOString();
+
       query = query.gte('release_date', startDate).lte('release_date', endDate);
     }
 
-    // Filter by brand
-    if (brand) {
-      query = query.ilike('brand', `%${brand}%`);
+    // Full-text search
+    if (q && q.trim()) {
+      // Simple ILIKE search across title, brand, model, sku
+      query = query.or(`title.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%,sku.ilike.%${q}%`);
     }
 
-    // Apply limit
-    query = query.limit(limit);
+    // Cursor-based pagination
+    if (cursor) {
+      query = query.lt('created_at', cursor);
+    }
 
-    const { data: releases, error } = await query;
+    const { data: releases, error, count } = await query;
 
     if (error) {
       throw new Error(`Failed to fetch releases: ${error.message}`);
     }
 
-    // Transform data to include SKUs array
-    const transformedReleases = (releases || []).map((release: any) => ({
-      ...release,
-      skus: release.release_products?.map((rp: any) => rp.sku) || [],
-      products: release.release_products?.map((rp: any) => rp.product_catalog).filter(Boolean) || [],
-      release_products: undefined, // Remove nested structure
-    }));
+    // Compute next cursor
+    let nextCursor: string | null = null;
+    if (releases && releases.length === limit) {
+      nextCursor = releases[releases.length - 1].created_at;
+    }
 
     return NextResponse.json({
-      releases: transformedReleases,
-      count: transformedReleases.length,
-      filters: { month, brand, status, limit },
+      items: releases || [],
+      nextCursor,
+      total: count || 0,
+      filters: { brand, q, month, status, retailer, limit },
     });
 
   } catch (error: any) {

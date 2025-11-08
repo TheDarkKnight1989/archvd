@@ -31,19 +31,19 @@ export default function TopNav() {
         {isLoggedIn && (
           <div className="flex items-center gap-4">
             <Link
-              href="/dashboard"
+              href="/portfolio"
               className="text-sm hover:text-blue-600 transition-colors"
             >
-              Dashboard
+              Portfolio
             </Link>
             <Link
-              href="/dashboard/inventory"
+              href="/portfolio/inventory"
               className="text-sm hover:text-blue-600 transition-colors"
             >
               Inventory
             </Link>
             <Link
-              href="/dashboard/expenses"
+              href="/portfolio/expenses"
               className="text-sm hover:text-blue-600 transition-colors"
             >
               Expenses

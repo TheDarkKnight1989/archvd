@@ -97,7 +97,7 @@ export default function InventoryPage() {
     if (!merged.search?.trim()) delete merged.search
 
     const query = buildQuery(merged)
-    router.replace(`/dashboard/inventory${query}`)
+    router.replace(`/portfolio/inventory${query}`)
   }
 
   // Callback when item is added via modal
