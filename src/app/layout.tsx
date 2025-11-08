@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono, Cinzel } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { Toaster } from 'sonner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetmono.variable} ${cinzel.variable} font-sans min-h-screen bg-bg text-fg`}>
         <a href="#main" className="skip-link">Skip to content</a>
         <Providers>{children}</Providers>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

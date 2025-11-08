@@ -1,102 +1,75 @@
+// Scraper API for thedropdate.com releases
+// Fetches, parses, and upserts release data to Supabase
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import * as cheerio from 'cheerio'
 
-// Service role client for writing
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
-
-// Rate limiting: simple in-memory store (use Redis in production)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+// In-memory rate limiting (use Redis in production)
+const rateLimitMap = new Map<string, number>()
+const RATE_LIMIT_MS = 60 * 1000 // 1 minute
 
 function checkRateLimit(userId: string): boolean {
   const now = Date.now()
-  const limit = rateLimitMap.get(userId)
+  const lastRequest = rateLimitMap.get(userId)
 
-  if (!limit || limit.resetAt < now) {
-    // Reset limit (1 request per minute)
-    rateLimitMap.set(userId, { count: 1, resetAt: now + 60000 })
-    return true
+  if (lastRequest && now - lastRequest < RATE_LIMIT_MS) {
+    return false
   }
 
-  if (limit.count >= 1) {
-    return false // Rate limited
-  }
-
-  limit.count++
+  rateLimitMap.set(userId, now)
   return true
 }
 
-// Sleep utility with jitter
-function sleep(ms: number, jitter = 0): Promise<void> {
-  const actualMs = jitter > 0 ? ms + Math.random() * jitter : ms
-  return new Promise(resolve => setTimeout(resolve, actualMs))
-}
-
-// Cache utilities
-async function getCachedHtml(cacheKey: string): Promise<string | null> {
-  const { data, error } = await supabaseAdmin
+// Cache helpers
+async function getCachedHtml(supabase: any, cacheKey: string): Promise<string | null> {
+  const { data } = await supabase
     .from('scrape_cache')
     .select('html, expires_at')
     .eq('cache_key', cacheKey)
     .single()
 
-  if (error || !data) return null
-
-  // Check if expired
-  if (new Date(data.expires_at) < new Date()) {
-    // Delete expired cache
-    await supabaseAdmin.from('scrape_cache').delete().eq('cache_key', cacheKey)
+  if (!data || new Date(data.expires_at) < new Date()) {
     return null
   }
 
   return data.html
 }
 
-async function setCachedHtml(cacheKey: string, html: string, ttlHours = 6): Promise<void> {
+async function setCachedHtml(supabase: any, cacheKey: string, html: string, ttlHours: number = 6) {
   const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000)
 
-  await supabaseAdmin
+  await supabase
     .from('scrape_cache')
     .upsert({
       cache_key: cacheKey,
       html,
       expires_at: expiresAt.toISOString(),
       fetched_at: new Date().toISOString(),
+    }, {
+      onConflict: 'cache_key',
     })
 }
 
-// Fetch HTML with caching
-async function fetchPageHtml(page: number): Promise<string | null> {
+// Fetch HTML from thedropdate.com with caching
+async function fetchPageHtml(supabase: any, page: number): Promise<string | null> {
   const cacheKey = `thedropdate:page:${page}`
 
   // Check cache first
-  const cached = await getCachedHtml(cacheKey)
+  const cached = await getCachedHtml(supabase, cacheKey)
   if (cached) {
     console.log(`[Scraper] Cache hit for ${cacheKey}`)
     return cached
   }
 
-  // Fetch from source
-  console.log(`[Scraper] Fetching ${cacheKey}`)
-  const url = page === 1
-    ? 'https://thedropdate.com/releases'
-    : `https://thedropdate.com/releases?page=${page}`
+  console.log(`[Scraper] Cache miss for ${cacheKey}, fetching...`)
 
   try {
+    const url = `https://thedropdate.com/releases${page > 1 ? `?page=${page}` : ''}`
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'ArchvdBot/1.0 (+https://archvd.io)',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-GB,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
     })
 
@@ -108,265 +81,292 @@ async function fetchPageHtml(page: number): Promise<string | null> {
     const html = await response.text()
 
     // Cache for 6 hours
-    await setCachedHtml(cacheKey, html, 6)
+    await setCachedHtml(supabase, cacheKey, html, 6)
 
     return html
-  } catch (error) {
-    console.error(`[Scraper] Fetch error for ${url}:`, error)
+  } catch (error: any) {
+    console.error(`[Scraper] Fetch error for page ${page}:`, error.message)
     return null
   }
 }
 
-// Parse a single release from HTML card
-function parseReleaseCard($: cheerio.CheerioAPI, card: cheerio.Element): any | null {
-  try {
-    const $card = $(card)
-
-    // Extract product URL and external_id
-    const productUrl = $card.find('a').first().attr('href') || ''
-    const external_id = productUrl.split('/').pop() || `release-${Date.now()}`
-
-    // Extract image
-    const image_url = $card.find('img').first().attr('src') || $card.find('img').first().attr('data-src') || ''
-
-    // Extract title (usually in h3 or product-title class)
-    const title = $card.find('.product-title, h3, .release-title').first().text().trim() || ''
-
-    // Extract brand (usually first word or has a brand badge)
-    let brand = ''
-    const brandBadge = $card.find('.brand-badge, .brand-label').first().text().trim()
-    if (brandBadge) {
-      brand = brandBadge
-    } else if (title) {
-      // Heuristic: first word is brand
-      brand = title.split(' ')[0] || 'Unknown'
-    }
-
-    // Extract model/colorway (heuristic: title minus brand)
-    const model = title.replace(brand, '').trim()
-    let colorway = ''
-    // If model has " - ", split it
-    if (model.includes(' - ')) {
-      const parts = model.split(' - ')
-      colorway = parts[1] || ''
-    }
-
-    // Extract SKU
-    const sku = $card.find('.sku, .style-code').first().text().trim() || null
-
-    // Extract release date
-    let release_date: string | null = null
-    const dateText = $card.find('.release-date, .date').first().text().trim()
-    if (dateText) {
-      // Parse date (e.g., "15 Nov 2024")
-      const parsed = new Date(dateText)
-      if (!isNaN(parsed.getTime())) {
-        // Convert to UTC midnight London time
-        const utc = new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0))
-        release_date = utc.toISOString()
-      }
-    }
-
-    // Extract price
-    let price_gbp: number | null = null
-    const priceText = $card.find('.price').first().text().trim()
-    if (priceText) {
-      const match = priceText.match(/[\d,]+\.?\d*/);
-      if (match) {
-        price_gbp = parseFloat(match[0].replace(',', ''))
-      }
-    }
-
-    // Extract retailers (if present on card)
-    const retailers: { name: string; url: string }[] = []
-    $card.find('.retailer-link, .store-link').each((_, el) => {
-      const name = $(el).text().trim()
-      const url = $(el).attr('href') || ''
-      if (name && url) {
-        retailers.push({ name, url })
-      }
-    })
-
-    return {
-      source: 'thedropdate',
-      external_id,
-      title: title || 'Untitled Release',
-      brand: brand || 'Unknown',
-      model: model || title,
-      colorway: colorway || null,
-      sku,
-      release_date,
-      price_gbp,
-      image_url: image_url.startsWith('//') ? `https:${image_url}` : image_url,
-      product_url: productUrl.startsWith('http') ? productUrl : `https://thedropdate.com${productUrl}`,
-      retailers,
-    }
-  } catch (error) {
-    console.error('[Scraper] Parse error for card:', error)
-    return null
-  }
-}
-
-// Parse HTML page
-function parsePage(html: string): any[] {
+// Parse release cards from HTML
+function parseReleaseCards(html: string): Array<{
+  external_id: string
+  title: string
+  brand: string
+  model: string
+  colorway: string | null
+  sku: string | null
+  release_date: string | null
+  price_gbp: number | null
+  image_url: string | null
+  product_url: string | null
+  retailers: Array<{ name: string; url: string }>
+}> {
   const $ = cheerio.load(html)
-  const releases: any[] = []
+  const cards: any[] = []
 
-  // Find release cards (adjust selectors based on actual HTML structure)
-  $('.release-card, .product-card, .item-card, article').each((_, card) => {
-    const parsed = parseReleaseCard($, card)
-    if (parsed && parsed.title !== 'Untitled Release') {
-      releases.push(parsed)
+  // Try multiple selectors for cards
+  const cardSelectors = [
+    '.release-card',
+    '.product-card',
+    '.item-card',
+    'article',
+  ]
+
+  let cardElements: cheerio.Cheerio<cheerio.Element> | null = null
+
+  for (const selector of cardSelectors) {
+    cardElements = $(selector)
+    if (cardElements.length > 0) {
+      console.log(`[Scraper] Found ${cardElements.length} cards using selector: ${selector}`)
+      break
+    }
+  }
+
+  if (!cardElements || cardElements.length === 0) {
+    console.warn('[Scraper] No release cards found on page')
+    return []
+  }
+
+  cardElements.each((_, cardEl) => {
+    const $card = $(cardEl)
+
+    try {
+      // Extract product URL (required for external_id)
+      const productLink = $card.find('a').first()
+      const productUrl = productLink.attr('href')
+
+      if (!productUrl) {
+        return // Skip cards without URL
+      }
+
+      // Generate external_id from URL slug
+      const urlPath = productUrl.split('/').filter(Boolean).pop() || productUrl
+      const external_id = urlPath.replace(/[^a-z0-9-]/gi, '-').toLowerCase()
+
+      // Extract title
+      const titleSelectors = ['.product-title', 'h3', '.release-title', '.title']
+      let title = ''
+      for (const sel of titleSelectors) {
+        title = $card.find(sel).first().text().trim()
+        if (title) break
+      }
+
+      if (!title) {
+        title = productLink.attr('title')?.trim() || 'Untitled Release'
+      }
+
+      // Extract image
+      const img = $card.find('img').first()
+      const image_url = img.attr('src') || img.attr('data-src') || null
+
+      // Extract brand (from badge or first word of title)
+      let brand = $card.find('.brand-badge, .brand-label').first().text().trim()
+      if (!brand && title) {
+        brand = title.split(' ')[0] || 'Unknown'
+      }
+
+      // Split title into model/colorway
+      let model = title
+      let colorway: string | null = null
+
+      // Simple heuristic: if title has quotes, extract colorway
+      const colorwayMatch = title.match(/[""](.*?)[""]/g)
+      if (colorwayMatch && colorwayMatch.length > 0) {
+        colorway = colorwayMatch[0].replace(/[""]/g, '')
+        model = title.replace(colorwayMatch[0], '').trim()
+      }
+
+      // Extract SKU
+      const skuSelectors = ['.sku', '.style-code', '[data-sku]']
+      let sku: string | null = null
+      for (const sel of skuSelectors) {
+        sku = $card.find(sel).first().text().trim() || $card.find(sel).first().attr('data-sku') || null
+        if (sku) break
+      }
+
+      // Extract release date
+      const dateText = $card.find('.release-date, .date, time').first().text().trim()
+      let release_date: string | null = null
+
+      if (dateText && dateText.toLowerCase() !== 'tba') {
+        try {
+          // Parse common date formats (e.g., "Nov 15, 2024" or "15/11/2024")
+          const parsed = new Date(dateText)
+          if (!isNaN(parsed.getTime())) {
+            release_date = parsed.toISOString()
+          }
+        } catch {
+          // Keep as null if parsing fails
+        }
+      }
+
+      // Extract price (GBP)
+      const priceText = $card.find('.price').first().text().trim()
+      let price_gbp: number | null = null
+
+      if (priceText) {
+        const priceMatch = priceText.match(/[\d.]+/)
+        if (priceMatch) {
+          price_gbp = parseFloat(priceMatch[0])
+        }
+      }
+
+      // Extract retailers
+      const retailers: Array<{ name: string; url: string }> = []
+      $card.find('.retailer-link, .store-link, a[href*="nike"], a[href*="adidas"], a[href*="size"]').each((_, linkEl) => {
+        const $link = $(linkEl)
+        const name = $link.text().trim() || new URL($link.attr('href') || '').hostname
+        const url = $link.attr('href')
+
+        if (name && url && url.startsWith('http')) {
+          retailers.push({ name, url })
+        }
+      })
+
+      cards.push({
+        external_id,
+        title,
+        brand,
+        model,
+        colorway,
+        sku,
+        release_date,
+        price_gbp,
+        image_url,
+        product_url: productUrl.startsWith('http') ? productUrl : `https://thedropdate.com${productUrl}`,
+        retailers,
+      })
+    } catch (error: any) {
+      console.error('[Scraper] Error parsing card:', error.message)
     }
   })
 
-  return releases
+  return cards
 }
 
-// Upsert releases to database
-async function upsertReleases(releases: any[]): Promise<{ inserted: number; updated: number; skipped: number }> {
-  let inserted = 0
-  let updated = 0
-  let skipped = 0
-
-  for (const release of releases) {
-    try {
-      // Check if exists
-      const { data: existing } = await supabaseAdmin
-        .from('releases')
-        .select('id, updated_at')
-        .eq('external_id', release.external_id)
-        .single()
-
-      if (existing) {
-        // Update
-        const { error } = await supabaseAdmin
-          .from('releases')
-          .update(release)
-          .eq('external_id', release.external_id)
-
-        if (error) {
-          console.error('[Scraper] Update error:', error)
-          skipped++
-        } else {
-          updated++
-        }
-      } else {
-        // Insert
-        const { error } = await supabaseAdmin
-          .from('releases')
-          .insert(release)
-
-        if (error) {
-          console.error('[Scraper] Insert error:', error)
-          skipped++
-        } else {
-          inserted++
-        }
-      }
-    } catch (error) {
-      console.error('[Scraper] Upsert error:', error)
-      skipped++
-    }
-  }
-
-  return { inserted, updated, skipped }
-}
-
-// Main handler
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    // Auth check
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const supabase = await createClient()
 
-    // Get user (simplified - in production, verify JWT properly)
-    const userId = 'system' // For now, treat as system user
+    // Get current user for rate limiting (optional - RLS will handle auth)
+    const { data: { user } } = await supabase.auth.getUser()
 
-    // Rate limit check
-    if (!checkRateLimit(userId)) {
+    // Rate limiting (only if user is available)
+    if (user && !checkRateLimit(user.id)) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please wait 1 minute.' },
+        { error: 'Rate limit exceeded - Please wait 1 minute between requests' },
         { status: 429 }
       )
     }
 
-    // Get pages param
-    const { searchParams } = new URL(request.url)
-    const pagesParam = searchParams.get('pages')
-    const pages = pagesParam ? parseInt(pagesParam, 10) : 3
+    // Parse query params
+    const searchParams = request.nextUrl.searchParams
+    const pagesParam = parseInt(searchParams.get('pages') || '3', 10)
+    const pages = Math.min(Math.max(pagesParam, 1), 10) // Clamp between 1-10
 
-    if (pages < 1 || pages > 10) {
-      return NextResponse.json({ error: 'Pages must be between 1 and 10' }, { status: 400 })
-    }
+    console.log(`[Scraper] Starting ingest from thedropdate.com (${pages} pages)`)
 
-    console.log(`[Scraper] Starting ingest for ${pages} pages`)
-
-    let totalInserted = 0
-    let totalUpdated = 0
-    let totalSkipped = 0
+    let pagesFetched = 0
+    let itemsInserted = 0
+    let itemsUpdated = 0
+    let itemsSkipped = 0
     const errors: string[] = []
 
     // Fetch and parse pages
     for (let page = 1; page <= pages; page++) {
-      try {
-        const html = await fetchPageHtml(page)
-        if (!html) {
-          errors.push(`Failed to fetch page ${page}`)
-          continue
-        }
+      console.log(`[Scraper] Fetching page ${page}/${pages}`)
 
-        const releases = parsePage(html)
-        console.log(`[Scraper] Page ${page}: parsed ${releases.length} releases`)
+      const html = await fetchPageHtml(supabase, page)
 
-        if (releases.length > 0) {
-          const stats = await upsertReleases(releases)
-          totalInserted += stats.inserted
-          totalUpdated += stats.updated
-          totalSkipped += stats.skipped
-        }
+      if (!html) {
+        errors.push(`Failed to fetch page ${page}`)
+        continue
+      }
 
-        // Polite crawling: wait between pages
-        if (page < pages) {
-          await sleep(800, 400) // 800-1200ms
+      pagesFetched++
+
+      const cards = parseReleaseCards(html)
+      console.log(`[Scraper] Parsed ${cards.length} cards from page ${page}`)
+
+      // Upsert each card to database
+      for (const card of cards) {
+        try {
+          const { data: existing } = await supabase
+            .from('releases')
+            .select('id')
+            .eq('external_id', card.external_id)
+            .single()
+
+          const { error: upsertError } = await supabase
+            .from('releases')
+            .upsert({
+              source: 'thedropdate',
+              ...card,
+              retailers: card.retailers,
+            }, {
+              onConflict: 'external_id',
+            })
+
+          if (upsertError) {
+            errors.push(`Failed to upsert ${card.external_id}: ${upsertError.message}`)
+            itemsSkipped++
+          } else {
+            if (existing) {
+              itemsUpdated++
+            } else {
+              itemsInserted++
+            }
+          }
+        } catch (error: any) {
+          errors.push(`Error processing ${card.external_id}: ${error.message}`)
+          itemsSkipped++
         }
-      } catch (error) {
-        const msg = `Error processing page ${page}: ${error}`
-        console.error(`[Scraper] ${msg}`)
-        errors.push(msg)
+      }
+
+      // Polite crawling: add jitter between pages
+      if (page < pages) {
+        const jitter = 800 + Math.random() * 400 // 800-1200ms
+        await new Promise(resolve => setTimeout(resolve, jitter))
       }
     }
 
     const duration_ms = Date.now() - startTime
 
-    // Log the run
-    await supabaseAdmin.from('release_ingest_logs').insert({
-      source: 'thedropdate',
-      pages_fetched: pages,
-      items_inserted: totalInserted,
-      items_updated: totalUpdated,
-      items_skipped: totalSkipped,
-      errors: errors.length > 0 ? errors : [],
-      duration_ms,
-    })
+    // Log ingest run
+    await supabase
+      .from('release_ingest_logs')
+      .insert({
+        source: 'thedropdate',
+        pages_fetched: pagesFetched,
+        items_inserted: itemsInserted,
+        items_updated: itemsUpdated,
+        items_skipped: itemsSkipped,
+        errors: errors,
+        duration_ms,
+      })
+
+    console.log(`[Scraper] Complete: ${itemsInserted} inserted, ${itemsUpdated} updated, ${itemsSkipped} skipped in ${duration_ms}ms`)
 
     return NextResponse.json({
       success: true,
-      pages_fetched: pages,
-      items_inserted: totalInserted,
-      items_updated: totalUpdated,
-      items_skipped: totalSkipped,
-      errors: errors.length > 0 ? errors : undefined,
+      pages_fetched: pagesFetched,
+      items_inserted: itemsInserted,
+      items_updated: itemsUpdated,
+      items_skipped: itemsSkipped,
       duration_ms,
+      errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Return first 10 errors
     })
-  } catch (error) {
+
+  } catch (error: any) {
     console.error('[Scraper] Fatal error:', error)
+
     return NextResponse.json(
-      { error: 'Internal server error', details: String(error) },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     )
   }
