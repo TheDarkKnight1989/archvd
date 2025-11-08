@@ -28,8 +28,13 @@ BEGIN
       SELECT 1 FROM information_schema.columns
       WHERE table_name='Inventory' AND column_name='status' AND udt_name <> 'item_status'
     ) THEN
+      -- Drop default first to avoid casting issues
+      ALTER TABLE "Inventory" ALTER COLUMN status DROP DEFAULT;
+      -- Convert the column type
       ALTER TABLE "Inventory"
         ALTER COLUMN status TYPE item_status USING status::item_status;
+      -- Re-add default as enum
+      ALTER TABLE "Inventory" ALTER COLUMN status SET DEFAULT 'active'::item_status;
     END IF;
   END IF;
 END$$;
