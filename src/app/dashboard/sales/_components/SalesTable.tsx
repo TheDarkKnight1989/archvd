@@ -64,11 +64,14 @@ export function SalesTable({
       columnHelper.accessor('size_uk', {
         id: 'size',
         header: 'Size',
-        cell: (info) => (
-          <div className="text-sm text-[#E8F6EE]">
-            {info.getValue() || info.row.original.size_alt || <span className="text-[#7FA08F]">—</span>}
-          </div>
-        ),
+        cell: (info) => {
+          const size = info.getValue()
+          return (
+            <div className="text-sm text-[#E8F6EE]">
+              {size || <span className="text-[#7FA08F]">—</span>}
+            </div>
+          )
+        },
         enableSorting: false,
       }),
 
