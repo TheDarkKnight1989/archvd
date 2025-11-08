@@ -217,11 +217,10 @@ export default function SalesPage() {
 
             <div className="flex items-center gap-2">
               <Button
-                variant="default"
-                className="max-md:hidden"
                 onClick={handleExportCSV}
                 disabled={items.length === 0}
                 size="sm"
+                className="bg-accent text-black hover:bg-accent-600 max-md:hidden"
               >
                 <Download className="h-4 w-4 mr-2" /> Export CSV
               </Button>
