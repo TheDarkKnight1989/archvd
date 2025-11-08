@@ -19,8 +19,20 @@ DROP VIEW IF EXISTS profit_loss_monthly_view CASCADE;
 DROP VIEW IF EXISTS vat_margin_monthly_view CASCADE;
 DROP VIEW IF EXISTS vat_margin_detail_view CASCADE;
 
--- 4. Drop old check constraints that block the update
-ALTER TABLE "Inventory" DROP CONSTRAINT IF EXISTS inventory_status_check;
+-- 4. Drop ALL constraints on Inventory table to avoid type comparison issues
+DO $$
+DECLARE
+  constraint_name TEXT;
+BEGIN
+  FOR constraint_name IN
+    SELECT conname
+    FROM pg_constraint
+    WHERE conrelid = '"Inventory"'::regclass
+    AND contype = 'c'  -- check constraints only
+  LOOP
+    EXECUTE 'ALTER TABLE "Inventory" DROP CONSTRAINT IF EXISTS ' || quote_ident(constraint_name);
+  END LOOP;
+END$$;
 
 -- 5. Convert status column to TEXT temporarily (if it's currently an enum)
 ALTER TABLE "Inventory" ALTER COLUMN status DROP DEFAULT;
