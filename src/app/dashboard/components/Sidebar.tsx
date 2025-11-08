@@ -40,9 +40,13 @@ const secondaryNav = [
 ]
 
 const utilityNav = [
-  { id: 'import', icon: Upload, href: '/dashboard/import', label: 'Import' },
   { id: 'help', icon: MessageCircle, href: '/help', label: 'Help' },
+]
+
+// Footer utilities (Settings, Import, Profile, Theme)
+const footerNav = [
   { id: 'settings', icon: Settings, href: '/settings', label: 'Settings' },
+  { id: 'import', icon: Upload, href: '/dashboard/import', label: 'Import' },
   { id: 'profile', icon: User, href: '/profile', label: 'Profile' },
 ]
 
@@ -143,14 +147,12 @@ export function Sidebar() {
         isExpanded ? 'w-[320px]' : 'w-16'
       )}
       style={{
-        background: isExpanded
-          ? `
-            linear-gradient(135deg, rgba(var(--archvd-accent-400-rgb, 15, 141, 101), 0.06) 0%, transparent 28%, transparent 72%, rgba(var(--archvd-accent-400-rgb, 15, 141, 101), 0.05) 100%),
-            linear-gradient(to bottom, var(--archvd-elev-2), var(--archvd-elev-3) 100%)
-          `
-          : 'linear-gradient(to bottom, var(--archvd-elev-1), var(--archvd-elev-2) 100%)',
+        background: `
+          linear-gradient(135deg, rgba(var(--archvd-accent-400-rgb), 0.05) 0%, transparent 28%, transparent 72%, rgba(var(--archvd-accent-400-rgb), 0.04) 100%),
+          linear-gradient(to bottom, var(--archvd-bg-elev-1) 0%, var(--archvd-bg-elev-1) 40%, var(--archvd-bg-elev-2) 100%)
+        `,
         boxShadow: isExpanded
-          ? 'inset 2px 0 0 0 rgba(var(--archvd-accent-400-rgb, 15, 141, 101), 0.35), 4px 0 24px -8px rgba(0,0,0,0.3)'
+          ? 'inset 2px 0 0 0 rgba(var(--archvd-accent-400-rgb), 0.35), 4px 0 24px -8px rgba(0,0,0,0.3)'
           : 'none',
       }}
     >
@@ -199,7 +201,7 @@ export function Sidebar() {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-3 pb-3">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 pt-3.5">
             {/* Primary Group */}
             {filteredPrimaryNav.length > 0 && (
               <div>
@@ -287,67 +289,106 @@ export function Sidebar() {
         {/* Footer Utility Strip */}
         <div
           className={cn(
-            "h-14 px-3 border-t border-border/40 bg-elev-1/80 backdrop-blur-sm gap-3",
-            "transition-all duration-120",
-            isExpanded ? "flex items-center justify-between" : "hidden"
+            "border-t border-border/30 bg-elev-1/90 backdrop-blur-sm",
+            "h-[44px] md:h-[48px] px-3",
+            "flex items-center",
+            isExpanded ? "justify-between gap-2" : "justify-center gap-1"
           )}
-          style={{
-            background: 'linear-gradient(to top, var(--archvd-elev-1), transparent)',
-          }}
         >
+          {/* Settings */}
+          <Link
+            href="/settings"
+            className={cn(
+              "group h-9 rounded-lg flex items-center transition-all duration-120 ease-terminal",
+              "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+              pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
+              isExpanded ? "gap-2 px-2 flex-1" : "w-9 justify-center"
+            )}
+            title={!isExpanded ? 'Settings' : undefined}
+          >
+            <Settings className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+            {isExpanded && (
+              <span className="text-xs font-medium truncate">Settings</span>
+            )}
+          </Link>
+
+          {/* Import */}
+          <Link
+            href="/dashboard/import"
+            className={cn(
+              "group h-9 rounded-lg flex items-center transition-all duration-120 ease-terminal",
+              "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+              pathname === '/dashboard/import' ? 'text-accent' : 'text-muted hover:text-fg',
+              isExpanded ? "gap-2 px-2 flex-1" : "w-9 justify-center"
+            )}
+            title={!isExpanded ? 'Import' : undefined}
+          >
+            <Upload className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+            {isExpanded && (
+              <span className="text-xs font-medium truncate">Import</span>
+            )}
+          </Link>
+
           {/* Profile */}
           <Link
             href="/profile"
             className={cn(
-              "flex items-center gap-2 px-2 py-1.5 rounded-lg flex-1",
-              "hover:bg-elev-2/80 transition-all duration-120",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25"
+              "group h-9 rounded-lg flex items-center transition-all duration-120 ease-terminal",
+              "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+              pathname === '/profile' ? 'text-accent' : 'text-muted hover:text-fg',
+              isExpanded ? "gap-2 px-2 flex-1" : "w-9 justify-center"
             )}
-            title="Profile"
+            title={!isExpanded ? 'Profile' : undefined}
           >
-            <div className="h-6 w-6 rounded-full bg-accent-200 flex items-center justify-center flex-shrink-0">
-              <User className="h-3.5 w-3.5 text-fg" strokeWidth={1.75} />
-            </div>
-            <span className="text-xs font-medium text-fg/90 truncate">Profile</span>
+            <User className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+            {isExpanded && (
+              <span className="text-xs font-medium truncate">Profile</span>
+            )}
           </Link>
 
           {/* Theme Toggle */}
           <button
             onClick={() => setTheme(theme === 'matrix' ? 'system' : 'matrix')}
             className={cn(
-              "h-7 w-7 rounded-lg flex items-center justify-center",
-              "hover:bg-elev-2/80 transition-all duration-120",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
-              theme === 'matrix' ? 'text-accent' : 'text-muted'
+              "h-9 rounded-lg flex items-center justify-center transition-all duration-120 ease-terminal",
+              "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+              theme === 'matrix' ? 'text-accent' : 'text-muted hover:text-fg',
+              isExpanded ? "gap-2 px-2 w-auto" : "w-9"
             )}
-            title={theme === 'matrix' ? 'Matrix Theme' : 'System Theme'}
+            title={!isExpanded ? (theme === 'matrix' ? 'Matrix Theme' : 'System Theme') : undefined}
             aria-label="Toggle theme"
           >
             {theme === 'matrix' ? (
-              <Moon className="h-4 w-4" strokeWidth={1.75} />
+              <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
             ) : (
-              <Sun className="h-4 w-4" strokeWidth={1.75} />
+              <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+            )}
+            {isExpanded && (
+              <span className="text-xs font-medium">
+                {theme === 'matrix' ? 'Matrix' : 'System'}
+              </span>
             )}
           </button>
 
-          {/* Pin Toggle */}
-          <button
-            onClick={() => setPinned(!pinned)}
-            className={cn(
-              "h-7 w-7 rounded-lg flex items-center justify-center",
-              "hover:bg-elev-2/80 transition-all duration-120",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
-              pinned ? 'text-accent' : 'text-muted'
-            )}
-            title={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-            aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-          >
-            {pinned ? (
-              <Pin className="h-4 w-4" strokeWidth={1.75} />
-            ) : (
-              <PinOff className="h-4 w-4" strokeWidth={1.75} />
-            )}
-          </button>
+          {/* Pin Toggle - Only show when expanded */}
+          {isExpanded && (
+            <button
+              onClick={() => setPinned(!pinned)}
+              className={cn(
+                "h-9 w-9 rounded-lg flex items-center justify-center transition-all duration-120 ease-terminal",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                pinned ? 'text-accent' : 'text-muted hover:text-fg'
+              )}
+              title={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+            >
+              {pinned ? (
+                <Pin className="h-5 w-5" strokeWidth={1.75} />
+              ) : (
+                <PinOff className="h-5 w-5" strokeWidth={1.75} />
+              )}
+            </button>
+          )}
         </div>
       </div>
     </nav>
@@ -394,11 +435,14 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
           isActive
             ? 'bg-elev-2 border border-border/60 shadow-soft text-fg'
-            : 'text-fg/90 hover:bg-elev-2/80 hover:glow-accent-hover'
+            : 'text-fg/90 hover:bg-elev-2/80'
         )}
         style={{
           background: isActive
-            ? 'radial-gradient(circle at center, rgba(var(--archvd-accent-400-rgb, 15, 141, 101), 0.08) 0%, rgba(var(--archvd-accent-400-rgb, 15, 141, 101), 0.02) 80%), var(--archvd-elev-2)'
+            ? 'radial-gradient(circle at center, rgba(var(--archvd-accent-400-rgb), 0.08) 0%, rgba(var(--archvd-accent-400-rgb), 0.02) 80%), var(--archvd-bg-elev-2)'
+            : undefined,
+          boxShadow: !isActive && isHovered
+            ? '0 0 12px rgba(var(--archvd-accent-400-rgb), 0.25)'
             : undefined,
         }}
       >

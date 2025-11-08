@@ -28,6 +28,10 @@
   --archvd-accent-300: #0C6C51;
   --archvd-accent-200: #0A5240;
 
+  /* RGB variants for rgba() usage */
+  --archvd-accent-rgb: 0, 255, 148;
+  --archvd-accent-400-rgb: 15, 141, 101;
+
   /* Success / Warning / Danger */
   --archvd-success: #22DA6E;
   --archvd-warning: #D9B949;
