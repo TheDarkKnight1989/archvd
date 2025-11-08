@@ -370,7 +370,10 @@ interface NavItemProps {
 
 function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
   const Icon = item.icon
-  const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+  // Dashboard should only be active on exact match, other routes can match sub-paths
+  const isActive = item.href === '/dashboard'
+    ? pathname === '/dashboard'
+    : pathname === item.href || pathname?.startsWith(item.href + '/')
   const [isHovered, setIsHovered] = useState(false)
 
   // Calculate stagger delay for label animations
