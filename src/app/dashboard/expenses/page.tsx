@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent, useMemo } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { useSavedViews } from '@/hooks/useSavedViews'
 import { gbp2 } from '@/lib/utils/format'
 import { TABLE_ITEMS, TABLE_EXPENSES, type ExpenseCategory, type InventoryItem } from '@/lib/portfolio/types'
 import { Button } from '@/components/ui/button'
@@ -12,8 +13,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Search, Download, Trash2 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Search, Download, Trash2, Bookmark } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { SavedViewChip } from '@/components/SavedViewChip'
+import { ColumnChooser, type ColumnConfig } from '@/components/ColumnChooser'
 
 type Expense = {
   id: string
@@ -55,6 +59,9 @@ export default function ExpensesPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // Saved views
+  const savedViews = useSavedViews()
+
   // Form state
   const [category, setCategory] = useState<ExpenseCategory>('shipping')
   const [amount, setAmount] = useState('')
@@ -67,6 +74,44 @@ export default function ExpensesPage() {
   const [filterMonth, setFilterMonth] = useState<string>(currentMonth)
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+
+  // Column visibility state (Date and Amount locked)
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
+    { key: 'date', label: 'Date', visible: true, lock: true },
+    { key: 'category', label: 'Category', visible: true },
+    { key: 'amount', label: 'Amount', visible: true, lock: true },
+    { key: 'description', label: 'Description', visible: true },
+    { key: 'linked_item', label: 'Linked Item', visible: true },
+    { key: 'actions', label: 'Actions', visible: true },
+  ])
+
+  // Saved view helpers
+  const applySavedView = (viewId: string) => {
+    const view = savedViews.views.find((v) => v.id === viewId)
+    if (view) {
+      setFilterMonth(view.filters.status || currentMonth)
+      setFilterCategory(view.filters.category || 'all')
+      setSearchQuery(view.filters.search || '')
+      savedViews.setActiveView(viewId)
+    }
+  }
+
+  const saveCurrentView = (name: string) => {
+    savedViews.createView(
+      name,
+      {
+        status: filterMonth !== currentMonth ? filterMonth : undefined,
+        category: filterCategory !== 'all' ? filterCategory : undefined,
+        search: searchQuery || undefined,
+      },
+      [] // No sorting for expenses
+    )
+  }
+
+  const activeFilterCount =
+    (filterMonth !== currentMonth ? 1 : 0) +
+    (filterCategory !== 'all' ? 1 : 0) +
+    (searchQuery ? 1 : 0)
 
   useEffect(() => {
     fetchItems()
@@ -265,11 +310,24 @@ export default function ExpensesPage() {
   return (
     <div className="mx-auto max-w-[1280px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-fg">
       {/* Page Header */}
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-fg relative inline-block">
           Expenses
           <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
         </h1>
+
+        {/* Saved Views */}
+        <div className="flex items-center gap-2">
+          {savedViews.views.map((view) => (
+            <SavedViewChip
+              key={view.id}
+              label={view.name}
+              active={savedViews.activeViewId === view.id}
+              onApply={() => applySavedView(view.id)}
+              onDelete={() => savedViews.deleteView(view.id)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -288,13 +346,13 @@ export default function ExpensesPage() {
             type="month"
             value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)}
-            className="w-[160px] bg-surface border-border shrink-0"
+            className="w-[160px] bg-elev-1 border-border shrink-0"
           />
           <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[140px] bg-surface border-border shrink-0">
+            <SelectTrigger className="w-[140px] bg-elev-1 border-border shrink-0">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent className="bg-surface2 border-border">
+            <SelectContent className="bg-elev-2 border-border">
               <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="shipping">Shipping</SelectItem>
               <SelectItem value="fees">Fees</SelectItem>
@@ -313,6 +371,29 @@ export default function ExpensesPage() {
           >
             <Download className="h-4 w-4 mr-2" /> Export CSV
           </Button>
+          {activeFilterCount > 0 && (
+            <Button
+              variant="outline"
+              className="border-border max-md:hidden border-accent/40 text-accent hover:bg-accent/10"
+              onClick={() => {
+                const name = prompt('Enter a name for this view:')
+                if (name) saveCurrentView(name)
+              }}
+            >
+              <Bookmark className="h-4 w-4 mr-2" /> Save View
+            </Button>
+          )}
+          <ColumnChooser
+            columns={columnConfig}
+            onChange={(updated) => {
+              setColumnConfig(prev =>
+                prev.map(col => ({
+                  ...col,
+                  visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
+                }))
+              )
+            }}
+          />
         </div>
       </div>
 
@@ -334,7 +415,7 @@ export default function ExpensesPage() {
       {/* Two-column layout */}
       <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-3 md:gap-4">
         {/* Add Expense Card */}
-        <Card className="bg-surface border border-border rounded-2xl">
+        <Card elevation={1} className="border border-border rounded-2xl">
           <CardHeader>
             <CardTitle className="text-sm text-muted font-normal">Add Expense</CardTitle>
           </CardHeader>
@@ -364,7 +445,7 @@ export default function ExpensesPage() {
                   <SelectTrigger className="bg-bg border-border">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-surface2 border-border">
+                  <SelectContent className="bg-elev-2 border-border">
                     <SelectItem value="shipping">Shipping</SelectItem>
                     <SelectItem value="fees">Fees</SelectItem>
                     <SelectItem value="ads">Advertising</SelectItem>
@@ -389,7 +470,7 @@ export default function ExpensesPage() {
                 <SelectTrigger className="bg-bg border-border">
                   <SelectValue placeholder="Linked Item (Optional)" />
                 </SelectTrigger>
-                <SelectContent className="bg-surface2 border-border max-h-[200px]">
+                <SelectContent className="bg-elev-2 border-border max-h-[200px]">
                   <SelectItem value="__none__">None</SelectItem>
                   {items.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
@@ -407,11 +488,11 @@ export default function ExpensesPage() {
         </Card>
 
         {/* Table */}
-        <Card className="bg-surface border border-border rounded-2xl overflow-hidden">
+        <Card elevation={1} className="border border-border rounded-2xl overflow-hidden">
           {loading ? (
             <div className="p-3 space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-12 rounded-lg bg-surface2 animate-pulse" />
+                <Skeleton key={i} className="h-12" />
               ))}
             </div>
           ) : filteredExpenses.length === 0 ? (
@@ -438,7 +519,7 @@ export default function ExpensesPage() {
             <>
               <div className="max-h-[70vh] overflow-auto">
                 <Table className="min-w-[720px]">
-                  <TableHeader className="text-muted text-xs bg-bg sticky top-0 z-10">
+                  <TableHeader className="text-muted text-xs bg-elev-2 sticky top-0 z-10">
                     <TableRow className="border-border border-t border-t-accent-400/25">
                       <TableHead className={cn('px-3 md:px-4 py-3', COLS.DATE)}>Date</TableHead>
                       <TableHead className="px-3 md:px-4 py-3">Description</TableHead>
@@ -450,7 +531,7 @@ export default function ExpensesPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredExpenses.map((expense) => (
-                      <TableRow key={expense.id} className="border-border hover:bg-surface/70 h-12">
+                      <TableRow key={expense.id} className="border-border hover:bg-elev-2 h-12">
                         <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-xs', COLS.DATE)}>
                           {formatUKDate(expense.date)}
                         </TableCell>
@@ -489,7 +570,7 @@ export default function ExpensesPage() {
               </div>
 
               {/* Total Footer */}
-              <div className="border-t border-border bg-surface2 px-4 py-3 flex justify-between items-center">
+              <div className="border-t border-border bg-elev-2 px-4 py-3 flex justify-between items-center">
                 <span className="text-sm font-medium text-muted">
                   Total ({filteredExpenses.length} {filteredExpenses.length === 1 ? 'expense' : 'expenses'})
                 </span>

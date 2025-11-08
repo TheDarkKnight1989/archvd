@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { gbp2 } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
 
+export const dynamic = 'force-dynamic'
+
 type MarketPrice = {
   size: string
   source: string
@@ -120,7 +122,7 @@ export default function MarketPage() {
       </div>
 
       {/* Search Bar */}
-      <Card className="p-4 md:p-6">
+      <Card elevation={1} className="p-4 md:p-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dim" />
@@ -154,7 +156,7 @@ export default function MarketPage() {
         <div className="space-y-4">
           {/* Product Info */}
           {marketData.catalog && (
-            <Card className="p-4 md:p-6">
+            <Card elevation={1} className="p-4 md:p-6">
               <div className="flex flex-col md:flex-row gap-4">
                 {marketData.catalog.image_url && (
                   <img
@@ -199,7 +201,7 @@ export default function MarketPage() {
           )}
 
           {/* Market Prices Table */}
-          <Card className="overflow-hidden">
+          <Card elevation={1} className="overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-fg">Market Prices</h3>
@@ -224,7 +226,7 @@ export default function MarketPage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-surface2 border-b border-border border-t border-t-accent-400/25">
+                  <thead className="bg-elev-2 border-b border-border border-t border-t-accent-400/25">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">
                         Size
@@ -250,7 +252,7 @@ export default function MarketPage() {
                       const diffPct = diff && retailPrice > 0 ? (diff / retailPrice) * 100 : null
 
                       return (
-                        <tr key={idx} className="hover:bg-surface/70 transition-colors">
+                        <tr key={idx} className="hover:bg-elev-2 transition-colors">
                           <td className="px-4 py-3 font-mono text-sm text-fg">UK {price.size}</td>
                           <td className="px-4 py-3">
                             <Badge variant="outline" className="text-xs capitalize">
@@ -287,7 +289,7 @@ export default function MarketPage() {
             )}
 
             {marketData.prices.length > 0 && (
-              <div className="px-4 py-3 border-t border-border bg-surface2">
+              <div className="px-4 py-3 border-t border-border bg-elev-2">
                 <p className="text-xs text-dim text-center">
                   Showing {marketData.prices.length} size{marketData.prices.length !== 1 ? 's' : ''} •{' '}
                   <a

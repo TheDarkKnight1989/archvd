@@ -11,6 +11,12 @@ const config: Config = {
     extend: {
       colors: {
         bg: 'var(--archvd-bg)',
+        elev: {
+          0: 'var(--archvd-bg-elev-0)',
+          1: 'var(--archvd-bg-elev-1)',
+          2: 'var(--archvd-bg-elev-2)',
+          3: 'var(--archvd-bg-elev-3)',
+        },
         surface: 'var(--archvd-bg-elev-1)',
         surface2: 'var(--archvd-bg-elev-2)',
         border: 'var(--archvd-border)',

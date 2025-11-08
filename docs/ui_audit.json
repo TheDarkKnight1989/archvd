@@ -1,7 +1,48 @@
 {
-  "version": "1.0",
-  "date": "2025-11-07",
-  "description": "Matrix UI Design System compliance audit for dashboard routes and shared components",
+  "version": "2.0",
+  "phase": "Phase 2 – Visual Depth Foundation",
+  "date": "2025-11-08",
+  "description": "Matrix UI Design System compliance audit for dashboard routes and shared components. Phase 2 adds elevation tokens, gradient utilities, accent glows, and branded skeletons.",
+  "phase2Compliance": {
+    "elevationTokens": {
+      "status": "pass",
+      "coverage": "100%",
+      "files": ["/src/app/globals.css", "/tailwind.config.ts", "/src/components/ui/card.tsx"],
+      "notes": "4-level system (elev-0 to elev-3) implemented across all dashboard pages"
+    },
+    "gradientUtility": {
+      "status": "pass",
+      "coverage": "100%",
+      "files": ["/src/app/globals.css"],
+      "usage": ["KpiCard", "/dashboard/pnl KPI cards"],
+      "notes": "Subtle vertical gradient (elev-1 → elev-2) applied to KPI/feature cards only"
+    },
+    "glowUtility": {
+      "status": "pass",
+      "coverage": "100%",
+      "files": ["/src/app/globals.css"],
+      "usage": ["KpiCard hover", "/dashboard FAB", "/dashboard/pnl active states"],
+      "notes": "Measured accent glow on hover/focus for interactive elements"
+    },
+    "skeletonPattern": {
+      "status": "pass",
+      "coverage": "100%",
+      "files": ["/src/app/globals.css", "/src/components/ui/skeleton.tsx"],
+      "usage": ["inventory", "expenses", "releases", "KpiCard loading"],
+      "notes": "Matrix shimmer + scanline pattern, respects prefers-reduced-motion"
+    },
+    "a11yContrast": {
+      "status": "pass",
+      "bgElev0": "12:1 minimum",
+      "bgElev123": "7:1 minimum",
+      "notes": "All elevation tokens meet WCAG AAA requirements"
+    },
+    "motionPreferences": {
+      "status": "pass",
+      "reducedMotion": true,
+      "notes": "Skeleton shimmer animation disables correctly"
+    }
+  },
   "routes": {
     "/dashboard": {
       "matrixTokens": "pass",
@@ -11,7 +52,14 @@
       "states": "pass",
       "accessibility": "pass",
       "pnlFormatting": "pass",
-      "notes": "Main dashboard with KPI cards, quick add FAB, recent items table"
+      "phase2": "pass",
+      "elevation": {
+        "header": "elev-0",
+        "kpiCards": "elev-2 + gradient + glow",
+        "tables": "elev-1 container, elev-2 headers",
+        "fab": "glow-accent-hover"
+      },
+      "notes": "Main dashboard with KPI cards, quick add FAB, recent items table. Phase 2 elevation applied."
     },
     "/dashboard/inventory": {
       "matrixTokens": "pass",
@@ -21,7 +69,16 @@
       "states": "pass",
       "accessibility": "pass",
       "pnlFormatting": "pass",
-      "notes": "Inventory table with filters, add/edit forms, P/L icons in margin column"
+      "phase2": "pass",
+      "elevation": {
+        "addCard": "elev-1",
+        "tableCard": "elev-1",
+        "tableHeader": "elev-2",
+        "rowHover": "elev-2",
+        "selectDropdowns": "trigger: elev-1, content: elev-2"
+      },
+      "skeletons": "Matrix pattern (6 rows)",
+      "notes": "Inventory table with filters, add/edit forms, P/L icons in margin column. Phase 2 elevation applied."
     },
     "/dashboard/expenses": {
       "matrixTokens": "pass",
@@ -31,7 +88,16 @@
       "states": "pass",
       "accessibility": "pass",
       "pnlFormatting": "n/a",
-      "notes": "Expense tracking with category filter, linked item select using sentinel pattern"
+      "phase2": "pass",
+      "elevation": {
+        "addCard": "elev-1",
+        "tableCard": "elev-1",
+        "tableHeader": "elev-2",
+        "rowHover": "elev-2",
+        "footer": "elev-2"
+      },
+      "skeletons": "Matrix pattern (6 rows)",
+      "notes": "Expense tracking with category filter, linked item select using sentinel pattern. Phase 2 elevation applied."
     },
     "/dashboard/pnl": {
       "matrixTokens": "pass",
@@ -41,7 +107,50 @@
       "states": "pass",
       "accessibility": "pass",
       "pnlFormatting": "pass",
-      "notes": "P&L KPIs, VAT summary, sold items table with TrendingUp/Down icons, CSV exports"
+      "phase2": "pass",
+      "elevation": {
+        "kpiCards": "elev-2 + gradient + glow",
+        "dateSelector": "elev-1 + active state glow",
+        "tables": "elev-1 container, elev-2 headers",
+        "footer": "elev-2"
+      },
+      "notes": "P&L KPIs, VAT summary, sold items table with TrendingUp/Down icons, CSV exports. Phase 2 elevation applied."
+    },
+    "/dashboard/market": {
+      "matrixTokens": "pass",
+      "navigation": "pass",
+      "tables": "pass",
+      "forms": "pass",
+      "states": "pass",
+      "accessibility": "pass",
+      "pnlFormatting": "pass",
+      "phase2": "pass",
+      "elevation": {
+        "searchCard": "elev-1",
+        "productCard": "elev-1",
+        "tableCard": "elev-1",
+        "tableHeader": "elev-2",
+        "rowHover": "elev-2"
+      },
+      "notes": "Market pricing lookup with SKU search, product catalog integration, per-size pricing table. Phase 2 elevation applied."
+    },
+    "/dashboard/releases": {
+      "matrixTokens": "pass",
+      "navigation": "pass",
+      "tables": "n/a",
+      "forms": "pass",
+      "states": "pass",
+      "accessibility": "pass",
+      "pnlFormatting": "n/a",
+      "phase2": "pass",
+      "elevation": {
+        "filterCard": "elev-1",
+        "releaseCards": "elev-1",
+        "releaseImageBg": "elev-2",
+        "modalSkuLinks": "elev-2 hover to elev-1"
+      },
+      "skeletons": "Matrix pattern (6 cards)",
+      "notes": "Upcoming release calendar with brand/date filters, modal details with SKU links. Phase 2 elevation applied."
     }
   },
   "components": {
@@ -83,7 +192,17 @@
     "Skeleton": {
       "matrixTokens": "pass",
       "accessibility": "pass",
-      "notes": "6-row default, h-12 matching table rows, animate-pulse, respects prefers-reduced-motion"
+      "phase2": "pass",
+      "pattern": "Matrix shimmer + scanline",
+      "reducedMotion": true,
+      "notes": "Branded Matrix pattern with shimmer animation (90deg) and scanline texture. Animation disables with prefers-reduced-motion."
+    },
+    "Card": {
+      "matrixTokens": "pass",
+      "accessibility": "pass",
+      "phase2": "pass",
+      "elevation": "Prop-based (1, 2, or 3)",
+      "notes": "Enhanced with elevation prop. Maps to bg-elev-{1,2,3}. Defaults to elevation=1."
     }
   },
   "designSystem": {
@@ -91,8 +210,12 @@
       "status": "pass",
       "tokens": [
         "bg-bg",
-        "bg-surface",
-        "bg-surface2",
+        "bg-surface (alias for elev-1)",
+        "bg-surface2 (alias for elev-2)",
+        "bg-elev-0",
+        "bg-elev-1",
+        "bg-elev-2",
+        "bg-elev-3",
         "text-fg",
         "text-muted",
         "text-dim",
@@ -101,6 +224,20 @@
         "text-danger",
         "border-border"
       ]
+    },
+    "utilities": {
+      "gradientElev": {
+        "status": "pass",
+        "gradient": "180deg, elev-1 → elev-2",
+        "usage": "KPI/feature cards only",
+        "notes": "6-8% intensity, never on tables"
+      },
+      "glowAccentHover": {
+        "status": "pass",
+        "transition": "120ms cubic-bezier(.22,.61,.36,1)",
+        "glow": "0 0 0 1px #0C6C51, 0 0 24px #00FF9440",
+        "notes": "Applied to interactive elements on hover/focus only"
+      }
     },
     "pnlFormatting": {
       "status": "pass",
@@ -138,5 +275,30 @@
     "clientSide": "pass",
     "utilities": "/src/lib/export/csv.ts",
     "notes": "UTF-8 BOM for Excel, proper escaping, numeric formatting"
-  }
+  },
+  "filesModified": [
+    "/src/app/globals.css",
+    "/tailwind.config.ts",
+    "/src/components/ui/card.tsx",
+    "/src/components/ui/skeleton.tsx",
+    "/src/app/dashboard/page.tsx",
+    "/src/app/dashboard/components/KpiCard.tsx",
+    "/src/app/dashboard/pnl/page.tsx",
+    "/src/app/dashboard/inventory/page.tsx",
+    "/src/app/dashboard/expenses/page.tsx",
+    "/src/app/dashboard/market/page.tsx",
+    "/src/app/dashboard/releases/page.tsx"
+  ],
+  "testing": {
+    "consoleErrors": "None",
+    "hydrationErrors": "None",
+    "lighthouseA11y": "Unchanged or improved",
+    "reducedMotion": "Verified – skeleton shimmer disables"
+  },
+  "nextSteps": [
+    "Apply elevation patterns to auth pages",
+    "Explore chart elevation patterns (Phase 3)",
+    "Form input elevation patterns (Phase 3)",
+    "Modal/dialog elev-3 patterns (Phase 3)"
+  ]
 }

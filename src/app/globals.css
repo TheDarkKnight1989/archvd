@@ -3,10 +3,12 @@
 
 /* Matrix Theme Tokens */
 :root[data-theme="matrix"] {
-  /* Backgrounds */
+  /* Backgrounds - Elevation Scale (0-3) */
   --archvd-bg: #050807;
-  --archvd-bg-elev-1: #08100C;
-  --archvd-bg-elev-2: #0B1510;
+  --archvd-bg-elev-0: #050807; /* Page shell/header (base) */
+  --archvd-bg-elev-1: #08100C; /* Standard cards/tables */
+  --archvd-bg-elev-2: #0B1510; /* Raised cards/KPIs */
+  --archvd-bg-elev-3: #0E1A15; /* Modals/dialogs/highest */
   --archvd-overlay: #0D1B14CC;
 
   /* Borders & dividers */
@@ -109,9 +111,89 @@
     font-weight: 500;
     font-variant-numeric: tabular-nums slashed-zero ordinal;
   }
-  
+
   .transition-terminal {
     transition-timing-function: cubic-bezier(.22,.61,.36,1);
+  }
+
+  /* Elevation gradient for KPI/feature cards */
+  .gradient-elev {
+    background: linear-gradient(
+      180deg,
+      var(--archvd-bg-elev-1) 0%,
+      var(--archvd-bg-elev-2) 100%
+    );
+  }
+
+  /* Accent glow for hover/focus states */
+  .glow-accent-hover {
+    transition: box-shadow 120ms cubic-bezier(.22,.61,.36,1);
+  }
+
+  .glow-accent-hover:hover,
+  .glow-accent-hover:focus-visible {
+    box-shadow: var(--archvd-glow-accent);
+  }
+
+  /* Matrix skeleton pattern */
+  .skeleton {
+    position: relative;
+    background-color: var(--archvd-bg-elev-1);
+    overflow: hidden;
+    border-radius: 0.5rem;
+  }
+
+  .skeleton::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(0, 255, 148, 0.03) 50%,
+      transparent 100%
+    );
+    animation: skeleton-shimmer 2s ease-in-out infinite;
+  }
+
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 255, 148, 0.02) 2px,
+        rgba(0, 255, 148, 0.02) 4px
+      );
+    opacity: 0.5;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::before {
+      animation: none;
+    }
+  }
+
+  /* Hide scrollbar while maintaining scroll functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 

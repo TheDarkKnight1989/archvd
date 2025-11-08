@@ -407,8 +407,8 @@ export function useItemsTable(userId: string | undefined, params: TableParams = 
         if (params.sort) {
           const { key, dir } = params.sort;
           tableRows.sort((a, b) => {
-            let aVal = a[key];
-            let bVal = b[key];
+            let aVal = (a as any)[key];
+            let bVal = (b as any)[key];
 
             // Handle null values
             if (aVal === null && bVal === null) return 0;

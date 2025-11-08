@@ -1,343 +1,201 @@
 'use client'
 
-import { useEffect, useState, FormEvent, useMemo } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { useState, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
-import { gbp2, pct1 } from '@/lib/utils/format'
+import { usePortfolioInventory, type EnrichedInventoryItem } from '@/hooks/usePortfolioInventory'
+import { useInventoryCounts } from '@/hooks/useInventoryCounts'
+import { parseParams, buildQuery, type TableParams } from '@/lib/url/params'
+import { useSavedViews } from '@/hooks/useSavedViews'
 import { exportTaxCsv, exportInsuranceCsv } from '@/lib/portfolio/exports'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Search, Filter, Plus, Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { Search, Download, Plus, Bookmark } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { AddItemModal } from '@/components/modals/AddItemModal'
+import type { SortingState } from '@tanstack/react-table'
 
-const TABLE = 'Inventory'
+// Matrix V2 Phase 3 Components
+import { SavedViewChip } from '@/components/SavedViewChip'
+import { ColumnChooser, type ColumnConfig } from '@/components/ColumnChooser'
+import { MarketModal } from '@/components/MarketModal'
 
-type Category = 'sneaker' | 'apparel' | 'accessory' | 'other'
-type Platform = 'StockX' | 'eBay' | 'Vinted' | 'Instagram' | 'Other'
-
-type InventoryItem = {
-  id: string
-  user_id: string
-  sku: string
-  brand: string
-  model: string
-  size: string
-  category?: Category
-  purchase_price: number
-  purchase_date?: string
-  sale_price?: number | null
-  sold_price?: number | null
-  sold_date?: string | null
-  platform?: Platform | null
-  sales_fee?: number | null
-  market_value?: number | null
-  market_updated_at?: string | null
-  market_meta?: {
-    sources_used?: string[]
-    confidence?: 'high' | 'medium' | 'low'
-  } | null
-  status: 'in_stock' | 'sold' | 'reserved'
-  location: string
-  image_url?: string | null
-  created_at: string
-}
-
-type MarketPreview = {
-  price: number
-  source: string
-  as_of: Date
-}
-
-// Column width constants
-const COLS = {
-  SKU: 'w-[110px]',
-  SIZE: 'w-[72px]',
-  STATUS: 'w-[100px]',
-  MONEY: 'w-[110px]',
-}
+// Inventory V2 Components
+import { InventoryTable } from './_components/InventoryTable'
+import { FilterTabs } from './_components/FilterTabs'
 
 export default function InventoryPage() {
-  useRequireAuth()
-  const [items, setItems] = useState<InventoryItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const { user } = useRequireAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
-  // Form state
-  const [sku, setSku] = useState('')
-  const [brand, setBrand] = useState('')
-  const [model, setModel] = useState('')
-  const [size, setSize] = useState('')
-  const [category, setCategory] = useState<Category>('sneaker')
-  const [purchasePrice, setPurchasePrice] = useState('')
-  const [salePrice, setSalePrice] = useState('')
-  const [status, setStatus] = useState<'in_stock' | 'sold' | 'reserved'>('in_stock')
-  const [location, setLocation] = useState('')
-  const [marketPreview, setMarketPreview] = useState<MarketPreview | null>(null)
-  const [loadingMarket, setLoadingMarket] = useState(false)
+  // Parse URL params
+  const urlParams = parseParams(searchParams)
 
-  // Filter state
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterCategory, setFilterCategory] = useState<string>('all')
-  const [filterSize, setFilterSize] = useState<string>('')
-  const [searchQuery, setSearchQuery] = useState<string>('')
+  // Data fetching via portfolio hook
+  const { items, loading, error: fetchError, refetch } = usePortfolioInventory()
 
-  // Edit state
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<Partial<InventoryItem>>({})
+  // Get counts for filter tabs
+  const { data: counts } = useInventoryCounts(user?.id)
 
-  const fetchItems = async () => {
-    try {
-      const { data, error } = await supabase
-        .from(TABLE)
-        .select('*')
-        .order('created_at', { ascending: false })
+  // Saved views
+  const savedViews = useSavedViews()
 
-      if (error) throw error
-      setItems(data || [])
-      setError(null)
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch items')
-      setItems([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Filter state from URL
+  const [searchQuery, setSearchQuery] = useState<string>(urlParams.search || '')
+  const selectedStatus = urlParams.status || []
+  const selectedCategory = urlParams.category && urlParams.category.length > 0 ? urlParams.category : ['sneaker']
+  const selectedSize = urlParams.size_uk?.map(String) || []
 
-  const formatRelativeTime = (dateString: string): string => {
-    const now = new Date()
-    const date = new Date(dateString)
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
+  // Sorting state
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'purchase_date', desc: true }, // Default: newest first
+  ])
 
-    if (diffMins < 1) return 'just now'
-    if (diffMins < 60) return `${diffMins}m ago`
+  // Column visibility state
+  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
+    { key: 'item', label: 'Item', visible: true, lock: true },
+    { key: 'purchase_date', label: 'Purchase Date', visible: true },
+    { key: 'market', label: 'Market £', visible: true },
+    { key: 'chart', label: 'Price Chart', visible: true },
+    { key: 'qty', label: 'Qty', visible: true },
+    { key: 'total', label: 'Total £', visible: true },
+    { key: 'invested', label: 'Invested £', visible: true },
+    { key: 'profit', label: 'Profit/Loss £', visible: true },
+    { key: 'performance', label: 'Performance %', visible: true },
+    { key: 'actions', label: 'Actions', visible: true },
+  ])
 
-    const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24) return `${diffHours}h ago`
+  // Modal state
+  const [addItemModalOpen, setAddItemModalOpen] = useState(false)
+  const [editItem, setEditItem] = useState<EnrichedInventoryItem | null>(null)
+  const [marketModalOpen, setMarketModalOpen] = useState(false)
+  const [selectedMarketItem, setSelectedMarketItem] = useState<EnrichedInventoryItem | null>(null)
 
-    const diffDays = Math.floor(diffHours / 24)
-    if (diffDays === 1) return 'yesterday'
-    if (diffDays < 7) return `${diffDays}d ago`
-
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
-
-  const handleSkuBlur = async () => {
-    const trimmedSku = sku.trim()
-    if (!trimmedSku) {
-      setMarketPreview(null)
-      return
+  // Update URL params
+  const updateParams = (updates: Partial<TableParams>) => {
+    const merged: TableParams = {
+      status: selectedStatus,
+      category: selectedCategory,
+      size_uk: selectedSize,
+      search: searchQuery || undefined,
+      ...updates,
     }
 
-    setLoadingMarket(true)
-    try {
-      const response = await fetch('/api/pricing/quick', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sku: trimmedSku, category }),
+    // Remove empty values
+    if (merged.status?.length === 0) delete merged.status
+    if (merged.category?.length === 0) delete merged.category
+    if (merged.size_uk?.length === 0) delete merged.size_uk
+    if (!merged.search?.trim()) delete merged.search
+
+    const query = buildQuery(merged)
+    router.replace(`/dashboard/inventory${query}`)
+  }
+
+  // Callback when item is added via modal
+  const handleItemAdded = () => {
+    refetch()
+  }
+
+  // Apply active saved view filters
+  const applySavedView = (viewId: string) => {
+    const view = savedViews.views.find((v) => v.id === viewId)
+    if (view) {
+      updateParams({
+        status: view.filters.status ? [view.filters.status] : [],
+        category: view.filters.category ? [view.filters.category] : ['sneaker'],
+        size_uk: view.filters.size ? [view.filters.size] : [],
+        search: view.filters.search || undefined,
       })
-
-      if (response.status === 204) {
-        setMarketPreview(null)
-        return
-      }
-
-      if (response.status === 429) {
-        console.log('Rate limited on SKU lookup')
-        return
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch pricing')
-      }
-
-      const data = await response.json()
-
-      if (data.product) {
-        if (!brand && data.product.brand) {
-          setBrand(data.product.brand)
-        }
-        if (!model && data.product.name) {
-          setModel(data.product.name)
-        }
-      }
-
-      if (data.price !== undefined && data.source && data.as_of) {
-        setMarketPreview({
-          price: data.price,
-          source: data.source,
-          as_of: new Date(data.as_of),
-        })
-      }
-    } catch (err: any) {
-      console.error('Quick pricing lookup failed:', err.message)
-      setMarketPreview(null)
-    } finally {
-      setLoadingMarket(false)
+      setSorting(view.sorting)
+      savedViews.setActiveView(viewId)
     }
   }
 
-  useEffect(() => {
-    fetchItems()
-  }, [])
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const userId = sessionData.session?.user?.id
-
-      if (!userId) {
-        throw new Error('No authenticated user found')
-      }
-
-      const insertData: any = {
-        user_id: userId,
-        sku,
-        brand,
-        model,
-        size,
-        category,
-        purchase_price: parseFloat(purchasePrice),
-        status,
-        location,
-      }
-
-      if (salePrice) {
-        insertData.sale_price = parseFloat(salePrice)
-      }
-
-      const { error } = await supabase.from(TABLE).insert(insertData)
-
-      if (error) throw error
-
-      // Reset form
-      setSku('')
-      setBrand('')
-      setModel('')
-      setSize('')
-      setPurchasePrice('')
-      setSalePrice('')
-      setStatus('in_stock')
-      setLocation('')
-      setMarketPreview(null)
-
-      setSuccess('Item added successfully!')
-      setTimeout(() => setSuccess(null), 3000)
-
-      await fetchItems()
-    } catch (err: any) {
-      setError(err.message || 'Failed to add item')
-    } finally {
-      setSubmitting(false)
-    }
+  // Save current view
+  const saveCurrentView = (name: string) => {
+    savedViews.createView(
+      name,
+      {
+        status: selectedStatus[0],
+        category: selectedCategory[0],
+        size: selectedSize[0],
+        search: searchQuery || undefined,
+      },
+      sorting
+    )
   }
 
-  const handleEdit = (item: InventoryItem) => {
-    setEditingId(item.id)
-    setEditForm({
-      status: item.status,
-      location: item.location,
-      purchase_price: item.purchase_price,
-      sale_price: item.sale_price,
-    })
-    setError(null)
-  }
-
-  const handleCancelEdit = () => {
-    setEditingId(null)
-    setEditForm({})
-  }
-
-  const handleSaveEdit = async (id: string) => {
-    setError(null)
-    try {
-      const updateData: any = {
-        status: editForm.status,
-        location: editForm.location,
-      }
-
-      if (editForm.purchase_price !== undefined) {
-        updateData.purchase_price = editForm.purchase_price
-      }
-
-      if (editForm.sale_price !== undefined && editForm.sale_price !== null) {
-        updateData.sale_price = editForm.sale_price
-      }
-
-      const { error } = await supabase.from(TABLE).update(updateData).eq('id', id)
-
-      if (error) throw error
-
-      setEditingId(null)
-      setEditForm({})
-      await fetchItems()
-    } catch (err: any) {
-      setError(err.message || 'Failed to update item')
-    }
-  }
-
-  const handleDelete = async (id: string, sku: string) => {
-    if (!window.confirm(`Delete item ${sku}? This cannot be undone.`)) {
-      return
-    }
-
-    setError(null)
-    try {
-      const { error } = await supabase.from(TABLE).delete().eq('id', id)
-
-      if (error) throw error
-
-      await fetchItems()
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete item')
-    }
-  }
-
+  // Filtered items
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      if (filterStatus !== 'all' && item.status !== filterStatus) return false
-      if (filterCategory !== 'all' && item.category !== filterCategory) return false
-      if (filterSize && item.size !== filterSize) return false
+      // Status filter
+      if (selectedStatus.length > 0 && !selectedStatus.includes(item.status || '')) {
+        return false
+      }
+
+      // Category filter
+      if (selectedCategory.length > 0 && !selectedCategory.includes(item.category || 'other')) {
+        return false
+      }
+
+      // Size filter
+      if (selectedSize.length > 0 && !selectedSize.includes(item.size_uk || item.size || '')) {
+        return false
+      }
+
+      // Search filter
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
         const matches =
           item.sku.toLowerCase().includes(q) ||
-          item.brand.toLowerCase().includes(q) ||
-          item.model.toLowerCase().includes(q)
+          item.brand?.toLowerCase().includes(q) ||
+          item.model?.toLowerCase().includes(q) ||
+          item.full_title.toLowerCase().includes(q)
         if (!matches) return false
       }
+
       return true
     })
-  }, [items, filterStatus, filterCategory, filterSize, searchQuery])
+  }, [items, selectedStatus, selectedCategory, selectedSize, searchQuery])
 
+  // Export CSV
   const exportCSV = () => {
-    const headers = ['sku', 'brand', 'model', 'size', 'purchase_price', 'sale_price', 'status', 'location', 'created_at']
+    const headers = [
+      'sku',
+      'brand',
+      'model',
+      'size_uk',
+      'category',
+      'purchase_price',
+      'tax',
+      'shipping',
+      'invested',
+      'market_value',
+      'sold_price',
+      'profit',
+      'performance_pct',
+      'status',
+      'location',
+      'created_at',
+    ]
     const rows = filteredItems.map((item) =>
       [
         item.sku,
-        item.brand,
-        item.model,
-        item.size,
+        item.brand ?? '',
+        item.model ?? '',
+        item.size_uk ?? '',
+        item.category ?? '',
         item.purchase_price,
-        item.sale_price ?? '',
-        item.status,
-        item.location,
+        item.tax ?? '',
+        item.shipping ?? '',
+        item.invested,
+        item.market_value ?? '',
+        item.sold_price ?? '',
+        item.profit ?? '',
+        item.performance_pct ?? '',
+        item.status ?? '',
+        item.location ?? '',
         item.created_at,
       ].map((field) => `"${field}"`)
     )
@@ -353,383 +211,280 @@ export default function InventoryPage() {
     URL.revokeObjectURL(url)
   }
 
+  // Row action handlers
+  const handleRowClick = (item: EnrichedInventoryItem) => {
+    setSelectedMarketItem(item)
+    setMarketModalOpen(true)
+  }
+
+  const handleEdit = (item: EnrichedInventoryItem) => {
+    setEditItem(item)
+    setAddItemModalOpen(true)
+  }
+
+  const handleToggleSold = async (item: EnrichedInventoryItem) => {
+    // TODO: Implement toggle sold status
+    console.log('Toggle sold:', item.sku)
+  }
+
+  const handleAddExpense = (item: EnrichedInventoryItem) => {
+    // TODO: Implement add expense modal
+    console.log('Add expense:', item.sku)
+  }
+
+  // Active filter count
+  const activeFilterCount =
+    (selectedStatus.length > 0 ? 1 : 0) +
+    (selectedCategory.length > 0 && selectedCategory[0] !== 'sneaker' ? 1 : 0) +
+    (selectedSize.length > 0 ? 1 : 0) +
+    (searchQuery ? 1 : 0)
+
+  // Convert columnConfig to columnVisibility object
+  const columnVisibility = useMemo(() => {
+    return columnConfig.reduce((acc, col) => {
+      acc[col.key] = col.visible
+      return acc
+    }, {} as Record<string, boolean>)
+  }, [columnConfig])
+
+  // Build filter tab configs
+  const statusTabs = [
+    { key: 'in_stock', label: 'In Stock', count: counts.status['in_stock'] ?? 0 },
+    { key: 'sold', label: 'Sold', count: counts.status['sold'] ?? 0 },
+    { key: 'reserved', label: 'Reserved', count: counts.status['reserved'] ?? 0 },
+  ]
+
+  const categoryTabs = [
+    { key: 'sneaker', label: 'Sneakers', count: counts.category['sneaker'] ?? 0 },
+    { key: 'apparel', label: 'Apparel', count: counts.category['apparel'] ?? 0 },
+    { key: 'accessory', label: 'Accessories', count: counts.category['accessory'] ?? 0 },
+    { key: 'other', label: 'Other', count: counts.category['other'] ?? 0 },
+  ]
+
+  const sizeTabs = Object.entries(counts.size)
+    .sort((a, b) => b[1] - a[1]) // Sort by count descending
+    .slice(0, 10) // Top 10 sizes
+    .map(([key, count]) => ({ key, label: key, count }))
+
   return (
-    <div className="mx-auto max-w-[1280px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-fg">
+    <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-[#E8F6EE]">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-fg relative inline-block">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-[#E8F6EE] relative inline-block">
           Inventory
-          <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
+          <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-[#0F8D65] opacity-40"></span>
         </h1>
-      </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-        <div className="flex items-center gap-2 overflow-x-auto snap-x">
-          <div className="relative shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-dim" />
-            <Input
-              placeholder="Search SKU, brand, model"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-[260px] bg-bg border-border"
-            />
-          </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[140px] bg-surface border-border shrink-0">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent className="bg-surface2 border-border">
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="in_stock">In Stock</SelectItem>
-              <SelectItem value="sold">Sold</SelectItem>
-              <SelectItem value="reserved">Reserved</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[140px] bg-surface border-border shrink-0">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent className="bg-surface2 border-border">
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="sneaker">Sneaker</SelectItem>
-              <SelectItem value="apparel">Apparel</SelectItem>
-              <SelectItem value="accessory">Accessory</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            placeholder="Size"
-            value={filterSize}
-            onChange={(e) => setFilterSize(e.target.value)}
-            className="w-20 bg-surface border-border shrink-0"
-          />
-        </div>
+        {/* Saved Views */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-border max-md:hidden" onClick={() => exportTaxCsv(items)}>
-            <Download className="h-4 w-4 mr-2" /> Tax
-          </Button>
-          <Button variant="outline" className="border-border max-md:hidden" onClick={() => exportInsuranceCsv(items)}>
-            <Download className="h-4 w-4 mr-2" /> Insurance
-          </Button>
-          <Button variant="outline" className="border-border max-md:hidden" onClick={exportCSV} disabled={filteredItems.length === 0}>
-            <Download className="h-4 w-4 mr-2" /> CSV
-          </Button>
+          {savedViews.views.map((view) => (
+            <SavedViewChip
+              key={view.id}
+              label={view.name}
+              active={savedViews.activeViewId === view.id}
+              onApply={() => applySavedView(view.id)}
+              onDelete={() => savedViews.deleteView(view.id)}
+            />
+          ))}
         </div>
       </div>
 
-      {/* Success/Error Alerts */}
-      {success && (
-        <Alert variant="success">
-          <AlertTitle>Success</AlertTitle>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-3 md:gap-4">
-        {/* Add Item Card */}
-        <Card className="bg-surface border border-border rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-sm text-muted font-normal">Add Item</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <form onSubmit={handleSubmit} className="grid gap-3">
+      {/* Toolbar - Sticky with glowing tabs */}
+      <div className="sticky top-0 z-30 -mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-3 bg-[#050807]/90 backdrop-blur border-b border-[#15251B]/40">
+        <div className="flex flex-col gap-3">
+          {/* Row 1: Search + Add Button */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7FA08F]" />
               <Input
-                placeholder="SKU"
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                onBlur={handleSkuBlur}
-                required
-                className="bg-bg border-border font-mono"
+                placeholder="Search SKU, brand, model..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onBlur={() => updateParams({ search: searchQuery || undefined })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    updateParams({ search: searchQuery || undefined })
+                  }
+                }}
+                className={cn(
+                  'pl-9 bg-[#050807] border-[#15251B] transition-all duration-120 text-[#E8F6EE]',
+                  searchQuery && 'ring-2 ring-[#00FF94]/40'
+                )}
               />
-              {loadingMarket && <p className="text-xs text-dim">Checking market price...</p>}
-              {marketPreview && (
-                <div className="p-2 bg-surface2 border border-border rounded-lg">
-                  <div className="text-xs font-medium text-accent">Market: {gbp2.format(marketPreview.price)}</div>
-                  <div className="text-xs text-dim mt-0.5">
-                    {marketPreview.source} • {formatRelativeTime(marketPreview.as_of.toISOString())}
-                  </div>
-                </div>
-              )}
-
-              <Input
-                placeholder="Brand"
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                required
-                className="bg-bg border-border"
-              />
-
-              <Input
-                placeholder="Model"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                required
-                className="bg-bg border-border"
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  placeholder="Size (UK)"
-                  value={size}
-                  onChange={(e) => setSize(e.target.value)}
-                  required
-                  className="bg-bg border-border"
-                />
-                <Select value={category} onValueChange={(val) => setCategory(val as Category)}>
-                  <SelectTrigger className="bg-bg border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-surface2 border-border">
-                    <SelectItem value="sneaker">Sneaker</SelectItem>
-                    <SelectItem value="apparel">Apparel</SelectItem>
-                    <SelectItem value="accessory">Accessory</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  placeholder="Purchase (£)"
-                  type="number"
-                  inputMode="decimal"
-                  value={purchasePrice}
-                  onChange={(e) => setPurchasePrice(e.target.value)}
-                  required
-                  step="0.01"
-                  min="0"
-                  className="bg-bg border-border num text-right"
-                />
-                <Input
-                  placeholder="Sale (£) – optional"
-                  type="number"
-                  inputMode="decimal"
-                  value={salePrice}
-                  onChange={(e) => setSalePrice(e.target.value)}
-                  step="0.01"
-                  min="0"
-                  className="bg-bg border-border num text-right"
-                />
-              </div>
-
-              <Select value={status} onValueChange={(val) => setStatus(val as any)}>
-                <SelectTrigger className="bg-bg border-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-surface2 border-border">
-                  <SelectItem value="in_stock">In Stock</SelectItem>
-                  <SelectItem value="sold">Sold</SelectItem>
-                  <SelectItem value="reserved">Reserved</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Input
-                placeholder="Location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                required
-                className="bg-bg border-border"
-              />
-
-              <Button type="submit" disabled={submitting} className="bg-accent text-black hover:bg-accent-600">
-                {submitting ? 'Adding...' : 'Add Item'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Table */}
-        <Card className="bg-surface border border-border rounded-2xl overflow-hidden">
-          {loading ? (
-            <div className="p-3 space-y-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-12 rounded-lg bg-surface2 animate-pulse" />
-              ))}
             </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="text-center py-10 text-dim">
-              <p className="font-mono text-sm">
-                {items.length === 0 ? 'No items yet • Add your first pair!' : 'No results • Try adjusting your filters.'}
-              </p>
-              {items.length > 0 && (
+
+            <Button
+              onClick={() => setAddItemModalOpen(true)}
+              variant="default"
+              size="sm"
+              className="ml-auto bg-[#00FF94] text-[#000000] hover:bg-[#18D38B]"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Item
+            </Button>
+          </div>
+
+          {/* Row 2: Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Status Tabs (multi-select) */}
+            <FilterTabs
+              tabs={statusTabs}
+              value={selectedStatus}
+              onChange={(keys) => updateParams({ status: keys })}
+              multiselect
+            />
+
+            {/* Divider */}
+            <div className="h-6 w-px bg-[#15251B]/40" />
+
+            {/* Category Tabs (single-select) */}
+            <FilterTabs
+              tabs={categoryTabs}
+              value={selectedCategory}
+              onChange={(keys) => updateParams({ category: keys.length > 0 ? keys : ['sneaker'] })}
+              multiselect={false}
+            />
+
+            {/* Size Tabs (multi-select) - Only show if we have sizes */}
+            {sizeTabs.length > 0 && (
+              <>
+                <div className="h-6 w-px bg-[#15251B]/40" />
+                <FilterTabs
+                  tabs={sizeTabs}
+                  value={selectedSize}
+                  onChange={(keys) => updateParams({ size_uk: keys })}
+                  multiselect
+                  className="flex-1 justify-end"
+                />
+              </>
+            )}
+          </div>
+
+          {/* Row 3: Actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {activeFilterCount > 0 && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="mt-3 border-border"
                   onClick={() => {
-                    setFilterStatus('all')
-                    setFilterCategory('all')
-                    setFilterSize('')
                     setSearchQuery('')
+                    updateParams({ status: [], category: ['sneaker'], size_uk: [], search: undefined })
                   }}
+                  className="text-xs text-[#7FA08F] hover:text-[#E8F6EE]"
                 >
-                  Clear filters
+                  Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
                 </Button>
               )}
             </div>
-          ) : (
-            <div className="max-h-[70vh] overflow-auto">
-              <Table className="min-w-[920px]">
-                <TableHeader className="text-muted text-xs bg-bg sticky top-0 z-10">
-                  <TableRow className="border-border border-t border-t-accent-400/25">
-                    <TableHead className={cn('px-3 md:px-4 py-3', COLS.SKU)}>SKU</TableHead>
-                    <TableHead className="px-3 md:px-4 py-3">Brand</TableHead>
-                    <TableHead className="px-3 md:px-4 py-3">Model</TableHead>
-                    <TableHead className={cn('px-3 md:px-4 py-3', COLS.SIZE)}>Size</TableHead>
-                    <TableHead className={cn('px-3 md:px-4 py-3 text-right', COLS.MONEY)}>Purchase</TableHead>
-                    <TableHead className={cn('px-3 md:px-4 py-3 text-right', COLS.MONEY)}>Market</TableHead>
-                    <TableHead className={cn('px-3 md:px-4 py-3 text-right', COLS.MONEY)}>Sale</TableHead>
-                    <TableHead className={cn('px-3 md:px-4 py-3 text-right', COLS.MONEY)}>P/L</TableHead>
-                    <TableHead className={cn('px-3 md:px-4 py-3', COLS.STATUS)}>Status</TableHead>
-                    <TableHead className="px-3 md:px-4 py-3">Location</TableHead>
-                    <TableHead className="px-3 md:px-4 py-3">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredItems.map((item) => {
-                    const isEditing = editingId === item.id
-                    const pl = item.market_value && item.purchase_price ? item.market_value - item.purchase_price : null
-                    const plPct = pl !== null && item.purchase_price > 0 ? pl / item.purchase_price : null
-                    const gain = pl !== null && pl > 0
-                    const loss = pl !== null && pl < 0
 
-                    return (
-                      <TableRow key={item.id} className="border-border hover:bg-surface/70 h-12">
-                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-xs', COLS.SKU)}>{item.sku}</TableCell>
-                        <TableCell className="px-3 md:px-4 py-3 text-sm">{item.brand}</TableCell>
-                        <TableCell className="px-3 md:px-4 py-3 text-sm">{item.model}</TableCell>
-                        <TableCell className={cn('px-3 md:px-4 py-3 text-sm', COLS.SIZE)}>{item.size}</TableCell>
-                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-sm text-right', COLS.MONEY)}>
-                          {isEditing ? (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={editForm.purchase_price ?? ''}
-                              onChange={(e) =>
-                                setEditForm({ ...editForm, purchase_price: parseFloat(e.target.value) })
-                              }
-                              className="w-20 h-8 px-2 py-1 text-xs bg-bg border-border"
-                            />
-                          ) : (
-                            gbp2.format(item.purchase_price)
-                          )}
-                        </TableCell>
-                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-sm text-right', COLS.MONEY)}>
-                          {item.market_value ? (
-                            <div>
-                              <div>{gbp2.format(item.market_value)}</div>
-                              {item.market_meta?.sources_used?.[0] && item.market_updated_at && (
-                                <div className="mt-0.5 text-[10px] text-dim font-mono flex items-center justify-end gap-1">
-                                  <span className="h-1 w-1 rounded-full bg-accent" />
-                                  {item.market_meta.sources_used[0]} • {formatRelativeTime(item.market_updated_at)}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-dim">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-sm text-right', COLS.MONEY)}>
-                          {isEditing ? (
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={editForm.sale_price ?? ''}
-                              onChange={(e) =>
-                                setEditForm({ ...editForm, sale_price: e.target.value ? parseFloat(e.target.value) : null })
-                              }
-                              className="w-20 h-8 px-2 py-1 text-xs bg-bg border-border"
-                            />
-                          ) : item.sale_price ? (
-                            gbp2.format(item.sale_price)
-                          ) : (
-                            <span className="text-dim">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className={cn('px-3 md:px-4 py-3 font-mono text-sm text-right', COLS.MONEY)}>
-                          {pl === null || pl === 0 ? (
-                            <span className="text-dim">—</span>
-                          ) : (
-                            <div className={cn('inline-flex items-center gap-1', gain && 'text-accent', loss && 'text-danger')}>
-                              {gain && <TrendingUp className="h-3.5 w-3.5" />}
-                              {loss && <TrendingDown className="h-3.5 w-3.5" />}
-                              <span>{gbp2.format(pl)}</span>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className={cn('px-3 md:px-4 py-3', COLS.STATUS)}>
-                          {isEditing ? (
-                            <Select
-                              value={editForm.status}
-                              onValueChange={(val) => setEditForm({ ...editForm, status: val as any })}
-                            >
-                              <SelectTrigger className="h-8 px-2 py-1 text-xs bg-bg border-border">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-surface2 border-border">
-                                <SelectItem value="in_stock">In Stock</SelectItem>
-                                <SelectItem value="sold">Sold</SelectItem>
-                                <SelectItem value="reserved">Reserved</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge variant="outline" className="border-border text-xs capitalize">
-                              {item.status.replace('_', ' ')}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-3 md:px-4 py-3 text-sm">
-                          {isEditing ? (
-                            <Input
-                              value={editForm.location ?? ''}
-                              onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                              className="w-24 h-8 px-2 py-1 text-xs bg-bg border-border"
-                            />
-                          ) : (
-                            item.location
-                          )}
-                        </TableCell>
-                        <TableCell className="px-3 md:px-4 py-3">
-                          {isEditing ? (
-                            <div className="flex gap-1">
-                              <button onClick={() => handleSaveEdit(item.id)} className="px-2 py-1 text-xs text-accent hover:text-accent-600 font-medium">
-                                Save
-                              </button>
-                              <button onClick={handleCancelEdit} className="px-2 py-1 text-xs text-dim hover:text-fg font-medium">
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-1">
-                              <button onClick={() => handleEdit(item)} className="px-2 py-1 text-xs text-accent hover:text-accent-600 font-medium">
-                                Edit
-                              </button>
-                              <button onClick={() => handleDelete(item.id, item.sku)} className="px-2 py-1 text-xs text-danger hover:text-danger/80 font-medium">
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="border-[#15251B] max-md:hidden"
+                onClick={() => exportTaxCsv(items as any)}
+                disabled={items.length === 0}
+                size="sm"
+              >
+                <Download className="h-4 w-4 mr-2" /> Tax
+              </Button>
+              <Button
+                variant="outline"
+                className="border-[#15251B] max-md:hidden"
+                onClick={() => exportInsuranceCsv(items as any)}
+                disabled={items.length === 0}
+                size="sm"
+              >
+                <Download className="h-4 w-4 mr-2" /> Insurance
+              </Button>
+              <Button
+                variant="outline"
+                className="border-[#15251B] max-md:hidden"
+                onClick={exportCSV}
+                disabled={filteredItems.length === 0}
+                size="sm"
+              >
+                <Download className="h-4 w-4 mr-2" /> CSV
+              </Button>
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="outline"
+                  className="border-[#15251B] max-md:hidden border-[#00FF94]/40 text-[#00FF94] hover:bg-[#00FF94]/10"
+                  onClick={() => {
+                    const name = prompt('Enter a name for this view:')
+                    if (name) saveCurrentView(name)
+                  }}
+                  size="sm"
+                >
+                  <Bookmark className="h-4 w-4 mr-2" /> Save View
+                </Button>
+              )}
+              <ColumnChooser
+                columns={columnConfig}
+                onChange={(updated) => {
+                  setColumnConfig(prev =>
+                    prev.map(col => ({
+                      ...col,
+                      visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
+                    }))
+                  )
+                }}
+              />
             </div>
-          )}
-        </Card>
+          </div>
+        </div>
       </div>
+
+      {/* Fetch Error Alert */}
+      {fetchError && (
+        <div className="border-l-4 border-l-[#FF4D5E] bg-[#08100C] p-4 rounded-lg">
+          <p className="text-sm text-[#FF4D5E] font-medium">Error: {fetchError}</p>
+        </div>
+      )}
+
+      {/* Portfolio Table */}
+      <InventoryTable
+        items={filteredItems}
+        loading={loading}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        columnVisibility={columnVisibility}
+        onRowClick={handleRowClick}
+        onEdit={handleEdit}
+        onToggleSold={handleToggleSold}
+        onAddExpense={handleAddExpense}
+      />
+
+      {/* Add Item Modal */}
+      <AddItemModal
+        open={addItemModalOpen}
+        onOpenChange={setAddItemModalOpen}
+        onSuccess={handleItemAdded}
+      />
+
+      {/* Market Modal */}
+      {selectedMarketItem && (
+        <MarketModal
+          open={marketModalOpen}
+          onOpenChange={setMarketModalOpen}
+          product={{
+            name: selectedMarketItem.full_title,
+            sku: selectedMarketItem.sku,
+            brand: selectedMarketItem.brand || '',
+          }}
+          sizes={['UK6', 'UK7', 'UK8', 'UK9', 'UK10', 'UK11', 'UK12']}
+          activeSize={selectedMarketItem.size_uk || selectedMarketItem.size || 'UK9'}
+          onSizeChange={() => {}}
+          range="30d"
+          onRangeChange={() => {}}
+          series={selectedMarketItem.sparkline_data.map((d) => ({
+            date: d.date,
+            price: d.value,
+          }))}
+          sourceBadge={selectedMarketItem.market_source}
+          lastUpdatedISO={selectedMarketItem.market_updated_at || new Date().toISOString()}
+        />
+      )}
     </div>
   )
 }

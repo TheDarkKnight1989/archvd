@@ -2,6 +2,7 @@
 
 export type TableParams = {
   status?: string[]
+  category?: string[]
   brand?: string[]
   size_uk?: (number | string)[]
   search?: string
@@ -18,6 +19,12 @@ export function parseParams(searchParams: URLSearchParams): TableParams {
   const statusStr = searchParams.get('status')
   if (statusStr) {
     params.status = statusStr.split(',').filter(Boolean)
+  }
+
+  // Parse category (multi)
+  const categoryStr = searchParams.get('category')
+  if (categoryStr) {
+    params.category = categoryStr.split(',').filter(Boolean)
   }
 
   // Parse brand (multi)
@@ -70,6 +77,10 @@ export function buildQuery(params: TableParams): string {
     parts.push(`status=${params.status.join(',').trim()}`)
   }
 
+  if (params.category && params.category.length > 0) {
+    parts.push(`category=${params.category.join(',').trim()}`)
+  }
+
   if (params.brand && params.brand.length > 0) {
     parts.push(`brand=${params.brand.join(',').trim()}`)
   }
@@ -95,6 +106,7 @@ export function buildQuery(params: TableParams): string {
 export function hasActiveFilters(params: TableParams): boolean {
   return !!(
     (params.status && params.status.length > 0) ||
+    (params.category && params.category.length > 0) ||
     (params.brand && params.brand.length > 0) ||
     (params.size_uk && params.size_uk.length > 0) ||
     params.search

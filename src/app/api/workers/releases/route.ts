@@ -1,309 +1,11 @@
-// Releases Worker - Scrapes upcoming releases from official retailer websites
-// Node runtime required for cheerio
+// Releases Worker - Fetch releases using structured data adapters
+// Node runtime required for cheerio (used in adapters)
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import * as cheerio from 'cheerio'
-
-interface ReleaseData {
-  brand: string
-  model: string
-  colorway?: string
-  release_date: string
-  source_url?: string
-  image_url?: string
-  slug?: string
-  skus: string[]
-  raw_title: string
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Parse UK date formats: "15 Nov", "15 November", "15/11/2024", etc.
- */
-function parseUkDate(dateStr: string): string | null {
-  try {
-    const cleaned = dateStr.trim()
-    const currentYear = new Date().getFullYear()
-
-    // Format: "15 Nov" or "15 November"
-    const monthDayMatch = cleaned.match(/^(\d{1,2})\s+([A-Za-z]+)/)
-    if (monthDayMatch) {
-      const day = monthDayMatch[1]
-      const month = monthDayMatch[2]
-      const dateObj = new Date(`${day} ${month} ${currentYear}`)
-      if (!isNaN(dateObj.getTime())) {
-        return dateObj.toISOString().split('T')[0]
-      }
-    }
-
-    // Format: "15/11/2024" or "15-11-2024"
-    const dmyMatch = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
-    if (dmyMatch) {
-      const day = dmyMatch[1].padStart(2, '0')
-      const month = dmyMatch[2].padStart(2, '0')
-      const year = dmyMatch[3]
-      return `${year}-${month}-${day}`
-    }
-
-    // Fallback: try direct parse
-    const dateObj = new Date(cleaned)
-    if (!isNaN(dateObj.getTime())) {
-      return dateObj.toISOString().split('T')[0]
-    }
-
-    return null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Normalize title by removing extra whitespace and special characters
- */
-function normaliseTitle(title: string): string {
-  return title
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/[""]/g, '"')
-    .replace(/['']/g, "'")
-    .substring(0, 200) // Limit length
-}
-
-/**
- * Extract SKU candidates from text using regex patterns
- * Nike format: AA####-### or DZ####-### (2 letters, 4 digits, dash, 3 digits)
- */
-function extractSkuCandidates(text: string): string[] {
-  const skuPattern = /\b[A-Z]{2}\d{4}-\d{3}\b/g
-  const matches = text.match(skuPattern)
-  return matches ? Array.from(new Set(matches)) : []
-}
-
-/**
- * Split title into brand, model, colorway
- */
-function parseTitleParts(title: string, defaultBrand: string): { brand: string; model: string; colorway: string } {
-  const normalized = normaliseTitle(title)
-
-  // Try to extract brand from title
-  const brandMatch = normalized.match(/^(Nike|Jordan|Adidas|New Balance|Asics|Vans|Converse)\s+/i)
-  const brand = brandMatch ? brandMatch[1] : defaultBrand
-
-  // Remove brand from title
-  let remainder = brandMatch ? normalized.replace(brandMatch[0], '').trim() : normalized
-
-  // Try to find colorway in quotes or after dash
-  const colorwayMatch = remainder.match(/[""']([^""']+)[""']|[-–]\s*(.+)$/)
-  const colorway = colorwayMatch ? (colorwayMatch[1] || colorwayMatch[2]).trim() : ''
-
-  // Model is what's left
-  const model = colorwayMatch
-    ? remainder.replace(colorwayMatch[0], '').trim()
-    : remainder
-
-  return {
-    brand: brand.substring(0, 50),
-    model: model.substring(0, 100),
-    colorway: colorway.substring(0, 100),
-  }
-}
-
-async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
-  for (let i = 0; i < retries; i++) {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ArchvdBot/1.0)',
-      },
-    })
-    if (res.status === 429) {
-      const delay = Math.pow(2, i) * 1000 // 1s, 2s, 4s
-      await new Promise(r => setTimeout(r, delay))
-      continue
-    }
-    return res
-  }
-  throw new Error('Rate limited after retries')
-}
-
-// ============================================================================
-// Domain-Specific Parsers
-// ============================================================================
-
-async function parseNikeLaunch(html: string, baseUrl: string): Promise<ReleaseData[]> {
-  const $ = cheerio.load(html)
-  const releases: ReleaseData[] = []
-
-  // Nike uses various selectors - try common patterns
-  const cards = $('div[class*="product-card"], article[class*="launch"], div[data-testid*="product"]').slice(0, 50)
-
-  cards.each((_, element) => {
-    try {
-      const $card = $(element)
-
-      // Extract title
-      const titleEl = $card.find('h3, h4, div[class*="title"], div[class*="product-name"]').first()
-      const rawTitle = titleEl.text().trim()
-      if (!rawTitle) return
-
-      // Extract image
-      const imgEl = $card.find('img').first()
-      const imageUrl = imgEl.attr('src') || imgEl.attr('data-src') || ''
-
-      // Extract date
-      const dateEl = $card.find('[class*="date"], time, span[class*="launch"]').first()
-      const dateText = dateEl.text().trim()
-      const releaseDate = parseUkDate(dateText)
-      if (!releaseDate) return // Skip if no valid date
-
-      // Extract product URL
-      const linkEl = $card.find('a').first()
-      const productUrl = linkEl.attr('href') || ''
-      const fullUrl = productUrl.startsWith('http') ? productUrl : `${baseUrl}${productUrl}`
-
-      // Extract SKUs from title and card text
-      const cardText = $card.text()
-      const skus = extractSkuCandidates(`${rawTitle} ${cardText}`)
-
-      // Parse title parts
-      const { brand, model, colorway } = parseTitleParts(rawTitle, 'Nike')
-
-      releases.push({
-        brand,
-        model,
-        colorway: colorway || undefined,
-        release_date: releaseDate,
-        source_url: fullUrl || undefined,
-        image_url: imageUrl || undefined,
-        slug: productUrl.split('/').filter(Boolean).pop() || undefined,
-        skus,
-        raw_title: rawTitle,
-      })
-    } catch (err) {
-      console.error('[Nike Parser] Card parse error:', err)
-    }
-  })
-
-  return releases
-}
-
-async function parseSizeLaunch(html: string, baseUrl: string): Promise<ReleaseData[]> {
-  const $ = cheerio.load(html)
-  const releases: ReleaseData[] = []
-
-  // Size? uses product cards in launch section
-  const cards = $('div[class*="product"], article[class*="launch"], li[class*="item"]').slice(0, 50)
-
-  cards.each((_, element) => {
-    try {
-      const $card = $(element)
-
-      // Extract title
-      const titleEl = $card.find('h2, h3, h4, a[class*="title"], span[class*="name"]').first()
-      const rawTitle = titleEl.text().trim()
-      if (!rawTitle) return
-
-      // Extract image
-      const imgEl = $card.find('img').first()
-      const imageUrl = imgEl.attr('src') || imgEl.attr('data-src') || imgEl.attr('data-original') || ''
-
-      // Extract date
-      const dateEl = $card.find('[class*="date"], time, span[class*="release"]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim()
-      const releaseDate = parseUkDate(dateText)
-      if (!releaseDate) return
-
-      // Extract product URL
-      const linkEl = $card.find('a').first()
-      const productUrl = linkEl.attr('href') || ''
-      const fullUrl = productUrl.startsWith('http') ? productUrl : `${baseUrl}${productUrl}`
-
-      // Extract SKUs
-      const cardText = $card.text()
-      const skus = extractSkuCandidates(`${rawTitle} ${cardText}`)
-
-      // Determine brand from title or assume from Size? context
-      const { brand, model, colorway } = parseTitleParts(rawTitle, 'Nike')
-
-      releases.push({
-        brand,
-        model,
-        colorway: colorway || undefined,
-        release_date: releaseDate,
-        source_url: fullUrl || undefined,
-        image_url: imageUrl || undefined,
-        slug: productUrl.split('/').filter(Boolean).pop() || undefined,
-        skus,
-        raw_title: rawTitle,
-      })
-    } catch (err) {
-      console.error('[Size? Parser] Card parse error:', err)
-    }
-  })
-
-  return releases
-}
-
-async function parseFootpatrolLaunch(html: string, baseUrl: string): Promise<ReleaseData[]> {
-  const $ = cheerio.load(html)
-  const releases: ReleaseData[] = []
-
-  // Footpatrol similar structure to Size?
-  const cards = $('div[class*="product"], article[class*="launch"], li[class*="grid-item"]').slice(0, 50)
-
-  cards.each((_, element) => {
-    try {
-      const $card = $(element)
-
-      // Extract title
-      const titleEl = $card.find('h2, h3, h4, a[class*="title"], p[class*="name"]').first()
-      const rawTitle = titleEl.text().trim()
-      if (!rawTitle) return
-
-      // Extract image
-      const imgEl = $card.find('img').first()
-      const imageUrl = imgEl.attr('src') || imgEl.attr('data-src') || imgEl.attr('data-image') || ''
-
-      // Extract date
-      const dateEl = $card.find('[class*="date"], time, span[class*="launch"]').first()
-      const dateText = dateEl.attr('datetime') || dateEl.text().trim()
-      const releaseDate = parseUkDate(dateText)
-      if (!releaseDate) return
-
-      // Extract product URL
-      const linkEl = $card.find('a').first()
-      const productUrl = linkEl.attr('href') || ''
-      const fullUrl = productUrl.startsWith('http') ? productUrl : `${baseUrl}${productUrl}`
-
-      // Extract SKUs
-      const cardText = $card.text()
-      const skus = extractSkuCandidates(`${rawTitle} ${cardText}`)
-
-      // Parse title
-      const { brand, model, colorway } = parseTitleParts(rawTitle, 'Nike')
-
-      releases.push({
-        brand,
-        model,
-        colorway: colorway || undefined,
-        release_date: releaseDate,
-        source_url: fullUrl || undefined,
-        image_url: imageUrl || undefined,
-        slug: productUrl.split('/').filter(Boolean).pop() || undefined,
-        skus,
-        raw_title: rawTitle,
-      })
-    } catch (err) {
-      console.error('[Footpatrol Parser] Card parse error:', err)
-    }
-  })
-
-  return releases
-}
+import { getAdapter } from './adapters'
+import type { ExtractionStrategy } from './adapters'
 
 // ============================================================================
 // Main Worker Handler
@@ -322,6 +24,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Check for debug mode
+  const debugMode = request.nextUrl.searchParams.get('debug') === '1'
+
   const supabase = await createClient()
 
   const metrics = {
@@ -333,6 +38,19 @@ export async function POST(request: NextRequest) {
     linked: 0,
     errors: [] as string[],
   }
+
+  // Debug info
+  const debugInfo: Array<{
+    domain: string
+    status: number
+    htmlLength: number
+    strategy: ExtractionStrategy
+    parsedCount: number
+    sampleTitles?: string[]
+    warnings?: string[]
+    errors?: string[]
+    reasons?: string[]
+  }> = []
 
   try {
     // Fetch enabled sources from whitelist
@@ -354,42 +72,72 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Process each source
     for (const source of sources) {
       try {
         console.log(`[Releases Worker] Processing ${source.source_name}...`)
+        metrics.sources_processed++
 
-        // Fetch HTML
-        const response = await fetchWithRetry(source.source_url)
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-        }
-        const html = await response.text()
+        // Get adapter for this source
+        const adapter = getAdapter(source.source_name)
 
-        // Extract base URL for relative links
-        const baseUrl = new URL(source.source_url).origin
-
-        // Parse based on source
-        let releases: ReleaseData[] = []
-        switch (source.source_name) {
-          case 'nike':
-            releases = await parseNikeLaunch(html, baseUrl)
-            break
-          case 'size':
-            releases = await parseSizeLaunch(html, baseUrl)
-            break
-          case 'footpatrol':
-            releases = await parseFootpatrolLaunch(html, baseUrl)
-            break
-          default:
-            console.warn(`[Releases Worker] Unknown source: ${source.source_name}`)
-            continue
+        if (!adapter) {
+          const error = `No adapter found for source: ${source.source_name}`
+          console.warn(`[Releases Worker] ${error}`)
+          metrics.errors.push(error)
+          continue
         }
 
-        metrics.releases_found += releases.length
-        console.log(`[Releases Worker] Found ${releases.length} releases from ${source.source_name}`)
+        // Use adapter to fetch and parse releases
+        const result = await adapter.fetchIndex({ debug: debugMode })
+
+        if (debugMode) {
+          console.log(`[Releases Worker] ${source.source_name} strategy: ${result.strategy}`)
+          console.log(`[Releases Worker] ${source.source_name} found: ${result.releases.length} releases`)
+        }
+
+        metrics.releases_found += result.releases.length
+
+        // Build debug info for this source
+        const sourceDebug = {
+          domain: source.source_name,
+          status: result.releases.length > 0 ? 200 : 204,
+          htmlLength: result.metadata?.htmlLength || 0,
+          strategy: result.strategy,
+          parsedCount: result.releases.length,
+          sampleTitles: result.releases.slice(0, 3).map(r => r.raw_title || r.title),
+          warnings: result.metadata?.warnings || [],
+          errors: result.metadata?.errors || [],
+          reasons: [] as string[],
+        }
+
+        // Add reasons when zero items found
+        if (result.releases.length === 0) {
+          sourceDebug.reasons = [
+            `Strategy used: ${result.strategy}`,
+            ...(result.metadata?.warnings || []),
+            ...(result.metadata?.errors || []),
+          ]
+
+          if (sourceDebug.reasons.length === 0) {
+            sourceDebug.reasons.push('No structured data found in page')
+          }
+        }
+
+        if (debugMode) {
+          debugInfo.push(sourceDebug)
+        }
+
+        // Add warnings/errors to metrics
+        if (result.metadata?.errors && result.metadata.errors.length > 0) {
+          metrics.errors.push(...result.metadata.errors)
+        }
+        if (result.metadata?.warnings && result.metadata.warnings.length > 0) {
+          metrics.errors.push(...result.metadata.warnings)
+        }
 
         // Process each release
-        for (const release of releases) {
+        for (const release of result.releases) {
           try {
             const status = new Date(release.release_date) > new Date() ? 'upcoming' : 'past'
 
@@ -407,7 +155,10 @@ export async function POST(request: NextRequest) {
                   image_url: release.image_url || null,
                   slug: release.slug || null,
                   status,
-                  meta: { raw_title: release.raw_title },
+                  meta: {
+                    raw_title: release.raw_title || release.title,
+                    extraction_strategy: result.strategy,
+                  },
                   updated_at: new Date().toISOString(),
                 },
                 {
@@ -419,7 +170,7 @@ export async function POST(request: NextRequest) {
               .single()
 
             if (releaseError) {
-              metrics.errors.push(`${source.source_name} - ${release.raw_title}: ${releaseError.message}`)
+              metrics.errors.push(`${release.brand} ${release.model}: ${releaseError.message}`)
               continue
             }
 
@@ -429,14 +180,14 @@ export async function POST(request: NextRequest) {
               metrics.inserted++
             }
 
-            // Process SKUs if available
-            if (release.skus.length > 0 && insertedRelease) {
+            // Process SKUs
+            if (release.skus && release.skus.length > 0 && insertedRelease) {
               for (const sku of release.skus) {
                 try {
                   const skuUpper = sku.toUpperCase()
 
-                  // Ensure SKU exists in product_catalog (upsert minimal row)
-                  await supabase.from('public.product_catalog').upsert(
+                  // Ensure SKU exists in product_catalog
+                  await supabase.from('product_catalog').upsert(
                     {
                       sku: skuUpper,
                       brand: release.brand,
@@ -444,7 +195,10 @@ export async function POST(request: NextRequest) {
                       colorway: release.colorway || null,
                       release_date: release.release_date,
                       image_url: release.image_url || null,
-                      meta: { source: source.source_name, auto_created: true },
+                      meta: {
+                        source: source.source_name,
+                        extraction_strategy: result.strategy,
+                      },
                     },
                     {
                       onConflict: 'sku',
@@ -452,9 +206,9 @@ export async function POST(request: NextRequest) {
                     }
                   )
 
-                  // Link release to product via release_products
+                  // Link release to product
                   const { error: linkError } = await supabase
-                    .from('public.release_products')
+                    .from('release_products')
                     .upsert(
                       {
                         release_id: insertedRelease.id,
@@ -476,24 +230,25 @@ export async function POST(request: NextRequest) {
             }
           } catch (processError: any) {
             metrics.errors.push(
-              `${source.source_name} - ${release.raw_title}: ${processError.message}`
+              `${release.brand} ${release.model}: ${processError.message}`
             )
           }
         }
 
-        metrics.sources_processed++
+        // Rate limiting: delay between sources
+        await new Promise(r => setTimeout(r, 1000))
 
-        // Rate limit between sources (5 seconds)
-        if (metrics.sources_processed < sources.length) {
-          await new Promise((r) => setTimeout(r, 5000))
-        }
       } catch (sourceError: any) {
-        console.error(`[Releases Worker] ${source.source_name} failed:`, sourceError)
+        console.error(`[Releases Worker] Error processing ${source.source_name}:`, sourceError)
         metrics.errors.push(`${source.source_name}: ${sourceError.message}`)
       }
     }
 
-    // Log to worker_logs
+    console.log(
+      `[Releases Worker] Complete - Inserted: ${metrics.inserted}, Updated: ${metrics.updated}, Linked: ${metrics.linked}`
+    )
+
+    // Log to worker_logs table
     try {
       await supabase.from('public.worker_logs').insert({
         worker_name: 'releases_worker',
@@ -506,12 +261,22 @@ export async function POST(request: NextRequest) {
       console.error('[Releases Worker] Failed to log metrics:', logError)
     }
 
-    return NextResponse.json({
+    const response: any = {
       inserted: metrics.inserted,
       updated: metrics.updated,
       linked: metrics.linked,
       errors: metrics.errors,
-    })
+    }
+
+    // Include debug info if requested
+    if (debugMode) {
+      response.debug = {
+        sources: debugInfo,
+        metrics,
+      }
+    }
+
+    return NextResponse.json(response)
   } catch (error: any) {
     console.error('[Releases Worker] Fatal error:', error)
 
@@ -522,22 +287,14 @@ export async function POST(request: NextRequest) {
         started_at: metrics.started_at,
         completed_at: new Date().toISOString(),
         status: 'failed',
-        metrics: {
-          ...metrics,
-          fatal_error: error.message,
-        },
+        metrics: { ...metrics, fatal_error: error.message },
       })
     } catch (logError) {
       console.error('[Releases Worker] Failed to log error:', logError)
     }
 
     return NextResponse.json(
-      {
-        inserted: 0,
-        updated: 0,
-        linked: 0,
-        errors: [error.message],
-      },
+      { inserted: 0, updated: 0, linked: 0, errors: [error.message] },
       { status: 500 }
     )
   }

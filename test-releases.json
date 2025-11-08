@@ -1,0 +1,40 @@
+{
+  "releases": [
+    {
+      "title": "Nike Dunk Low \"Panda\"",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "White/Black",
+      "release_date": "2025-11-22",
+      "region": "UK/EU",
+      "source": "size",
+      "source_url": "https://www.size.co.uk/page/sizepreviews-launches/",
+      "image_url": "https://images.nike.com/is/image/DotCom/DD1391-100",
+      "skus": ["DD1391-100"]
+    },
+    {
+      "title": "Air Jordan 4 \"Bred Reimagined\"",
+      "brand": "Jordan",
+      "model": "Air Jordan 4",
+      "colorway": "Black/Fire Red",
+      "release_date": "2025-11-25",
+      "region": "UK/EU",
+      "source": "nike",
+      "source_url": "https://www.nike.com/gb/launch",
+      "image_url": "https://images.nike.com/is/image/DotCom/CT8527-016",
+      "skus": ["CT8527-016"]
+    },
+    {
+      "title": "adidas Campus 00s \"Dark Green\"",
+      "brand": "adidas",
+      "model": "Campus 00s",
+      "colorway": "Dark Green/White",
+      "release_date": "2025-11-28",
+      "region": "UK/EU",
+      "source": "footpatrol",
+      "source_url": "https://www.footpatrol.com/pages/launch-page/",
+      "image_url": "https://assets.adidas.com/images/w_600,f_auto,q_auto/abc12345-campus00s.jpg",
+      "skus": ["IG1234"]
+    }
+  ]
+}

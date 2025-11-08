@@ -3,12 +3,15 @@ import { cn } from "@/lib/utils/cn"
 
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLDivElement> & { elevation?: 1 | 2 | 3 }
+>(({ className, elevation = 1, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      "rounded-2xl border border-border bg-surface shadow-soft",
+      "rounded-2xl border border-border shadow-soft",
+      elevation === 1 && "bg-elev-1",
+      elevation === 2 && "bg-elev-2",
+      elevation === 3 && "bg-elev-3",
       className
     )}
     {...props}

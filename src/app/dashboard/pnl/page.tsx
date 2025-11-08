@@ -1,28 +1,60 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { Download, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { usePnLKPIs, usePnLItems, usePnLExpenses, useVATSummary } from '@/hooks/usePnL'
+import { Input } from '@/components/ui/input'
+import { usePnLItems, usePnLExpenses } from '@/hooks/usePnL'
 import { supabase } from '@/lib/supabase/client'
 import { toCsv, downloadCsv, formatGbpForCsv, formatDateForCsv } from '@/lib/export/csv'
+import {
+  type DateRangePreset,
+  type DateRange,
+  getPresetRange,
+  getPresetLabel,
+  formatRangeDisplay,
+  formatRangeFilename,
+  isDateInRange,
+  formatDate as formatDateYMD,
+} from '@/lib/date/range'
 import useRequireAuth from '@/hooks/useRequireAuth'
 
-type MonthTab = 'this' | 'last' | 'custom'
+const PRESETS: DateRangePreset[] = ['this-month', 'last-30', 'last-90', 'ytd', 'custom']
 
 export default function PnLPage() {
   const { user, loading: authLoading } = useRequireAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [activeTab, setActiveTab] = useState<MonthTab>('this')
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    // Default to current month or URL param
-    if (typeof window === 'undefined') return new Date().toISOString().slice(0, 7)
-    const urlMonth = searchParams?.get('month')
-    return urlMonth || new Date().toISOString().slice(0, 7)
+  // Initialize state from URL or defaults
+  const [preset, setPreset] = useState<DateRangePreset>(() => {
+    const urlPreset = searchParams?.get('preset') as DateRangePreset | null
+    return urlPreset && PRESETS.includes(urlPreset) ? urlPreset : 'this-month'
   })
+
+  const [customFrom, setCustomFrom] = useState<string>(() => {
+    const urlFrom = searchParams?.get('from')
+    if (urlFrom) return urlFrom
+    // Default to first day of current month
+    const today = new Date()
+    return formatDateYMD(new Date(today.getFullYear(), today.getMonth(), 1))
+  })
+
+  const [customTo, setCustomTo] = useState<string>(() => {
+    const urlTo = searchParams?.get('to')
+    if (urlTo) return urlTo
+    // Default to today
+    return formatDateYMD(new Date())
+  })
+
+  // Compute active date range
+  const dateRange = useMemo<DateRange>(() => {
+    if (preset === 'custom') {
+      return { from: customFrom, to: customTo }
+    }
+    return getPresetRange(preset) || { from: customFrom, to: customTo }
+  }, [preset, customFrom, customTo])
 
   // Log session for debugging
   useEffect(() => {
@@ -32,161 +64,138 @@ export default function PnLPage() {
     })()
   }, [])
 
-  // Sync month with URL
+  // Sync URL params whenever range changes
   useEffect(() => {
-    if (searchParams) {
-      const urlMonth = searchParams.get('month')
-      if (urlMonth && urlMonth !== selectedMonth) {
-        setSelectedMonth(urlMonth)
-      }
+    const params = new URLSearchParams()
+    params.set('preset', preset)
+    if (preset === 'custom') {
+      params.set('from', customFrom)
+      params.set('to', customTo)
     }
-  }, [searchParams])
+    router.replace(`/dashboard/pnl?${params.toString()}`, { scroll: false })
+  }, [preset, customFrom, customTo, router])
 
-  // Fetch all data (no date filter)
-  const pnlKPIsRaw = usePnLKPIs(user?.id)
+  // Fetch ALL data (no server-side date filtering)
   const pnlItemsRaw = usePnLItems(user?.id)
-  const pnlExpenses = usePnLExpenses(user?.id, selectedMonth) // Keep month filter for expenses
-  const vatSummaryRaw = useVATSummary(user?.id)
+  const pnlExpensesRaw = usePnLExpenses(user?.id, null) // Pass null to fetch all expenses
 
-  // Compute month key for filtering (YYYY-MM)
-  const monthKey = selectedMonth // Already in YYYY-MM format
+  // Client-side filter items by date range
+  const filteredItems = useMemo(() => {
+    if (!pnlItemsRaw.data) return []
 
-  // Debug logs with errors
-  console.log('[PnL] kpiData', pnlKPIsRaw.data, pnlKPIsRaw.error)
-  console.log('[PnL] vatSummary', vatSummaryRaw.data, vatSummaryRaw.error)
-  console.log('[PnL] itemsData', pnlItemsRaw.data, pnlItemsRaw.error)
-  console.log('[PnL] monthKey', monthKey)
+    return pnlItemsRaw.data.filter((item: any) => {
+      const dateValue = item.date
+      if (!dateValue) return false
 
-  // Filter data by month in JavaScript
-  const kpiRow = pnlKPIsRaw.data?.find((r: any) => String(r.month).slice(0, 7) === monthKey)
-  const vatRow = vatSummaryRaw.data?.find((r: any) => String(r.month).slice(0, 7) === monthKey)
-  const detailRows = (pnlItemsRaw.data || []).filter((r: any) => {
-    // Use sold_date (from view) or date (from mapped type)
-    const dateValue = r.sold_date || r.date
-    if (!dateValue) return false
-    return String(dateValue).slice(0, 7) === monthKey
-  })
+      // Extract YYYY-MM-DD from date string
+      const itemDate = String(dateValue).slice(0, 10)
+      return isDateInRange(itemDate, dateRange)
+    })
+  }, [pnlItemsRaw.data, dateRange])
 
-  // Build filtered data objects
-  const pnlKPIs = {
-    loading: pnlKPIsRaw.loading,
-    error: pnlKPIsRaw.error,
-    data: kpiRow ? {
-      revenue: kpiRow.revenue || 0,
-      cogs: kpiRow.cogs || 0,
-      grossProfit: kpiRow.gross_profit || 0,
-      expenses: kpiRow.expenses || 0,
-      netProfit: kpiRow.net_profit || 0,
-      numSales: kpiRow.num_sales || 0,
-    } : {
-      revenue: 0,
-      cogs: 0,
-      grossProfit: 0,
-      expenses: 0,
-      netProfit: 0,
-      numSales: 0,
-    }
-  }
+  // Client-side filter expenses by date range
+  const filteredExpenses = useMemo(() => {
+    if (!pnlExpensesRaw.data) return []
 
-  const vatSummary = {
-    loading: vatSummaryRaw.loading,
-    error: vatSummaryRaw.error,
-    data: vatRow ? {
-      totalSales: vatRow.total_sales || 0,
-      totalMargin: vatRow.total_margin || 0,
-      taxableMargin: vatRow.taxable_margin || 0,
-      vatDue: vatRow.vat_due || 0,
-      numSales: vatRow.num_sales || 0,
-      totalVatDue: vatRow.vat_due || 0,
-    } : {
-      totalSales: 0,
-      totalMargin: 0,
-      taxableMargin: 0,
-      vatDue: 0,
-      numSales: 0,
-      totalVatDue: 0,
-    }
-  }
+    return pnlExpensesRaw.data.filter((expense: any) => {
+      const dateValue = expense.date
+      if (!dateValue) return false
 
-  const pnlItems = {
-    loading: pnlItemsRaw.loading,
-    error: pnlItemsRaw.error,
-    data: detailRows
-  }
+      const expenseDate = String(dateValue).slice(0, 10)
+      return isDateInRange(expenseDate, dateRange)
+    })
+  }, [pnlExpensesRaw.data, dateRange])
 
-  const handleMonthChange = (tab: MonthTab, month?: string) => {
-    setActiveTab(tab)
-    let newMonth = month
+  // Compute KPIs from filtered items
+  const kpis = useMemo(() => {
+    const revenue = filteredItems.reduce((sum, item) => sum + (item.salePrice || 0), 0)
+    const cogs = filteredItems.reduce((sum, item) => sum + (item.buyPrice || 0), 0)
+    const grossProfit = revenue - cogs
+    const expenses = filteredExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)
+    const netProfit = grossProfit - expenses
+    const numSales = filteredItems.length
 
-    if (tab === 'this') {
-      newMonth = new Date().toISOString().slice(0, 7)
-    } else if (tab === 'last') {
-      const lastMonth = new Date()
-      lastMonth.setMonth(lastMonth.getMonth() - 1)
-      newMonth = lastMonth.toISOString().slice(0, 7)
-    }
+    return { revenue, cogs, grossProfit, expenses, netProfit, numSales }
+  }, [filteredItems, filteredExpenses])
 
-    if (newMonth) {
-      setSelectedMonth(newMonth)
-      router.replace(`/dashboard/pnl?month=${newMonth}`, { scroll: false })
+  // Compute VAT summary from filtered items
+  const vatSummary = useMemo(() => {
+    const totalSales = filteredItems.reduce((sum, item) => sum + (item.salePrice || 0), 0)
+    const totalMargin = filteredItems.reduce((sum, item) => sum + (item.margin || 0), 0)
+    const vatDue = filteredItems.reduce((sum, item) => sum + (item.vatDue || 0), 0)
+    const numSales = filteredItems.length
+
+    // Taxable margin = total margin (for VAT Margin Scheme)
+    const taxableMargin = totalMargin
+
+    return { totalSales, totalMargin, taxableMargin, vatDue, numSales }
+  }, [filteredItems])
+
+  const handlePresetChange = (newPreset: DateRangePreset) => {
+    setPreset(newPreset)
+
+    // If switching to custom, ensure we have valid dates
+    if (newPreset === 'custom') {
+      if (!customFrom || !customTo) {
+        const today = new Date()
+        setCustomFrom(formatDateYMD(new Date(today.getFullYear(), today.getMonth(), 1)))
+        setCustomTo(formatDateYMD(today))
+      }
     }
   }
 
   const handleExportPnL = () => {
-    // Export P&L items (sold items with margin and VAT)
-    const rows = pnlItems.data.map(item => ({
+    const rows = filteredItems.map((item: any) => ({
       Date: formatDateForCsv(item.date),
-      SKU: item.sku,
-      Brand: item.brand,
-      Model: item.model,
-      Size: item.size,
-      'Buy Price': formatGbpForCsv(item.buyPrice),
-      'Sale Price': formatGbpForCsv(item.salePrice),
-      'Margin': formatGbpForCsv(item.margin),
-      'VAT Due': formatGbpForCsv(item.vatDue),
+      SKU: item.sku || '',
+      Brand: item.brand || '',
+      Model: item.model || '',
+      Size: item.size || '',
+      'Buy Price': formatGbpForCsv(item.buyPrice || 0),
+      'Sale Price': formatGbpForCsv(item.salePrice || 0),
+      'Margin': formatGbpForCsv(item.margin || 0),
+      'VAT Due': formatGbpForCsv(item.vatDue || 0),
       'Platform': item.platform || '',
     }))
 
     const headers = ['Date', 'SKU', 'Brand', 'Model', 'Size', 'Buy Price', 'Sale Price', 'Margin', 'VAT Due', 'Platform']
     const csv = toCsv(rows, headers)
-    const filename = `archvd-pnl-${selectedMonth}.csv`
+    const filename = `archvd-pnl-${formatRangeFilename(dateRange)}.csv`
     downloadCsv(filename, csv)
   }
 
   const handleExportVATDetail = () => {
-    // Export VAT detail (same as P&L items, focused on VAT)
-    const rows = pnlItems.data.map(item => ({
+    const rows = filteredItems.map((item: any) => ({
       Date: formatDateForCsv(item.date),
-      SKU: item.sku,
-      Brand: item.brand,
-      Model: item.model,
-      Size: item.size,
-      'Buy Price': formatGbpForCsv(item.buyPrice),
-      'Sale Price': formatGbpForCsv(item.salePrice),
-      'Margin': formatGbpForCsv(item.margin),
-      'VAT Due': formatGbpForCsv(item.vatDue),
+      SKU: item.sku || '',
+      Brand: item.brand || '',
+      Model: item.model || '',
+      Size: item.size || '',
+      'Buy Price': formatGbpForCsv(item.buyPrice || 0),
+      'Sale Price': formatGbpForCsv(item.salePrice || 0),
+      'Margin': formatGbpForCsv(item.margin || 0),
+      'VAT Due': formatGbpForCsv(item.vatDue || 0),
       'Platform': item.platform || '',
     }))
 
     const headers = ['Date', 'SKU', 'Brand', 'Model', 'Size', 'Buy Price', 'Sale Price', 'Margin', 'VAT Due', 'Platform']
     const csv = toCsv(rows, headers)
-    const filename = `archvd-vat-detail-${selectedMonth}.csv`
+    const filename = `archvd-vat-detail-${formatRangeFilename(dateRange)}.csv`
     downloadCsv(filename, csv)
   }
 
   const handleExportVATSummary = () => {
-    // Export VAT summary (monthly totals)
     const rows = [{
-      Month: selectedMonth,
-      'Total Sales': formatGbpForCsv(vatSummary.data.totalSales),
-      'Total Margin': formatGbpForCsv(vatSummary.data.totalMargin),
-      'VAT Due': formatGbpForCsv(vatSummary.data.totalVatDue),
-      'Number of Sales': vatSummary.data.numSales,
+      Range: formatRangeDisplay(dateRange),
+      'Total Sales': formatGbpForCsv(vatSummary.totalSales),
+      'Total Margin': formatGbpForCsv(vatSummary.totalMargin),
+      'VAT Due': formatGbpForCsv(vatSummary.vatDue),
+      'Number of Sales': vatSummary.numSales,
     }]
 
-    const headers = ['Month', 'Total Sales', 'Total Margin', 'VAT Due', 'Number of Sales']
+    const headers = ['Range', 'Total Sales', 'Total Margin', 'VAT Due', 'Number of Sales']
     const csv = toCsv(rows, headers)
-    const filename = `archvd-vat-summary-${selectedMonth}.csv`
+    const filename = `archvd-vat-summary-${formatRangeFilename(dateRange)}.csv`
     downloadCsv(filename, csv)
   }
 
@@ -243,96 +252,101 @@ export default function PnLPage() {
         </div>
       </div>
 
-      {/* Month Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-2 bg-surface border border-border rounded-xl p-1">
-          <button
-            onClick={() => handleMonthChange('this')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'this'
-                ? 'bg-accent-200 text-fg border border-accent-400'
-                : 'text-dim hover:text-fg hover:bg-surface2 hover:outline hover:outline-1 hover:outline-accent-400/40'
-            }`}
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => handleMonthChange('last')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'last'
-                ? 'bg-accent-200 text-fg border border-accent-400'
-                : 'text-dim hover:text-fg hover:bg-surface2 hover:outline hover:outline-1 hover:outline-accent-400/40'
-            }`}
-          >
-            Last Month
-          </button>
-          <button
-            onClick={() => setActiveTab('custom')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'custom'
-                ? 'bg-accent-200 text-fg border border-accent-400'
-                : 'text-dim hover:text-fg hover:bg-surface2 hover:outline hover:outline-1 hover:outline-accent-400/40'
-            }`}
-          >
-            Custom
-          </button>
+      {/* Date Range Selector */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2 bg-elev-1 border border-border rounded-xl p-1">
+          {PRESETS.map((p) => (
+            <button
+              key={p}
+              onClick={() => handlePresetChange(p)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                preset === p
+                  ? 'bg-accent-200 text-fg border border-accent-400 glow-accent-hover'
+                  : 'text-dim hover:text-fg hover:bg-elev-2 hover:outline hover:outline-1 hover:outline-accent-400/40'
+              }`}
+            >
+              {getPresetLabel(p)}
+            </button>
+          ))}
         </div>
-        {activeTab === 'custom' && (
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => handleMonthChange('custom', e.target.value)}
-            className="px-4 py-2 rounded-xl border border-border bg-bg text-fg text-sm focus:outline-none focus:ring-2 focus:ring-focus"
-          />
+
+        {/* Custom Date Inputs */}
+        {preset === 'custom' && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted">From:</label>
+              <Input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="w-auto bg-bg border-border text-fg text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted">To:</label>
+              <Input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="w-auto bg-bg border-border text-fg text-sm"
+              />
+            </div>
+          </div>
         )}
+
+        {/* Range Display */}
+        <div className="flex items-center gap-2 text-sm text-dim">
+          <Calendar className="h-4 w-4" />
+          <span>Showing: {formatRangeDisplay(dateRange)}</span>
+        </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
+        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">Revenue</div>
           <div className="text-2xl font-bold text-fg font-mono">
-            {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.revenue)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.revenue)}
           </div>
-          <div className="text-xs text-dim mt-1">{pnlKPIs.data.numSales} sales</div>
+          <div className="text-xs text-dim mt-1">{kpis.numSales} sales</div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
+        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">COGS</div>
           <div className="text-2xl font-bold text-fg font-mono">
-            {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.cogs)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.cogs)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
+        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">Gross Profit</div>
           <div className="text-2xl font-bold text-accent font-mono">
-            {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.grossProfit)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.grossProfit)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
+        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">Expenses</div>
           <div className="text-2xl font-bold text-fg font-mono">
-            {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.expenses)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.expenses)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
+        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">Net Profit</div>
-          <div className={`text-2xl font-bold font-mono inline-flex items-center gap-2 ${pnlKPIs.data.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>
-            {pnlKPIs.data.netProfit > 0 && <TrendingUp className="h-6 w-6" />}
-            {pnlKPIs.data.netProfit < 0 && <TrendingDown className="h-6 w-6" />}
-            {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.netProfit)}
+          <div className={`text-2xl font-bold font-mono inline-flex items-center gap-2 ${kpis.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>
+            {kpis.netProfit > 0 && <TrendingUp className="h-6 w-6" />}
+            {kpis.netProfit < 0 && <TrendingDown className="h-6 w-6" />}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.netProfit)}
           </div>
         </div>
       </div>
 
       {/* Sold Items Table */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+      <div className="bg-elev-1 border border-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
           <h2 className="text-lg font-semibold text-fg">Sold Items</h2>
-          <p className="text-xs text-dim mt-0.5">Items sold in {new Date(selectedMonth).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+          <p className="text-xs text-dim mt-0.5">Items sold in {formatRangeDisplay(dateRange)}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-surface2 border-b border-border border-t border-t-accent-400/25">
+            <thead className="bg-elev-2 border-b border-border border-t border-t-accent-400/25">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">SKU</th>
@@ -346,21 +360,21 @@ export default function PnLPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {pnlItems.loading ? (
+              {pnlItemsRaw.loading ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-dim">
                     Loading...
                   </td>
                 </tr>
-              ) : pnlItems.data.length === 0 ? (
+              ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-dim">
-                    No sales in this month
+                    No sales in this period
                   </td>
                 </tr>
               ) : (
-                pnlItems.data.map((item) => (
-                  <tr key={item.id} className="hover:bg-surface2 transition-colors">
+                filteredItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-elev-2 transition-colors">
                     <td className="px-4 py-3 text-sm text-fg">{formatDate(item.date)}</td>
                     <td className="px-4 py-3 text-sm text-fg font-mono">{item.sku}</td>
                     <td className="px-4 py-3 text-sm text-fg">
@@ -388,45 +402,45 @@ export default function PnLPage() {
       </div>
 
       {/* VAT Summary */}
-      <div className="bg-surface border border-border rounded-xl p-4">
+      <div className="bg-elev-1 border border-border rounded-xl p-4">
         <h2 className="text-lg font-semibold text-fg mb-4">VAT Margin Scheme Summary</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <div className="text-xs text-muted uppercase tracking-wide mb-1">Total Sales</div>
             <div className="text-xl font-bold text-fg">
-              {vatSummary.loading ? '...' : formatCurrency(vatSummary.data.totalSales)}
+              {pnlItemsRaw.loading ? '...' : formatCurrency(vatSummary.totalSales)}
             </div>
           </div>
           <div>
             <div className="text-xs text-muted uppercase tracking-wide mb-1">Total Margin</div>
             <div className="text-xl font-bold text-fg">
-              {vatSummary.loading ? '...' : formatCurrency(vatSummary.data.totalMargin)}
+              {pnlItemsRaw.loading ? '...' : formatCurrency(vatSummary.totalMargin)}
             </div>
           </div>
           <div>
             <div className="text-xs text-muted uppercase tracking-wide mb-1">Taxable Margin</div>
             <div className="text-xl font-bold text-fg">
-              {vatSummary.loading ? '...' : formatCurrency(vatSummary.data.taxableMargin)}
+              {pnlItemsRaw.loading ? '...' : formatCurrency(vatSummary.taxableMargin)}
             </div>
           </div>
           <div>
             <div className="text-xs text-muted uppercase tracking-wide mb-1">VAT Due</div>
             <div className="text-xl font-bold text-accent">
-              {vatSummary.loading ? '...' : formatCurrency(vatSummary.data.vatDue)}
+              {pnlItemsRaw.loading ? '...' : formatCurrency(vatSummary.vatDue)}
             </div>
           </div>
         </div>
       </div>
 
       {/* Expenses Table */}
-      <div className="bg-surface border border-border rounded-xl overflow-hidden">
+      <div className="bg-elev-1 border border-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
           <h2 className="text-lg font-semibold text-fg">Expenses</h2>
-          <p className="text-xs text-dim mt-0.5">Expenses recorded in {new Date(selectedMonth).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+          <p className="text-xs text-dim mt-0.5">Expenses recorded in {formatRangeDisplay(dateRange)}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-surface2 border-b border-border border-t border-t-accent-400/25">
+            <thead className="bg-elev-2 border-b border-border border-t border-t-accent-400/25">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Description</th>
@@ -435,21 +449,21 @@ export default function PnLPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {pnlExpenses.loading ? (
+              {pnlExpensesRaw.loading ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-dim">
                     Loading...
                   </td>
                 </tr>
-              ) : pnlExpenses.data.length === 0 ? (
+              ) : filteredExpenses.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-dim">
-                    No expenses in this month
+                    No expenses in this period
                   </td>
                 </tr>
               ) : (
-                pnlExpenses.data.map((expense) => (
-                  <tr key={expense.id} className="hover:bg-surface2 transition-colors">
+                filteredExpenses.map((expense) => (
+                  <tr key={expense.id} className="hover:bg-elev-2 transition-colors">
                     <td className="px-4 py-3 text-sm text-fg">{formatDate(expense.date)}</td>
                     <td className="px-4 py-3 text-sm text-fg">{expense.description}</td>
                     <td className="px-4 py-3 text-sm text-dim">{expense.category}</td>

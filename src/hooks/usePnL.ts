@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import type { PnLItemRow, PnLMonthRow, VATMonthRow } from '@/lib/types/pnl'
 
 export type PnLKPIs = {
   revenue: number
@@ -14,15 +15,15 @@ export type PnLKPIs = {
 
 export type PnLItem = {
   id: string
-  date: string
+  date: string // sold_date from view
   sku: string
   brand: string
   model: string
   size: string
-  buyPrice: number
-  salePrice: number
-  margin: number
-  vatDue: number
+  buyPrice: number // buy_price from view
+  salePrice: number // sale_price from view
+  margin: number // margin_gbp from view
+  vatDue: number // vat_due_gbp from view
   platform: string | null
 }
 
@@ -38,7 +39,7 @@ export type ExpenseItem = {
  * Hook for fetching P&L KPIs (all months, no date filter)
  */
 export function usePnLKPIs(userId: string | undefined) {
-  const [data, setData] = useState<any[]>([])
+  const [data, setData] = useState<PnLMonthRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -61,6 +62,7 @@ export function usePnLKPIs(userId: string | undefined) {
           throw fetchError
         }
 
+        console.log('[usePnLKPIs] Raw data from view:', pnlData)
         setData(pnlData || [])
         setError(null)
       } catch (err: any) {
@@ -102,20 +104,24 @@ export function usePnLItems(userId: string | undefined) {
 
         if (fetchError) throw fetchError
 
-        const pnlItems: PnLItem[] = (items || []).map((item: any) => ({
+        console.log('[usePnLItems] Raw data from view (first row):', items?.[0])
+
+        // Map from view columns to PnLItem interface
+        const pnlItems: PnLItem[] = (items || []).map((item: PnLItemRow) => ({
           id: item.item_id,
-          date: item.sold_date,
+          date: item.sold_date, // Use sold_date from view
           sku: item.sku || '',
           brand: item.brand || '',
           model: item.model || '',
           size: item.size || '',
-          buyPrice: item.purchase_price || 0,
-          salePrice: item.sold_price || 0,
-          margin: item.margin || 0,
-          vatDue: item.vat_due || 0,
+          buyPrice: item.buy_price, // Use buy_price from view
+          salePrice: item.sale_price, // Use sale_price from view
+          margin: item.margin_gbp, // Use margin_gbp from view
+          vatDue: item.vat_due_gbp, // Use vat_due_gbp from view
           platform: item.platform,
         }))
 
+        console.log('[usePnLItems] Mapped items (first row):', pnlItems?.[0])
         setData(pnlItems)
         setError(null)
       } catch (err: any) {
@@ -133,15 +139,16 @@ export function usePnLItems(userId: string | undefined) {
 }
 
 /**
- * Hook for fetching expenses for a specific month
+ * Hook for fetching expenses
+ * @param month - Optional month in YYYY-MM format. If null/undefined, fetches all expenses.
  */
-export function usePnLExpenses(userId: string | undefined, month: string) {
+export function usePnLExpenses(userId: string | undefined, month: string | null | undefined) {
   const [data, setData] = useState<ExpenseItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!userId || !month) {
+    if (!userId) {
       setLoading(false)
       return
     }
@@ -149,18 +156,24 @@ export function usePnLExpenses(userId: string | undefined, month: string) {
     const fetchExpenses = async () => {
       setLoading(true)
       try {
-        // Calculate month start and end dates
-        const monthStart = new Date(month + '-01')
-        const monthEnd = new Date(monthStart)
-        monthEnd.setMonth(monthEnd.getMonth() + 1)
-
-        const { data: expenses, error: fetchError } = await supabase
+        let query = supabase
           .from('expenses')
           .select('*')
           .eq('user_id', userId)
-          .gte('date', monthStart.toISOString().split('T')[0])
-          .lt('date', monthEnd.toISOString().split('T')[0])
           .order('date', { ascending: false })
+
+        // Apply month filter only if month is provided
+        if (month) {
+          const monthStart = new Date(month + '-01')
+          const monthEnd = new Date(monthStart)
+          monthEnd.setMonth(monthEnd.getMonth() + 1)
+
+          query = query
+            .gte('date', monthStart.toISOString().split('T')[0])
+            .lt('date', monthEnd.toISOString().split('T')[0])
+        }
+
+        const { data: expenses, error: fetchError } = await query
 
         if (fetchError) throw fetchError
 
@@ -192,7 +205,7 @@ export function usePnLExpenses(userId: string | undefined, month: string) {
  * Hook for fetching VAT summary (all months, no date filter)
  */
 export function useVATSummary(userId: string | undefined) {
-  const [data, setData] = useState<any[]>([])
+  const [data, setData] = useState<VATMonthRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -215,6 +228,7 @@ export function useVATSummary(userId: string | undefined) {
           throw fetchError
         }
 
+        console.log('[useVATSummary] Raw data from view (first row):', vatData?.[0])
         setData(vatData || [])
         setError(null)
       } catch (err: any) {

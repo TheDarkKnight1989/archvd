@@ -16,7 +16,7 @@ interface KpiCardProps {
 export function KpiCard({ label, value, delta, period, loading }: KpiCardProps) {
   if (loading) {
     return (
-      <Card className="p-4 md:p-5">
+      <Card elevation={2} className="p-4 md:p-5 gradient-elev">
         <div className="flex items-center justify-between mb-2">
           <Skeleton className="h-3 w-24" />
           {period && <Skeleton className="h-5 w-8" />}
@@ -28,7 +28,7 @@ export function KpiCard({ label, value, delta, period, loading }: KpiCardProps) 
   }
 
   return (
-    <Card className="p-4 md:p-5 hover:shadow-glow transition-shadow duration-base">
+    <Card elevation={2} className="p-4 md:p-5 gradient-elev glow-accent-hover">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted">{label}</span>
         {period && (

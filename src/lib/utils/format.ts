@@ -19,3 +19,17 @@ export const pct1 = new Intl.NumberFormat('en-GB', {
 });
 
 export const fmt = gbp0; // Alias for backwards compat
+
+// Format percentage (converts 0.15 → "15.0%")
+export function formatPct(value: number | null | undefined): string {
+  if (value === null || value === undefined || isNaN(value)) return '—'
+  return pct1.format(value)
+}
+
+// Get color class for delta values
+export function deltaColor(
+  value: number | null | undefined
+): 'text-green-400' | 'text-red-400' | 'text-dim' {
+  if (value === null || value === undefined || value === 0) return 'text-dim'
+  return value > 0 ? 'text-green-400' : 'text-red-400'
+}

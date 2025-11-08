@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils/cn'
+import { ReleaseCard, ReleaseCardSkeleton } from '@/components/ReleaseCard'
 
 type Release = {
   id: string
@@ -128,7 +129,7 @@ export default function ReleasesPage() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
+      <Card elevation={1} className="p-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex items-center gap-2 text-sm text-muted">
             <Filter className="h-4 w-4" />
@@ -139,7 +140,7 @@ export default function ReleasesPage() {
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-surface2 border-border">
+            <SelectContent className="bg-elev-2 border-border">
               {monthOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -151,7 +152,7 @@ export default function ReleasesPage() {
             <SelectTrigger className="w-[160px] bg-bg border-border">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-surface2 border-border">
+            <SelectContent className="bg-elev-2 border-border">
               {BRANDS.map((brand) => (
                 <SelectItem key={brand} value={brand}>
                   {brand}
@@ -173,14 +174,14 @@ export default function ReleasesPage() {
       {loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="h-64 animate-pulse bg-surface" />
+            <ReleaseCardSkeleton key={i} />
           ))}
         </div>
       )}
 
       {/* Empty State */}
       {!loading && releases.length === 0 && (
-        <Card className="p-12 text-center">
+        <Card elevation={1} className="p-12 text-center">
           <Calendar className="h-12 w-12 mx-auto text-dim mb-4" />
           <p className="text-fg font-medium">No releases found</p>
           <p className="text-sm text-dim mt-2">Try adjusting your filters or check back later</p>
@@ -204,76 +205,22 @@ export default function ReleasesPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {groupedByDate[date].map((release) => (
-                  <Card
-                    key={release.id}
-                    className="overflow-hidden group hover:border-accent-400/50 transition-colors cursor-pointer"
-                    onClick={() => handleCardClick(release)}
-                  >
-                    {/* Image */}
-                    <div className="relative h-48 bg-surface2 overflow-hidden">
-                      {release.image_url ? (
-                        <img
-                          src={release.image_url}
-                          alt={`${release.brand} ${release.model}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-dim">
-                          <Calendar className="h-12 w-12" />
-                        </div>
-                      )}
-                      <div className="absolute top-2 right-2">
-                        <Badge className="bg-accent text-black text-xs font-semibold">
-                          {release.brand}
-                        </Badge>
-                      </div>
-                      {release.source && (
-                        <div className="absolute top-2 left-2">
-                          <Badge variant="outline" className="bg-bg/80 backdrop-blur-sm text-xs">
-                            {release.source}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-4 space-y-2">
-                      <h3 className="font-semibold text-fg text-sm line-clamp-2">
-                        {release.brand} {release.model}
-                      </h3>
-                      {release.colorway && (
-                        <p className="text-xs text-dim line-clamp-1">{release.colorway}</p>
-                      )}
-
-                      <div className="flex items-center justify-between pt-2">
-                        <p className="text-xs text-muted font-mono">
-                          {new Date(release.release_date).toLocaleDateString('en-GB')}
-                        </p>
-                        <div className="flex items-center gap-1 text-accent text-xs">
-                          <span>Details</span>
-                          <ArrowRight className="h-3 w-3" />
-                        </div>
-                      </div>
-
-                      {release.skus && release.skus.length > 0 && (
-                        <div className="pt-2 border-t border-border">
-                          <p className="text-xs text-dim mb-1">SKUs:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {release.skus.slice(0, 3).map((sku, idx) => (
-                              <Badge key={idx} variant="outline" className="text-[10px] font-mono">
-                                {sku}
-                              </Badge>
-                            ))}
-                            {release.skus.length > 3 && (
-                              <Badge variant="outline" className="text-[10px]">
-                                +{release.skus.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
+                  <div key={release.id} onClick={() => handleCardClick(release)} className="cursor-pointer">
+                    <ReleaseCard
+                      imageUrl={release.image_url || '/placeholder-release.png'}
+                      name={release.model}
+                      brand={release.brand}
+                      colorway={release.colorway || undefined}
+                      releaseDateISO={release.release_date}
+                      retailers={
+                        release.source
+                          ? [{ name: release.source, href: release.source_url || undefined }]
+                          : []
+                      }
+                      sku={release.skus?.[0]}
+                      remindable={false}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -345,7 +292,7 @@ export default function ReleasesPage() {
                           key={idx}
                           href={`/dashboard/market?sku=${sku}`}
                           onClick={() => setModalOpen(false)}
-                          className="group flex items-center justify-between p-3 bg-surface2 hover:bg-surface border border-border hover:border-accent-400/50 rounded-lg transition-all"
+                          className="group flex items-center justify-between p-3 bg-elev-2 hover:bg-elev-1 border border-border hover:border-accent-400/50 rounded-lg transition-all"
                         >
                           <span className="text-sm font-mono text-fg">{sku}</span>
                           <ArrowRight className="h-4 w-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
