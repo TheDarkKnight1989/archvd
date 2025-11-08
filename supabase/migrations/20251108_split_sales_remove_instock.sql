@@ -10,50 +10,33 @@ BEGIN
   END IF;
 END$$;
 
--- 2. Drop ALL constraints on Inventory table FIRST to avoid type comparison issues during any table modifications
-DO $$
-DECLARE
-  r RECORD;
-BEGIN
-  FOR r IN
-    SELECT constraint_name
-    FROM information_schema.table_constraints
-    WHERE table_schema = 'public'
-    AND table_name = 'Inventory'
-    AND constraint_type = 'CHECK'
-  LOOP
-    EXECUTE 'ALTER TABLE "Inventory" DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
-  END LOOP;
-END$$;
-
--- 3. Drop status default to avoid enum-to-text comparison issues during table modifications
-ALTER TABLE "Inventory" ALTER COLUMN status DROP DEFAULT;
-
--- 4. Inventory table: drop legacy boolean instock if it exists
+-- 2. Drop legacy boolean instock if it exists
 ALTER TABLE "Inventory"
   DROP COLUMN IF EXISTS instock;
 
--- 5. Drop dependent views temporarily (they'll be recreated later in this migration)
+-- 3. Drop dependent views temporarily (they'll be recreated later in this migration)
 DROP VIEW IF EXISTS profit_loss_monthly_view CASCADE;
 DROP VIEW IF EXISTS vat_margin_monthly_view CASCADE;
 DROP VIEW IF EXISTS vat_margin_detail_view CASCADE;
 
--- 6. Convert status column to TEXT temporarily (if it's currently an enum)
-ALTER TABLE "Inventory" ALTER COLUMN status TYPE TEXT;
+-- 4. Create a new TEXT column, copy status values, drop old column (avoids all constraint issues)
+ALTER TABLE "Inventory" ADD COLUMN status_new TEXT;
+UPDATE "Inventory" SET status_new = status::text;
+ALTER TABLE "Inventory" DROP COLUMN status;
+ALTER TABLE "Inventory" RENAME COLUMN status_new TO status;
 
--- 7. Update existing status values to match new enum
--- Map old values to new enum values
+-- 5. Update status values to match new enum
 UPDATE "Inventory" SET status = 'active' WHERE status IN ('in_stock', 'deadstock', 'reserved');
 UPDATE "Inventory" SET status = 'sold' WHERE status = 'sold';
 -- 'listed' and 'worn' should already be correct if they exist
 
--- 8. Convert status column back to item_status enum with new default
+-- 6. Convert status column to item_status enum with default
 ALTER TABLE "Inventory"
   ALTER COLUMN status TYPE item_status USING status::item_status;
 ALTER TABLE "Inventory"
   ALTER COLUMN status SET DEFAULT 'active'::item_status;
 
--- 9. Create sales_view for sold items only
+-- 7. Create sales_view for sold items only
 CREATE OR REPLACE VIEW sales_view
 WITH (security_invoker = on) AS
 SELECT
@@ -100,7 +83,7 @@ SELECT
 FROM "Inventory" i
 WHERE i.status = 'sold';
 
--- 10. Create inventory_active_view for non-sold items
+-- 8. Create inventory_active_view for non-sold items
 CREATE OR REPLACE VIEW inventory_active_view
 WITH (security_invoker = on) AS
 SELECT
@@ -138,7 +121,7 @@ SELECT
 FROM "Inventory" i
 WHERE i.status IN ('active', 'listed', 'worn');
 
--- 11. Ensure RLS is enabled and policies exist
+-- 9. Ensure RLS is enabled and policies exist
 ALTER TABLE "Inventory" ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist (to recreate cleanly)
@@ -164,21 +147,21 @@ CREATE POLICY "Users can delete own items"
   ON "Inventory" FOR DELETE
   USING (auth.uid() = user_id);
 
--- 12. Ensure views use security_invoker
+-- 10. Ensure views use security_invoker
 ALTER VIEW sales_view SET (security_invoker = on);
 ALTER VIEW inventory_active_view SET (security_invoker = on);
 
--- 13. Add indexes for performance
+-- 11. Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_inventory_status ON "Inventory"(status);
 CREATE INDEX IF NOT EXISTS idx_inventory_user_status ON "Inventory"(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_inventory_sold_date ON "Inventory"(sold_date) WHERE status = 'sold';
 
--- 14. Comment documentation
+-- 12. Comment documentation
 COMMENT ON VIEW sales_view IS 'Shows only sold items with calculated margin metrics';
 COMMENT ON VIEW inventory_active_view IS 'Shows only active inventory (active, listed, worn) excluding sold items';
 COMMENT ON COLUMN "Inventory".status IS 'Item status: active (owned), listed (for sale), worn (used but owned), sold (completed transaction)';
 
--- 15. Recreate P&L and VAT views (dropped in step 5)
+-- 13. Recreate P&L and VAT views (dropped in step 3)
 CREATE OR REPLACE VIEW profit_loss_monthly_view AS
 WITH sold_items AS (
   SELECT
