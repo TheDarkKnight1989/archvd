@@ -196,7 +196,10 @@ export default function DashboardPage() {
           style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
         >
           <div className="mx-auto max-w-[1280px]">
-            <h1 className="text-base md:text-lg font-mono text-fg">Dashboard</h1>
+            <h1 className="text-2xl font-bold text-fg relative inline-block">
+              Dashboard
+              <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
+            </h1>
           </div>
         </header>
 

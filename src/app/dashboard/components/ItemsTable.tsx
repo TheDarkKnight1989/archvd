@@ -97,7 +97,7 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
         style={{ maxHeight: shouldVirtualize ? '600px' : 'auto' }}
       >
         <table className="min-w-full">
-          <thead className="sticky top-0 bg-bg text-muted text-xs border-b border-border">
+          <thead className="sticky top-0 bg-bg text-muted text-xs border-b border-border border-t border-t-accent-400/25">
             <tr>
               <th className="px-3 md:px-4 py-3 text-left font-medium min-w-[220px]">Item</th>
               <th className="px-3 md:px-4 py-3 text-left font-medium w-[110px]">SKU</th>

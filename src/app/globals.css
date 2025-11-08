@@ -49,6 +49,7 @@
   /* Font families */
   --font-inter: 'Inter', system-ui, sans-serif;
   --font-jetmono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-cinzel: 'Cinzel', serif;
 }
 
 /* High contrast mode */
@@ -77,6 +78,27 @@
     background-color: var(--archvd-bg);
     color: var(--archvd-fg);
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Matrix heading typography */
+  h1, h2, h3 {
+    font-family: var(--font-cinzel);
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
   }
 }
 

@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button'
 import { usePnLKPIs, usePnLItems, usePnLExpenses, useVATSummary } from '@/hooks/usePnL'
 import { supabase } from '@/lib/supabase/client'
 import { toCsv, downloadCsv, formatGbpForCsv, formatDateForCsv } from '@/lib/export/csv'
+import useRequireAuth from '@/hooks/useRequireAuth'
 
 type MonthTab = 'this' | 'last' | 'custom'
 
 export default function PnLPage() {
+  const { user, loading: authLoading } = useRequireAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [userId, setUserId] = useState<string | undefined>(undefined)
   const [activeTab, setActiveTab] = useState<MonthTab>('this')
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     // Default to current month or URL param
@@ -23,16 +24,13 @@ export default function PnLPage() {
     return urlMonth || new Date().toISOString().slice(0, 7)
   })
 
-  // Fetch user
+  // Log session for debugging
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setUserId(user?.id)
-    }
-    fetchUser()
-  }, [supabase])
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('[PnL] session user id:', session?.user?.id)
+    })()
+  }, [])
 
   // Sync month with URL
   useEffect(() => {
@@ -44,11 +42,77 @@ export default function PnLPage() {
     }
   }, [searchParams])
 
-  // Fetch data
-  const pnlKPIs = usePnLKPIs(userId, selectedMonth)
-  const pnlItems = usePnLItems(userId, selectedMonth)
-  const pnlExpenses = usePnLExpenses(userId, selectedMonth)
-  const vatSummary = useVATSummary(userId, selectedMonth)
+  // Fetch all data (no date filter)
+  const pnlKPIsRaw = usePnLKPIs(user?.id)
+  const pnlItemsRaw = usePnLItems(user?.id)
+  const pnlExpenses = usePnLExpenses(user?.id, selectedMonth) // Keep month filter for expenses
+  const vatSummaryRaw = useVATSummary(user?.id)
+
+  // Compute month key for filtering (YYYY-MM)
+  const monthKey = selectedMonth // Already in YYYY-MM format
+
+  // Debug logs with errors
+  console.log('[PnL] kpiData', pnlKPIsRaw.data, pnlKPIsRaw.error)
+  console.log('[PnL] vatSummary', vatSummaryRaw.data, vatSummaryRaw.error)
+  console.log('[PnL] itemsData', pnlItemsRaw.data, pnlItemsRaw.error)
+  console.log('[PnL] monthKey', monthKey)
+
+  // Filter data by month in JavaScript
+  const kpiRow = pnlKPIsRaw.data?.find((r: any) => String(r.month).slice(0, 7) === monthKey)
+  const vatRow = vatSummaryRaw.data?.find((r: any) => String(r.month).slice(0, 7) === monthKey)
+  const detailRows = (pnlItemsRaw.data || []).filter((r: any) => {
+    // Use sold_date (from view) or date (from mapped type)
+    const dateValue = r.sold_date || r.date
+    if (!dateValue) return false
+    return String(dateValue).slice(0, 7) === monthKey
+  })
+
+  // Build filtered data objects
+  const pnlKPIs = {
+    loading: pnlKPIsRaw.loading,
+    error: pnlKPIsRaw.error,
+    data: kpiRow ? {
+      revenue: kpiRow.revenue || 0,
+      cogs: kpiRow.cogs || 0,
+      grossProfit: kpiRow.gross_profit || 0,
+      expenses: kpiRow.expenses || 0,
+      netProfit: kpiRow.net_profit || 0,
+      numSales: kpiRow.num_sales || 0,
+    } : {
+      revenue: 0,
+      cogs: 0,
+      grossProfit: 0,
+      expenses: 0,
+      netProfit: 0,
+      numSales: 0,
+    }
+  }
+
+  const vatSummary = {
+    loading: vatSummaryRaw.loading,
+    error: vatSummaryRaw.error,
+    data: vatRow ? {
+      totalSales: vatRow.total_sales || 0,
+      totalMargin: vatRow.total_margin || 0,
+      taxableMargin: vatRow.taxable_margin || 0,
+      vatDue: vatRow.vat_due || 0,
+      numSales: vatRow.num_sales || 0,
+      totalVatDue: vatRow.vat_due || 0,
+    } : {
+      totalSales: 0,
+      totalMargin: 0,
+      taxableMargin: 0,
+      vatDue: 0,
+      numSales: 0,
+      totalVatDue: 0,
+    }
+  }
+
+  const pnlItems = {
+    loading: pnlItemsRaw.loading,
+    error: pnlItemsRaw.error,
+    data: detailRows
+  }
 
   const handleMonthChange = (tab: MonthTab, month?: string) => {
     setActiveTab(tab)
@@ -142,12 +206,25 @@ export default function PnLPage() {
     })
   }
 
+  // Guard: show loading while auth resolves
+  if (authLoading) {
+    return <div className="p-6 text-dim">Loading...</div>
+  }
+
+  // Guard: redirect handled by useRequireAuth
+  if (!user) {
+    return null
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-fg">Profit & Loss</h1>
+          <h1 className="text-2xl font-bold text-fg relative inline-block">
+            Profit & Loss
+            <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
+          </h1>
           <p className="text-sm text-dim mt-1">Monthly P&L and VAT reporting</p>
         </div>
         <div className="flex items-center gap-2">
@@ -173,8 +250,8 @@ export default function PnLPage() {
             onClick={() => handleMonthChange('this')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'this'
-                ? 'bg-accent text-black'
-                : 'text-dim hover:text-fg hover:bg-surface2'
+                ? 'bg-accent-200 text-fg border border-accent-400'
+                : 'text-dim hover:text-fg hover:bg-surface2 hover:outline hover:outline-1 hover:outline-accent-400/40'
             }`}
           >
             This Month
@@ -183,8 +260,8 @@ export default function PnLPage() {
             onClick={() => handleMonthChange('last')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'last'
-                ? 'bg-accent text-black'
-                : 'text-dim hover:text-fg hover:bg-surface2'
+                ? 'bg-accent-200 text-fg border border-accent-400'
+                : 'text-dim hover:text-fg hover:bg-surface2 hover:outline hover:outline-1 hover:outline-accent-400/40'
             }`}
           >
             Last Month
@@ -193,8 +270,8 @@ export default function PnLPage() {
             onClick={() => setActiveTab('custom')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'custom'
-                ? 'bg-accent text-black'
-                : 'text-dim hover:text-fg hover:bg-surface2'
+                ? 'bg-accent-200 text-fg border border-accent-400'
+                : 'text-dim hover:text-fg hover:bg-surface2 hover:outline hover:outline-1 hover:outline-accent-400/40'
             }`}
           >
             Custom
@@ -212,34 +289,34 @@ export default function PnLPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-surface border border-border rounded-xl p-4">
+        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">Revenue</div>
-          <div className="text-2xl font-bold text-fg">
+          <div className="text-2xl font-bold text-fg font-mono">
             {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.revenue)}
           </div>
           <div className="text-xs text-dim mt-1">{pnlKPIs.data.numSales} sales</div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
+        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">COGS</div>
-          <div className="text-2xl font-bold text-fg">
+          <div className="text-2xl font-bold text-fg font-mono">
             {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.cogs)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
+        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">Gross Profit</div>
-          <div className="text-2xl font-bold text-accent">
+          <div className="text-2xl font-bold text-accent font-mono">
             {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.grossProfit)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
+        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">Expenses</div>
-          <div className="text-2xl font-bold text-fg">
+          <div className="text-2xl font-bold text-fg font-mono">
             {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.expenses)}
           </div>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
+        <div className="bg-surface border border-border rounded-xl p-4 shadow-[inset_0_0_0_1px_rgba(15,141,101,0.2)]">
           <div className="text-xs text-muted uppercase tracking-wide mb-1">Net Profit</div>
-          <div className={`text-2xl font-bold inline-flex items-center gap-2 ${pnlKPIs.data.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>
+          <div className={`text-2xl font-bold font-mono inline-flex items-center gap-2 ${pnlKPIs.data.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>
             {pnlKPIs.data.netProfit > 0 && <TrendingUp className="h-6 w-6" />}
             {pnlKPIs.data.netProfit < 0 && <TrendingDown className="h-6 w-6" />}
             {pnlKPIs.loading ? '...' : formatCurrency(pnlKPIs.data.netProfit)}
@@ -255,7 +332,7 @@ export default function PnLPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-surface2 border-b border-border">
+            <thead className="bg-surface2 border-b border-border border-t border-t-accent-400/25">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">SKU</th>
@@ -349,7 +426,7 @@ export default function PnLPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-surface2 border-b border-border">
+            <thead className="bg-surface2 border-b border-border border-t border-t-accent-400/25">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Date</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wide">Description</th>

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono, Cinzel } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
@@ -13,6 +13,13 @@ const jetmono = JetBrains_Mono({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-jetmono'
+});
+
+const cinzel = Cinzel({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['600', '700'],
+  variable: '--font-cinzel'
 });
 
 export const metadata: Metadata = {
@@ -32,7 +39,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#050807" media="(prefers-color-scheme: dark)" />
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className={`${inter.variable} ${jetmono.variable} font-sans min-h-screen bg-bg text-fg`}>
+      <body className={`${inter.variable} ${jetmono.variable} ${cinzel.variable} font-sans min-h-screen bg-bg text-fg`}>
         <a href="#main" className="skip-link">Skip to content</a>
         <Providers>{children}</Providers>
       </body>

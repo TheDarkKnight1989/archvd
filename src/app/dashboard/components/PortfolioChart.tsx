@@ -111,13 +111,13 @@ export function PortfolioChart({ series, loading, onRangeChange, currentRange = 
           <AreaChart data={series} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
             <defs>
               <linearGradient id="archvdArea" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="var(--archvd-series-1)" stopOpacity={0.35} />
+                <stop offset="0%" stopColor="var(--archvd-series-1)" stopOpacity={0.45} />
                 <stop offset="100%" stopColor="var(--archvd-series-1)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid
-              stroke="var(--archvd-border)"
-              strokeOpacity={0.6}
+              stroke="var(--archvd-accent-200)"
+              strokeOpacity={0.25}
               vertical={false}
             />
             <XAxis
@@ -138,6 +138,7 @@ export function PortfolioChart({ series, loading, onRangeChange, currentRange = 
               contentStyle={{
                 background: 'var(--archvd-bg-elev-2)',
                 border: '1px solid var(--archvd-border)',
+                borderLeft: '2px solid var(--archvd-accent-400)',
                 borderRadius: 12,
                 padding: '8px 12px'
               }}
@@ -149,7 +150,7 @@ export function PortfolioChart({ series, loading, onRangeChange, currentRange = 
               type="monotone"
               dataKey="value"
               stroke="var(--archvd-series-1)"
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill="url(#archvdArea)"
             />
           </AreaChart>

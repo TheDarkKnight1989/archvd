@@ -1,6 +1,14 @@
 {
   "crons": [
     {
+      "path": "/api/workers/releases?secret=%CRON_SECRET%",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/workers/prices",
+      "schedule": "0 2 * * *"
+    },
+    {
       "path": "/api/pricing/refresh",
       "schedule": "0 2 * * *"
     }

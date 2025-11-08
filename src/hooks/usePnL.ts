@@ -35,22 +35,15 @@ export type ExpenseItem = {
 }
 
 /**
- * Hook for fetching P&L KPIs for a specific month
+ * Hook for fetching P&L KPIs (all months, no date filter)
  */
-export function usePnLKPIs(userId: string | undefined, month: string) {
-  const [data, setData] = useState<PnLKPIs>({
-    revenue: 0,
-    cogs: 0,
-    grossProfit: 0,
-    expenses: 0,
-    netProfit: 0,
-    numSales: 0,
-  })
+export function usePnLKPIs(userId: string | undefined) {
+  const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!userId || !month) {
+    if (!userId) {
       setLoading(false)
       return
     }
@@ -62,34 +55,13 @@ export function usePnLKPIs(userId: string | undefined, month: string) {
           .from('profit_loss_monthly_view')
           .select('*')
           .eq('user_id', userId)
-          .eq('month', month)
-          .single()
+          .order('month', { ascending: false })
 
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          // PGRST116 = no rows, which is fine
+        if (fetchError) {
           throw fetchError
         }
 
-        if (pnlData) {
-          setData({
-            revenue: pnlData.revenue || 0,
-            cogs: pnlData.cogs || 0,
-            grossProfit: pnlData.gross_profit || 0,
-            expenses: pnlData.expenses || 0,
-            netProfit: pnlData.net_profit || 0,
-            numSales: pnlData.num_sales || 0,
-          })
-        } else {
-          // No data for this month
-          setData({
-            revenue: 0,
-            cogs: 0,
-            grossProfit: 0,
-            expenses: 0,
-            netProfit: 0,
-            numSales: 0,
-          })
-        }
+        setData(pnlData || [])
         setError(null)
       } catch (err: any) {
         console.error('Failed to fetch P&L KPIs:', err)
@@ -100,21 +72,21 @@ export function usePnLKPIs(userId: string | undefined, month: string) {
     }
 
     fetchKPIs()
-  }, [userId, month])
+  }, [userId])
 
   return { data, loading, error }
 }
 
 /**
- * Hook for fetching sold items with VAT details for a specific month
+ * Hook for fetching sold items with VAT details (all items, no date filter)
  */
-export function usePnLItems(userId: string | undefined, month: string) {
+export function usePnLItems(userId: string | undefined) {
   const [data, setData] = useState<PnLItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!userId || !month) {
+    if (!userId) {
       setLoading(false)
       return
     }
@@ -126,7 +98,6 @@ export function usePnLItems(userId: string | undefined, month: string) {
           .from('vat_margin_detail_view')
           .select('*')
           .eq('user_id', userId)
-          .eq('month', month)
           .order('sold_date', { ascending: false })
 
         if (fetchError) throw fetchError
@@ -156,7 +127,7 @@ export function usePnLItems(userId: string | undefined, month: string) {
     }
 
     fetchItems()
-  }, [userId, month])
+  }, [userId])
 
   return { data, loading, error }
 }
@@ -218,21 +189,15 @@ export function usePnLExpenses(userId: string | undefined, month: string) {
 }
 
 /**
- * Hook for fetching VAT summary for a specific month
+ * Hook for fetching VAT summary (all months, no date filter)
  */
-export function useVATSummary(userId: string | undefined, month: string) {
-  const [data, setData] = useState({
-    totalSales: 0,
-    totalMargin: 0,
-    taxableMargin: 0,
-    vatDue: 0,
-    numSales: 0,
-  })
+export function useVATSummary(userId: string | undefined) {
+  const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!userId || !month) {
+    if (!userId) {
       setLoading(false)
       return
     }
@@ -244,30 +209,13 @@ export function useVATSummary(userId: string | undefined, month: string) {
           .from('vat_margin_monthly_view')
           .select('*')
           .eq('user_id', userId)
-          .eq('month', month)
-          .single()
+          .order('month', { ascending: false })
 
-        if (fetchError && fetchError.code !== 'PGRST116') {
+        if (fetchError) {
           throw fetchError
         }
 
-        if (vatData) {
-          setData({
-            totalSales: vatData.total_sales || 0,
-            totalMargin: vatData.total_margin || 0,
-            taxableMargin: vatData.taxable_margin || 0,
-            vatDue: vatData.vat_due || 0,
-            numSales: vatData.num_sales || 0,
-          })
-        } else {
-          setData({
-            totalSales: 0,
-            totalMargin: 0,
-            taxableMargin: 0,
-            vatDue: 0,
-            numSales: 0,
-          })
-        }
+        setData(vatData || [])
         setError(null)
       } catch (err: any) {
         console.error('Failed to fetch VAT summary:', err)
@@ -278,7 +226,7 @@ export function useVATSummary(userId: string | undefined, month: string) {
     }
 
     fetchSummary()
-  }, [userId, month])
+  }, [userId])
 
   return { data, loading, error }
 }

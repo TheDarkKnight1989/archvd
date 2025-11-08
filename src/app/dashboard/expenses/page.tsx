@@ -264,6 +264,14 @@ export default function ExpensesPage() {
 
   return (
     <div className="mx-auto max-w-[1280px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-fg">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-fg relative inline-block">
+          Expenses
+          <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
+        </h1>
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div className="flex items-center gap-2 overflow-x-auto snap-x">
@@ -431,7 +439,7 @@ export default function ExpensesPage() {
               <div className="max-h-[70vh] overflow-auto">
                 <Table className="min-w-[720px]">
                   <TableHeader className="text-muted text-xs bg-bg sticky top-0 z-10">
-                    <TableRow className="border-border">
+                    <TableRow className="border-border border-t border-t-accent-400/25">
                       <TableHead className={cn('px-3 md:px-4 py-3', COLS.DATE)}>Date</TableHead>
                       <TableHead className="px-3 md:px-4 py-3">Description</TableHead>
                       <TableHead className={cn('px-3 md:px-4 py-3', COLS.CATEGORY)}>Category</TableHead>
