@@ -9,7 +9,7 @@ interface SidebarContextType {
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined)
 
-const STORAGE_KEY_PINNED = 'archvd_sidebar_pinned_v1'
+const STORAGE_KEY_PINNED = 'archvd_sidebar_pinned_v2'
 
 export function SidebarStateProvider({ children }: { children: ReactNode }) {
   const [pinned, setPinnedState] = useState(false)

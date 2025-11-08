@@ -15,12 +15,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="min-h-screen bg-bg" data-theme="matrix">
         <Sidebar />
 
-        {/* Main content with dynamic padding based on sidebar state */}
+        {/* Main content with dynamic padding based on sidebar pinned state */}
         <main
           className="md:pl-16 pb-16 md:pb-0 transition-[padding-left] duration-120 ease-terminal"
-          style={{
-            paddingLeft: 'var(--sidebar-width, 4rem)', // 64px collapsed
-          }}
           id="main"
         >
           {children}
@@ -29,14 +26,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Mobile Navigation */}
         <MobileDock />
 
-        {/* CSS variable update based on data-sidebar attribute */}
+        {/* CSS for pinned state - shifts content when sidebar is pinned */}
         <style jsx global>{`
-          body[data-sidebar='pinned'] {
-            --sidebar-width: 21.5rem; /* 344px (64 + 280) */
+          /* When sidebar is pinned, shift content to make room */
+          body[data-sidebar='pinned'] main {
+            padding-left: 336px; /* 320px sidebar + 16px gutter */
           }
+
+          /* Mobile: no sidebar padding */
           @media (max-width: 768px) {
-            body {
-              --sidebar-width: 0;
+            body[data-sidebar='pinned'] main {
+              padding-left: 0;
             }
           }
         `}</style>
