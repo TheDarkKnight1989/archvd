@@ -19,13 +19,16 @@ DROP VIEW IF EXISTS profit_loss_monthly_view CASCADE;
 DROP VIEW IF EXISTS vat_margin_monthly_view CASCADE;
 DROP VIEW IF EXISTS vat_margin_detail_view CASCADE;
 
--- 4. Update existing status values to match new enum
+-- 4. Drop old check constraints that block the update
+ALTER TABLE "Inventory" DROP CONSTRAINT IF EXISTS inventory_status_check;
+
+-- 5. Update existing status values to match new enum
 -- Map old values to new enum values
 UPDATE "Inventory" SET status = 'active' WHERE status IN ('in_stock', 'deadstock', 'reserved');
 UPDATE "Inventory" SET status = 'sold' WHERE status = 'sold';
 -- 'listed' and 'worn' should already be correct if they exist
 
--- 5. Convert status column to use new enum type
+-- 6. Convert status column to use new enum type
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -52,7 +55,7 @@ BEGIN
   END IF;
 END$$;
 
--- 6. Create sales_view for sold items only
+-- 7. Create sales_view for sold items only
 CREATE OR REPLACE VIEW sales_view
 WITH (security_invoker = on) AS
 SELECT
@@ -99,7 +102,7 @@ SELECT
 FROM "Inventory" i
 WHERE i.status = 'sold';
 
--- 7. Create inventory_active_view for non-sold items
+-- 8. Create inventory_active_view for non-sold items
 CREATE OR REPLACE VIEW inventory_active_view
 WITH (security_invoker = on) AS
 SELECT
@@ -137,7 +140,7 @@ SELECT
 FROM "Inventory" i
 WHERE i.status IN ('active', 'listed', 'worn');
 
--- 8. Ensure RLS is enabled and policies exist
+-- 9. Ensure RLS is enabled and policies exist
 ALTER TABLE "Inventory" ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist (to recreate cleanly)
@@ -163,21 +166,21 @@ CREATE POLICY "Users can delete own items"
   ON "Inventory" FOR DELETE
   USING (auth.uid() = user_id);
 
--- 9. Ensure views use security_invoker
+-- 10. Ensure views use security_invoker
 ALTER VIEW sales_view SET (security_invoker = on);
 ALTER VIEW inventory_active_view SET (security_invoker = on);
 
--- 10. Add indexes for performance
+-- 11. Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_inventory_status ON "Inventory"(status);
 CREATE INDEX IF NOT EXISTS idx_inventory_user_status ON "Inventory"(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_inventory_sold_date ON "Inventory"(sold_date) WHERE status = 'sold';
 
--- 11. Comment documentation
+-- 12. Comment documentation
 COMMENT ON VIEW sales_view IS 'Shows only sold items with calculated margin metrics';
 COMMENT ON VIEW inventory_active_view IS 'Shows only active inventory (active, listed, worn) excluding sold items';
 COMMENT ON COLUMN "Inventory".status IS 'Item status: active (owned), listed (for sale), worn (used but owned), sold (completed transaction)';
 
--- 12. Recreate P&L and VAT views (dropped in step 3)
+-- 13. Recreate P&L and VAT views (dropped in step 3)
 CREATE OR REPLACE VIEW profit_loss_monthly_view AS
 WITH sold_items AS (
   SELECT
