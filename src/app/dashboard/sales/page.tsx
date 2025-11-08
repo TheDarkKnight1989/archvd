@@ -98,42 +98,42 @@ export default function SalesPage() {
       {/* KPI Cards */}
       {items.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div className="bg-elev-1 border border-border rounded-xl p-4">
-            <div className="text-xs text-dim uppercase tracking-wider mb-1">Sales</div>
+          <div className="bg-elev-1 border border-border/40 rounded-lg p-4 transition-colors hover:border-border">
+            <div className="text-xs text-dim uppercase tracking-wider mb-1.5">Sales</div>
             <div className="text-2xl font-bold text-fg font-mono">
               £{kpis.totalSales.toFixed(2)}
             </div>
-            <div className="text-xs text-muted mt-1">{kpis.count} items</div>
+            <div className="text-xs text-muted mt-1.5">{kpis.count} items</div>
           </div>
 
-          <div className="bg-elev-1 border border-border rounded-xl p-4">
-            <div className="text-xs text-dim uppercase tracking-wider mb-1">COGS</div>
+          <div className="bg-elev-1 border border-border/40 rounded-lg p-4 transition-colors hover:border-border">
+            <div className="text-xs text-dim uppercase tracking-wider mb-1.5">COGS</div>
             <div className="text-2xl font-bold text-fg font-mono">
               £{kpis.totalCOGS.toFixed(2)}
             </div>
-            <div className="text-xs text-muted mt-1">Cost of goods sold</div>
+            <div className="text-xs text-muted mt-1.5">Cost of goods sold</div>
           </div>
 
-          <div className="bg-elev-1 border border-border rounded-xl p-4">
-            <div className="text-xs text-dim uppercase tracking-wider mb-1">Gross Profit</div>
+          <div className="bg-elev-1 border border-border/40 rounded-lg p-4 transition-colors hover:border-border">
+            <div className="text-xs text-dim uppercase tracking-wider mb-1.5">Gross Profit</div>
             <div className={cn(
               "text-2xl font-bold font-mono",
               kpis.totalMargin >= 0 ? "text-success" : "text-danger"
             )}>
               {kpis.totalMargin >= 0 ? '+' : ''}£{kpis.totalMargin.toFixed(2)}
             </div>
-            <div className="text-xs text-muted mt-1">Total margin</div>
+            <div className="text-xs text-muted mt-1.5">Total margin</div>
           </div>
 
-          <div className="bg-elev-1 border border-border rounded-xl p-4">
-            <div className="text-xs text-dim uppercase tracking-wider mb-1">Avg Margin</div>
+          <div className="bg-elev-1 border border-border/40 rounded-lg p-4 transition-colors hover:border-border">
+            <div className="text-xs text-dim uppercase tracking-wider mb-1.5">Avg Margin</div>
             <div className={cn(
               "text-2xl font-bold font-mono",
               kpis.avgMargin >= 0 ? "text-success" : "text-danger"
             )}>
               {kpis.avgMargin >= 0 ? '+' : ''}{kpis.avgMargin.toFixed(1)}%
             </div>
-            <div className="text-xs text-muted mt-1">Average profit %</div>
+            <div className="text-xs text-muted mt-1.5">Average profit %</div>
           </div>
         </div>
       )}
@@ -191,29 +191,34 @@ export default function SalesPage() {
 
           {/* Row 2: Actions */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-xs text-muted">
+              {loading && <span>Loading...</span>}
+              {!loading && items.length > 0 && (
+                <span>{items.length} {items.length === 1 ? 'sale' : 'sales'}</span>
+              )}
               {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSearchQuery('')
-                    setSelectedPlatform('')
-                    setDateFrom('')
-                    setDateTo('')
-                    updateParams({ search: undefined, platform: undefined, date_from: undefined, date_to: undefined })
-                  }}
-                  className="text-xs text-muted hover:text-fg"
-                >
-                  Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
-                </Button>
+                <>
+                  <span className="text-border">•</span>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('')
+                      setSelectedPlatform('')
+                      setDateFrom('')
+                      setDateTo('')
+                      updateParams({ search: undefined, platform: undefined, date_from: undefined, date_to: undefined })
+                    }}
+                    className="text-accent hover:underline"
+                  >
+                    Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
+                  </button>
+                </>
               )}
             </div>
 
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                className="border-border max-md:hidden"
+                className="border-border/40 hover:border-border max-md:hidden"
                 onClick={handleExportCSV}
                 disabled={items.length === 0}
                 size="sm"
