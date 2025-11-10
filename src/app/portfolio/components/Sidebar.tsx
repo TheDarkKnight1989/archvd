@@ -207,12 +207,12 @@ export function Sidebar() {
           <button
             onClick={() => setCommandSearchOpen(true)}
             className={cn(
-              "relative transition-all duration-120 w-full",
+              "relative transition-boutique w-full",
               isExpanded ? "flex" : "hidden",
               "h-8 pl-7 pr-2 rounded-lg bg-elev-1/80 border border-border/40",
-              "text-sm text-dim hover:text-fg hover:border-accent/50 hover:glow-accent-hover",
-              "focus:outline-none focus:border-accent/50 focus:glow-accent-hover",
-              "transition-all duration-120 text-left items-center gap-2"
+              "text-sm text-dim hover:text-fg hover:border-accent/50",
+              "focus:outline-none focus:ring-2 focus:ring-focus",
+              "text-left items-center gap-2"
             )}
             tabIndex={isExpanded ? 0 : -1}
           >
@@ -231,8 +231,8 @@ export function Sidebar() {
             <div>
               <h3
                 className={cn(
-                  "px-3 pt-2 pb-1 text-[10px] tracking-widest uppercase transition-all duration-120",
-                  isExpanded ? "text-accent-200/60 opacity-100" : "opacity-0 pointer-events-none"
+                  "label-uppercase px-3 pt-2 pb-1 transition-boutique",
+                  isExpanded ? "text-muted/60 opacity-100" : "opacity-0 pointer-events-none"
                 )}
               >
                 Main
@@ -254,8 +254,8 @@ export function Sidebar() {
             <div className="mt-2">
               <h3
                 className={cn(
-                  "px-3 pt-2 pb-1 text-[10px] tracking-widest uppercase transition-all duration-120",
-                  isExpanded ? "text-accent-200/60 opacity-100" : "opacity-0 pointer-events-none"
+                  "label-uppercase px-3 pt-2 pb-1 transition-boutique",
+                  isExpanded ? "text-muted/60 opacity-100" : "opacity-0 pointer-events-none"
                 )}
               >
                 Tools
@@ -288,8 +288,8 @@ export function Sidebar() {
             <Link
               href="/settings"
               className={cn(
-                "group rounded-lg flex items-center transition-all duration-120 ease-terminal",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                "group rounded-lg flex items-center transition-boutique",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                 pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -305,8 +305,8 @@ export function Sidebar() {
             <Link
               href="/portfolio/settings/accounting"
               className={cn(
-                "group rounded-lg flex items-center transition-all duration-120 ease-terminal",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                "group rounded-lg flex items-center transition-boutique",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                 pathname === '/portfolio/settings/accounting' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -322,8 +322,8 @@ export function Sidebar() {
             <Link
               href="/portfolio/import"
               className={cn(
-                "group rounded-lg flex items-center transition-all duration-120 ease-terminal",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                "group rounded-lg flex items-center transition-boutique",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                 pathname === '/portfolio/import' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -339,8 +339,8 @@ export function Sidebar() {
             <Link
               href="/profile"
               className={cn(
-                "group rounded-lg flex items-center transition-all duration-120 ease-terminal",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                "group rounded-lg flex items-center transition-boutique",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                 pathname === '/profile' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -357,8 +357,8 @@ export function Sidebar() {
               <button
                 onClick={() => setPinned(!pinned)}
                 className={cn(
-                  "h-9 w-full rounded-lg flex items-center gap-2 px-2 transition-all duration-120 ease-terminal",
-                  "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                  "h-9 w-full rounded-lg flex items-center gap-2 px-2 transition-boutique",
+                  "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                   pinned ? 'text-accent' : 'text-muted hover:text-fg'
                 )}
                 title={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
@@ -379,7 +379,7 @@ export function Sidebar() {
           {/* Bottom Section: Preferences (only when expanded) */}
           {isExpanded && (
             <div className="px-3 pb-3 pt-3 border-t border-border/20 space-y-2">
-              <h3 className="text-[10px] tracking-widest uppercase text-accent-200/60 px-1 pb-1">
+              <h3 className="label-uppercase text-muted/60 px-1 pb-1">
                 Preferences
               </h3>
 
@@ -387,8 +387,8 @@ export function Sidebar() {
               <button
                 onClick={() => setTheme(theme === 'matrix' ? 'system' : 'matrix')}
                 className={cn(
-                  "w-full h-9 rounded-lg flex items-center gap-2 px-2 transition-all duration-120 ease-terminal",
-                  "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                  "w-full h-9 rounded-lg flex items-center gap-2 px-2 transition-boutique",
+                  "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                   theme === 'matrix' ? 'text-accent' : 'text-muted hover:text-fg'
                 )}
                 aria-label="Toggle theme"
@@ -471,8 +471,8 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
           'group relative h-11 px-3 rounded-xl',
           'flex items-center gap-3',
           'whitespace-nowrap overflow-hidden',
-          'transition-all duration-120 ease-terminal',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
+          'transition-boutique',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
           isActive
             ? 'bg-elev-2 border border-border/60 shadow-soft text-fg'
             : 'text-fg/90 hover:bg-elev-2/80'
@@ -480,9 +480,6 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
         style={{
           background: isActive
             ? 'radial-gradient(circle at center, rgba(var(--archvd-accent-400-rgb), 0.08) 0%, rgba(var(--archvd-accent-400-rgb), 0.02) 80%), var(--archvd-bg-elev-2)'
-            : undefined,
-          boxShadow: !isActive && isHovered
-            ? '0 0 12px rgba(var(--archvd-accent-400-rgb), 0.25)'
             : undefined,
         }}
       >

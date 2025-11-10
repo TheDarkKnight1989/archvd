@@ -211,9 +211,9 @@ export default function DashboardPage() {
           style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
         >
           <div className="mx-auto max-w-[1280px] flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-fg relative inline-block">
+            <h1 className="font-display text-2xl font-semibold text-fg tracking-tight relative inline-block">
               Dashboard
-              <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
+              <span className="absolute bottom-0 left-0 w-16 h-px bg-accent/30"></span>
             </h1>
             <CurrencySwitcher />
           </div>
@@ -227,13 +227,13 @@ export default function DashboardPage() {
 
             {/* Inventory Section Header */}
             <div className="pt-4">
-              <h2 className="text-lg font-semibold text-fg mb-4">Inventory</h2>
+              <h2 className="font-display text-lg font-semibold text-fg tracking-tight mb-4">Inventory</h2>
             </div>
 
             {/* Recent Activity - Now with portfolio activity feed */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-3">
-                <h2 className="text-lg font-semibold text-fg">Recent Activity</h2>
+                <h2 className="font-display text-lg font-semibold text-fg tracking-tight">Recent Activity</h2>
                 <div className="space-y-2">
                   {itemsTable.loading ? (
                     <>
@@ -296,7 +296,7 @@ export default function DashboardPage() {
       {/* Quick Add FAB (Mobile only - replaces MobileDock FAB for dashboard) */}
       <button
         onClick={() => setQuickAddOpen(true)}
-        className="fixed bottom-20 right-4 z-50 h-14 w-14 rounded-full bg-accent text-black flex items-center justify-center hover:bg-accent-600 transition-colors duration-fast md:hidden active:scale-95 glow-accent-hover"
+        className="fixed bottom-20 right-4 z-50 h-14 w-14 rounded-full bg-accent text-fg flex items-center justify-center hover:bg-accent/90 transition-boutique md:hidden active:scale-95 shadow-medium"
         style={{ bottom: 'max(5rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
         aria-label="Quick Add"
       >
