@@ -186,8 +186,11 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
           <span className="label-up mb-3 block">
             Invested
           </span>
-          <p className="heading mono kpi-number text-fg">
+          <p className="heading mono kpi-number text-fg mb-2">
             {format(kpis.invested)}
+          </p>
+          <p className="kbd text-[10px]">
+            Total capital deployed
           </p>
         </Card>
 
@@ -196,7 +199,7 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
           <span className="label-up mb-3 block">
             Unrealised P/L
           </span>
-          <div className="flex items-baseline gap-2 mb-1">
+          <div className="flex items-baseline gap-2 mb-2">
             <p className={cn(
               "heading mono kpi-number",
               plPositive ? "money-pos" : "money-neg"
@@ -215,6 +218,9 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
               </span>
             )}
           </div>
+          <p className="kbd text-[10px]">
+            7-day change {kpis.unrealisedPLDelta7d !== null ? `${delta7dPositive ? '+' : ''}${kpis.unrealisedPLDelta7d.toFixed(1)}%` : 'tracking'}
+          </p>
         </Card>
 
         {/* ROI % */}
@@ -223,10 +229,13 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
             ROI %
           </span>
           <p className={cn(
-            "heading mono kpi-number",
+            "heading mono kpi-number mb-2",
             roiPositive ? "money-pos" : "money-neg"
           )}>
             {roiPositive ? '+' : ''}{kpis.roi.toFixed(2)}%
+          </p>
+          <p className="kbd text-[10px]">
+            Return on investment
           </p>
         </Card>
       </div>

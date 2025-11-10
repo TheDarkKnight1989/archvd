@@ -11,9 +11,10 @@ interface KpiCardProps {
   period?: string
   loading?: boolean
   tooltip?: string
+  subtitle?: string
 }
 
-export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCardProps) {
+export function KpiCard({ label, value, delta, period, loading, tooltip, subtitle }: KpiCardProps) {
   if (loading) {
     return (
       <Card elevation="soft" className="p-5 md:p-6">
@@ -48,7 +49,7 @@ export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCa
           </span>
         )}
       </div>
-      <div className="flex items-baseline gap-3">
+      <div className="flex items-baseline gap-3 mb-2">
         <span className="heading mono kpi-number text-fg">
           {value}
         </span>
@@ -59,6 +60,11 @@ export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCa
           </span>
         )}
       </div>
+      {subtitle && (
+        <p className="kbd text-[10px]">
+          {subtitle}
+        </p>
+      )}
     </Card>
   )
 }
