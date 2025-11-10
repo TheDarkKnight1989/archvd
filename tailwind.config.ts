@@ -10,6 +10,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Boutique v2 - Simplified naming (preferred)
+        canvas: 'var(--bg)',
+        panel: 'var(--panel)',
+        keyline: 'var(--keyline)',
+        ink: 'var(--ink)',
+
+        // Legacy naming (backward compat)
         bg: 'var(--archvd-bg)',
         surface: 'var(--archvd-surface)',
         soft: 'var(--archvd-soft)',
@@ -34,12 +41,12 @@ const config: Config = {
           200: 'var(--archvd-accent-200)',
         },
         profit: {
-          DEFAULT: 'var(--archvd-profit)',
-          bg: 'var(--archvd-profit-bg)',
+          DEFAULT: 'var(--profit)',        // Use new brighter color
+          bg: 'var(--profit-tint)',         // Use new tint
         },
         loss: {
-          DEFAULT: 'var(--archvd-loss)',
-          bg: 'var(--archvd-loss-bg)',
+          DEFAULT: 'var(--loss)',           // Use new brighter color
+          bg: 'var(--loss-tint)',           // Use new tint
         },
         // Legacy compatibility
         success: 'var(--archvd-success)',
@@ -57,11 +64,17 @@ const config: Config = {
         focus: 'var(--archvd-focus)'
       },
       boxShadow: {
-        soft: 'var(--archvd-shadow-soft)',
-        medium: 'var(--archvd-shadow-medium)',
+        // Boutique v2 naming
+        soft: 'var(--elev-1)',
+        medium: 'var(--elev-2)',
+        // Legacy naming (backward compat)
         large: 'var(--archvd-shadow-large)',
       },
       borderRadius: {
+        // Boutique v2 naming
+        card: 'var(--r-card)',
+        input: 'var(--r-input)',
+        // Legacy naming
         lg: '12px',
         xl: '16px',
         '2xl': '20px',
@@ -72,7 +85,7 @@ const config: Config = {
         3.5: '0.875rem'
       },
       transitionTimingFunction: {
-        boutique: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        boutique: 'var(--ease)',
       },
       transitionDuration: {
         fast: '120ms',
