@@ -1,0 +1,118 @@
+{
+  "results": [
+    {
+      "id": "mock-prod-001",
+      "slug": "nike-dunk-low-panda",
+      "sku": "DD1391-100",
+      "name": "Nike Dunk Low Panda (2021)",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "White/Black",
+      "category": "sneakers",
+      "gender": "unisex",
+      "releaseDate": "2021-03-10",
+      "retailPrice": 100,
+      "retailCurrency": "GBP",
+      "mainPictureUrl": "https://images.stockx.com/images/Nike-Dunk-Low-Black-White-2021.jpg",
+      "pictureUrls": [
+        "https://images.stockx.com/images/Nike-Dunk-Low-Black-White-2021.jpg"
+      ],
+      "description": "The Nike Dunk Low Panda features a classic black and white colorway.",
+      "condition": "new",
+      "createdAt": "2021-03-10T00:00:00Z",
+      "updatedAt": "2025-11-14T12:00:00Z"
+    },
+    {
+      "id": "mock-prod-002",
+      "slug": "air-jordan-1-retro-high-og-chicago",
+      "sku": "555088-101",
+      "name": "Air Jordan 1 Retro High OG Chicago (2015)",
+      "brand": "Jordan",
+      "model": "Air Jordan 1",
+      "colorway": "White/Varsity Red-Black",
+      "category": "sneakers",
+      "gender": "men",
+      "releaseDate": "2015-05-30",
+      "retailPrice": 140,
+      "retailCurrency": "GBP",
+      "mainPictureUrl": "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Chicago-2015.jpg",
+      "pictureUrls": [
+        "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Chicago-2015.jpg"
+      ],
+      "description": "The Air Jordan 1 Retro High OG Chicago is one of the most iconic sneakers.",
+      "condition": "new",
+      "createdAt": "2015-05-30T00:00:00Z",
+      "updatedAt": "2025-11-14T12:00:00Z"
+    },
+    {
+      "id": "mock-prod-003",
+      "slug": "adidas-yeezy-boost-350-v2-zebra",
+      "sku": "CP9654",
+      "name": "adidas Yeezy Boost 350 V2 Zebra",
+      "brand": "adidas",
+      "model": "Yeezy Boost 350 V2",
+      "colorway": "White/Core Black/Red",
+      "category": "sneakers",
+      "gender": "unisex",
+      "releaseDate": "2017-02-25",
+      "retailPrice": 180,
+      "retailCurrency": "GBP",
+      "mainPictureUrl": "https://images.stockx.com/images/adidas-Yeezy-Boost-350-V2-Zebra.jpg",
+      "pictureUrls": [
+        "https://images.stockx.com/images/adidas-Yeezy-Boost-350-V2-Zebra.jpg"
+      ],
+      "description": "The adidas Yeezy Boost 350 V2 Zebra features a distinctive striped pattern.",
+      "condition": "new",
+      "createdAt": "2017-02-25T00:00:00Z",
+      "updatedAt": "2025-11-14T12:00:00Z"
+    },
+    {
+      "id": "mock-prod-004",
+      "slug": "nike-air-max-1-anniversary-og-red",
+      "sku": "908375-103",
+      "name": "Nike Air Max 1 Anniversary OG Red (2017)",
+      "brand": "Nike",
+      "model": "Air Max 1",
+      "colorway": "White/University Red",
+      "category": "sneakers",
+      "gender": "men",
+      "releaseDate": "2017-03-26",
+      "retailPrice": 140,
+      "retailCurrency": "GBP",
+      "mainPictureUrl": "https://images.stockx.com/images/Nike-Air-Max-1-Anniversary-OG-Red.jpg",
+      "pictureUrls": [
+        "https://images.stockx.com/images/Nike-Air-Max-1-Anniversary-OG-Red.jpg"
+      ],
+      "description": "Celebrating the 30th anniversary of the Air Max 1.",
+      "condition": "new",
+      "createdAt": "2017-03-26T00:00:00Z",
+      "updatedAt": "2025-11-14T12:00:00Z"
+    },
+    {
+      "id": "mock-prod-005",
+      "slug": "new-balance-990v3-grey",
+      "sku": "M990GL3",
+      "name": "New Balance 990v3 Grey",
+      "brand": "New Balance",
+      "model": "990v3",
+      "colorway": "Grey",
+      "category": "sneakers",
+      "gender": "unisex",
+      "releaseDate": "2012-04-01",
+      "retailPrice": 165,
+      "retailCurrency": "GBP",
+      "mainPictureUrl": "https://images.stockx.com/images/New-Balance-990v3-Grey.jpg",
+      "pictureUrls": [
+        "https://images.stockx.com/images/New-Balance-990v3-Grey.jpg"
+      ],
+      "description": "The New Balance 990v3 in classic grey is a timeless silhouette.",
+      "condition": "new",
+      "createdAt": "2012-04-01T00:00:00Z",
+      "updatedAt": "2025-11-14T12:00:00Z"
+    }
+  ],
+  "total": 247,
+  "page": 1,
+  "limit": 5,
+  "hasMore": true
+}

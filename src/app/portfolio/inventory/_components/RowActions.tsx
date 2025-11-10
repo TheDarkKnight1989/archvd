@@ -7,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { MoreVertical, Edit, CheckCircle, XCircle, Receipt } from 'lucide-react'
+import { MoreVertical, Edit, CheckCircle, XCircle, Receipt, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 export interface RowActionsProps {
@@ -15,6 +15,7 @@ export interface RowActionsProps {
   onEdit: () => void
   onToggleSold: () => void
   onAddExpense: () => void
+  onAddToWatchlist?: () => void
 }
 
 export function RowActions({
@@ -22,6 +23,7 @@ export function RowActions({
   onEdit,
   onToggleSold,
   onAddExpense,
+  onAddToWatchlist,
 }: RowActionsProps) {
   const [open, setOpen] = useState(false)
 
@@ -56,6 +58,16 @@ export function RowActions({
             <Edit className="h-4 w-4" />
             Edit
           </button>
+
+          {onAddToWatchlist && (
+            <button
+              onClick={() => handleAction(onAddToWatchlist)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-fg hover:bg-elev-2 transition-all duration-120"
+            >
+              <Plus className="h-4 w-4" />
+              Add to Watchlist
+            </button>
+          )}
 
           <button
             onClick={() => handleAction(onToggleSold)}

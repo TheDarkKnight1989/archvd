@@ -30,12 +30,12 @@ export async function POST(request: NextRequest) {
 
     const userId = sessionData.session.user.id;
 
-    // Fetch all items for user with SKUs (in_stock or worn status)
+    // Fetch all items for user with SKUs (active, listed, or worn status)
     const { data: items, error: fetchError } = await supabase
       .from(TABLE_ITEMS)
       .select('id, sku, category, brand, model, market_value')
       .eq('user_id', userId)
-      .in('status', ['in_stock', 'worn'])
+      .in('status', ['active', 'listed', 'worn'])
       .not('sku', 'is', null);
 
     if (fetchError) {
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       .from(TABLE_ITEMS)
       .select('market_value, sale_price, purchase_price')
       .eq('user_id', userId)
-      .eq('status', 'in_stock');
+      .in('status', ['active', 'listed', 'worn']);
 
     const portfolioValue = (allItems || []).reduce((sum, item) => {
       const value = item.market_value || item.sale_price || item.purchase_price || 0;

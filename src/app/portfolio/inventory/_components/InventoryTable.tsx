@@ -11,13 +11,16 @@ import {
   type SortingState,
   type OnChangeFn,
 } from '@tanstack/react-table'
-import { gbp2, formatPct, deltaColor } from '@/lib/utils/format'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TrendingUp, TrendingDown, Package } from 'lucide-react'
+import { Package, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Sparkline, SparklineSkeleton } from './Sparkline'
 import { RowActions } from './RowActions'
+import { InventoryCard, InventoryCardSkeleton } from './InventoryCard'
+import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
+import { AliasMapIndicator } from '@/components/AliasMapIndicator'
 import type { EnrichedInventoryItem } from '@/hooks/usePortfolioInventory'
 
 const columnHelper = createColumnHelper<EnrichedInventoryItem>()
@@ -32,6 +35,8 @@ export interface InventoryTableProps {
   onEdit?: (item: EnrichedInventoryItem) => void
   onToggleSold?: (item: EnrichedInventoryItem) => void
   onAddExpense?: (item: EnrichedInventoryItem) => void
+  onAddToWatchlist?: (item: EnrichedInventoryItem) => void
+  onAddItem?: () => void
 }
 
 export function InventoryTable({
@@ -44,8 +49,11 @@ export function InventoryTable({
   onEdit,
   onToggleSold,
   onAddExpense,
+  onAddToWatchlist,
+  onAddItem,
 }: InventoryTableProps) {
   const parentRef = useRef<HTMLDivElement>(null)
+  const { convert, format } = useCurrency()
 
   // Define columns
   const columns = useMemo(
@@ -58,21 +66,123 @@ export function InventoryTable({
           const initials = item.brand?.slice(0, 2).toUpperCase() || 'IT'
 
           return (
-            <div className="flex items-center gap-3 min-w-[220px]">
+            <div className="flex items-center gap-3 min-w-[200px]">
               {/* Thumb */}
               <div className="h-10 w-10 rounded-lg bg-[#0E1A15] flex items-center justify-center shrink-0 text-xs font-medium text-[#7FA08F]">
                 {initials}
               </div>
 
-              {/* Title stack */}
+              {/* Title only (no SKU) */}
               <div className={cn('flex-1 min-w-0', item.status === 'sold' && 'opacity-80')}>
                 <div className="text-sm font-medium text-[#E8F6EE] truncate">{info.getValue()}</div>
-                <div className="text-xs text-[#7FA08F] font-mono">{item.sku}</div>
               </div>
             </div>
           )
         },
         enableSorting: false,
+      }),
+
+      columnHelper.accessor('sku', {
+        id: 'sku',
+        header: 'SKU',
+        cell: (info) => (
+          <div className="text-sm text-[#7FA08F] font-mono">{info.getValue()}</div>
+        ),
+        enableSorting: true,
+      }),
+
+      columnHelper.accessor('alias_mapping_status', {
+        id: 'alias',
+        header: '🧩',
+        cell: (info) => {
+          const item = info.row.original
+          return (
+            <div className="flex justify-center">
+              <AliasMapIndicator
+                status={item.alias_mapping_status}
+                aliasProductSku={item.alias_product_sku}
+                aliasProductId={item.alias_product_id}
+                mockMode={true}
+                variant="compact"
+              />
+            </div>
+          )
+        },
+        enableSorting: false,
+      }),
+
+      columnHelper.accessor('stockx_mapping_status', {
+        id: 'stockx',
+        header: () => (
+          <div className="flex justify-center">
+            <span
+              className="inline-flex items-center justify-center w-4 h-4 rounded bg-[#00B359]/20 text-[#00B359] text-[9px] font-bold border border-[#00B359]/30"
+              title="StockX"
+            >
+              Sx
+            </span>
+          </div>
+        ),
+        cell: (info) => {
+          const status = info.getValue()
+          const item = info.row.original
+
+          return (
+            <div className="flex justify-center group relative">
+              {status === 'mapped' && (
+                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#00B359]/20 text-[#00B359] border border-[#00B359]/30">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="w-3 h-3"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+
+              {status === 'unmapped' && (
+                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/5 text-white/30 border border-white/10">
+                  <span className="text-[10px]">—</span>
+                </div>
+              )}
+
+              {/* Tooltip */}
+              {status === 'mapped' && item.stockx_product_sku && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
+                  <div className="bg-[#1A2E23] border border-[#2A4A37] rounded-lg px-2 py-1 shadow-xl whitespace-nowrap">
+                    <div className="text-[10px] text-[#E8F6EE]">
+                      Mapped to StockX
+                      <div className="text-[#7FA08F] font-mono mt-0.5">{item.stockx_product_sku}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        },
+        enableSorting: false,
+      }),
+
+      columnHelper.accessor('category', {
+        id: 'category',
+        header: 'Category',
+        cell: (info) => {
+          const category = info.getValue()
+          return category ? (
+            <Badge variant="outline" className="text-xs capitalize">
+              {category}
+            </Badge>
+          ) : (
+            <span className="text-[#7FA08F]">—</span>
+          )
+        },
+        enableSorting: true,
       }),
 
       columnHelper.accessor('purchase_date', {
@@ -95,111 +205,132 @@ export function InventoryTable({
         enableSorting: true,
       }),
 
-      columnHelper.accessor('market_value', {
-        id: 'market',
-        header: () => <div className="text-right">Market £</div>,
-        cell: (info) => {
-          const value = info.getValue()
-          const source = info.row.original.market_source
-
-          return value !== null && value !== undefined ? (
-            <div className="text-right">
-              <div className="text-sm font-mono font-medium text-[#E8F6EE]">{gbp2.format(value)}</div>
-              {source !== '-' && (
-                <div className="text-[10px] text-[#7FA08F] font-mono mt-0.5">{source}</div>
-              )}
-            </div>
-          ) : (
-            <div className="text-right text-[#7FA08F]">—</div>
-          )
-        },
+      columnHelper.accessor('purchase_price', {
+        id: 'buy',
+        header: () => <div className="text-right">Buy £</div>,
+        cell: (info) => (
+          <div className="text-right">
+            <PlainMoneyCell value={convert(info.getValue(), 'GBP')} />
+          </div>
+        ),
         enableSorting: true,
       }),
 
-      columnHelper.accessor('sparkline_data', {
-        id: 'chart',
-        header: () => <div className="text-center hidden lg:block">Price Chart</div>,
+      columnHelper.accessor('tax', {
+        id: 'tax',
+        header: () => <div className="text-right">Tax £</div>,
         cell: (info) => (
-          <div className="hidden lg:flex justify-center">
-            <Sparkline data={info.getValue()} width={70} height={28} />
+          <div className="text-right">
+            <PlainMoneyCell value={convert(info.getValue() || 0, 'GBP')} />
           </div>
         ),
-        enableSorting: false,
+        enableSorting: true,
       }),
 
-      columnHelper.display({
-        id: 'qty',
-        header: () => <div className="text-center">Qty</div>,
-        cell: () => <div className="text-center text-sm text-[#7FA08F]">1</div>,
+      columnHelper.accessor('shipping', {
+        id: 'shipping',
+        header: () => <div className="text-right">Ship £</div>,
+        cell: (info) => (
+          <div className="text-right">
+            <PlainMoneyCell value={convert(info.getValue() || 0, 'GBP')} />
+          </div>
+        ),
+        enableSorting: true,
       }),
 
       columnHelper.display({
         id: 'total',
         header: () => <div className="text-right">Total £</div>,
         cell: (info) => {
-          const market = info.row.original.market_value
-          const qty = 1
-          const total = market ? market * qty : null
+          const item = info.row.original
+          const buy = item.purchase_price || 0
+          const tax = item.tax || 0
+          const shipping = item.shipping || 0
+          const total = buy + tax + shipping
 
-          return total !== null ? (
-            <div className="text-right text-sm font-mono font-medium text-[#E8F6EE]">
-              {gbp2.format(total)}
+          return (
+            <div className="text-right">
+              <PlainMoneyCell value={convert(total, 'GBP')} />
             </div>
-          ) : (
-            <div className="text-right text-[#7FA08F]">—</div>
           )
         },
       }),
 
-      columnHelper.accessor('invested', {
-        id: 'invested',
-        header: () => <div className="text-right">Invested £</div>,
-        cell: (info) => (
-          <div className="text-right text-sm font-mono text-[#E8F6EE]">
-            {gbp2.format(info.getValue())}
-          </div>
-        ),
-        enableSorting: true,
-      }),
-
-      columnHelper.accessor('profit', {
-        id: 'profit',
-        header: () => <div className="text-right">Profit/Loss £</div>,
+      columnHelper.accessor('market_value', {
+        id: 'market',
+        header: () => <div className="text-right">Market £</div>,
         cell: (info) => {
-          const profit = info.getValue()
+          const value = info.getValue()
+          const source = info.row.original.market_source
+          const item = info.row.original
 
-          if (profit === null || profit === undefined) {
-            return <div className="text-right text-[#7FA08F]">—</div>
-          }
-
-          const isPositive = profit > 0
-          const isNegative = profit < 0
+          // StockX provenance
+          const isStockX = source === 'stockx'
+          const stockxAsOf = item.stockx_price_as_of
+          const provenanceText = isStockX && stockxAsOf
+            ? `StockX • as of ${new Date(stockxAsOf).toLocaleString()}`
+            : source !== '-' ? source : null
 
           return (
-            <div className={cn('text-right text-sm font-mono flex items-center justify-end gap-1', deltaColor(profit))}>
-              {isPositive && <TrendingUp className="h-3.5 w-3.5" />}
-              {isNegative && <TrendingDown className="h-3.5 w-3.5" />}
-              <span>{gbp2.format(Math.abs(profit))}</span>
+            <div className="text-right group relative">
+              <PlainMoneyCell value={value ? convert(value, 'GBP') : null} />
+
+              {/* Source badge */}
+              {source !== '-' && value && (
+                <div className="flex items-center justify-end gap-1 mt-0.5">
+                  {isStockX && (
+                    <div className="inline-flex items-center justify-center w-4 h-4 rounded bg-[#00B359]/20 text-[#00B359] text-[9px] font-bold border border-[#00B359]/30">
+                      Sx
+                    </div>
+                  )}
+                  <div className="text-[10px] text-[#7FA08F] font-mono">{source}</div>
+                </div>
+              )}
+
+              {/* Provenance tooltip */}
+              {provenanceText && (
+                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-50">
+                  <div className="bg-[#1A2E23] border border-[#2A4A37] rounded-lg px-2 py-1 shadow-xl whitespace-nowrap">
+                    <div className="text-[10px] text-[#E8F6EE]">{provenanceText}</div>
+                  </div>
+                </div>
+              )}
             </div>
           )
         },
         enableSorting: true,
       }),
 
-      columnHelper.accessor('performance_pct', {
-        id: 'performance',
-        header: () => <div className="text-right hidden xl:block">Performance %</div>,
+      columnHelper.display({
+        id: 'gain_loss',
+        header: () => <div className="text-right">% Gain/Loss</div>,
         cell: (info) => {
-          const pct = info.getValue()
+          const item = info.row.original
+          const market = item.market_value
+          const buy = item.purchase_price || 0
+          const tax = item.tax || 0
+          const shipping = item.shipping || 0
+          const total = buy + tax + shipping
 
-          if (pct === null || pct === undefined) {
-            return <div className="text-right text-[#7FA08F] hidden xl:block">—</div>
-          }
+          const gainLoss = market != null && total > 0 ? ((market - total) / total) * 100 : null
 
           return (
-            <div className={cn('text-right text-sm font-mono hidden xl:block', deltaColor(pct))}>
-              {formatPct(pct)}
+            <div className="text-right">
+              <PercentCell value={gainLoss} />
             </div>
+          )
+        },
+      }),
+
+      columnHelper.accessor('status', {
+        id: 'status',
+        header: 'Status',
+        cell: (info) => {
+          const status = info.getValue()
+          return (
+            <Badge variant="outline" className="text-xs capitalize">
+              {status}
+            </Badge>
           )
         },
         enableSorting: true,
@@ -210,15 +341,16 @@ export function InventoryTable({
         header: '',
         cell: (info) => (
           <RowActions
-            status={info.row.original.status || 'in_stock'}
+            status={info.row.original.status || 'active'}
             onEdit={() => onEdit?.(info.row.original)}
             onToggleSold={() => onToggleSold?.(info.row.original)}
             onAddExpense={() => onAddExpense?.(info.row.original)}
+            onAddToWatchlist={() => onAddToWatchlist?.(info.row.original)}
           />
         ),
       }),
     ],
-    [onEdit, onToggleSold, onAddExpense]
+    [onEdit, onToggleSold, onAddExpense, onAddToWatchlist, convert, format]
   )
 
   // Setup table
@@ -251,39 +383,83 @@ export function InventoryTable({
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-20">
-        <Package className="h-12 w-12 mx-auto text-[#7FA08F] opacity-40 mb-4" />
-        <p className="text-[#7FA08F] font-medium mb-1">No items in your inventory</p>
-        <p className="text-sm text-[#7FA08F]/70">Add your first item to get started</p>
+      <div className="flex items-center justify-center min-h-[500px] rounded-2xl border border-[#15251B] bg-gradient-to-br from-[#08100C] to-[#0B1510]">
+        <div className="text-center px-6 py-12">
+          {/* Icon with accent glow */}
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full" />
+            <Package className="h-16 w-16 mx-auto text-accent relative" strokeWidth={1.5} />
+          </div>
+
+          {/* Heading */}
+          <h3 className="text-xl font-semibold text-[#E8F6EE] mb-2">
+            Your inventory is empty
+          </h3>
+
+          {/* Description */}
+          <p className="text-sm text-[#7FA08F] mb-8 max-w-sm mx-auto leading-relaxed">
+            Start building your portfolio by adding your first item. Track market values, monitor performance, and manage your collection.
+          </p>
+
+          {/* CTA Button */}
+          {onAddItem && (
+            <button
+              onClick={onAddItem}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-lg hover:bg-accent-600 transition-all duration-120 motion-reduce:transition-none hover:shadow-[0_0_24px_rgba(0,255,148,0.5)] active:scale-95 motion-reduce:active:scale-100"
+            >
+              <Plus className="h-5 w-5" />
+              Add Your First Item
+            </button>
+          )}
+        </div>
       </div>
     )
   }
 
   return (
-    <div
-      ref={parentRef}
-      className="h-[calc(100vh-280px)] overflow-auto rounded-2xl border border-[#15251B] bg-[#08100C]"
-    >
-      <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-        {/* Sticky Header */}
-        <div className="sticky top-0 z-10 bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <div key={headerGroup.id} className="flex">
-              {headerGroup.headers.map((header) => (
+    <>
+      {/* Mobile Card View (< 1024px) */}
+      <div className="lg:hidden space-y-3">
+        {rows.map((row) => (
+          <InventoryCard
+            key={row.id}
+            item={row.original}
+            onClick={() => onRowClick?.(row.original)}
+            onEdit={() => onEdit?.(row.original)}
+            onToggleSold={() => onToggleSold?.(row.original)}
+            onAddExpense={() => onAddExpense?.(row.original)}
+          />
+        ))}
+      </div>
+
+      {/* Desktop Table View (>= 1024px) */}
+      <div
+        ref={parentRef}
+        className="hidden lg:block h-[calc(100vh-280px)] overflow-auto rounded-2xl border border-[#15251B] bg-[#08100C]"
+      >
+        <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-10 bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <div key={headerGroup.id} className="flex">
+                {headerGroup.headers.map((header, idx) => (
                 <div
                   key={header.id}
                   className={cn(
-                    'px-4 py-3 text-xs font-medium text-[#B7D0C2] flex-shrink-0',
-                    header.column.getCanSort() && 'cursor-pointer select-none hover:text-[#E8F6EE]',
-                    header.id === 'item' && 'flex-1 min-w-[280px]',
-                    header.id === 'purchase_date' && 'w-[140px]',
-                    header.id === 'market' && 'w-[120px]',
-                    header.id === 'chart' && 'w-[100px]',
-                    header.id === 'qty' && 'w-[70px]',
-                    header.id === 'total' && 'w-[120px]',
-                    header.id === 'invested' && 'w-[120px]',
-                    header.id === 'profit' && 'w-[140px]',
-                    header.id === 'performance' && 'w-[130px]',
+                    'px-4 py-3 text-xs font-medium text-[#B7D0C2] flex-shrink-0 border-r border-border/20 last:border-r-0',
+                    header.column.getCanSort() && 'cursor-pointer select-none hover:text-[#E8F6EE] transition-colors duration-120 motion-reduce:transition-none',
+                    header.id === 'item' && 'flex-1 min-w-[240px]',
+                    header.id === 'sku' && 'w-[140px]',
+                    header.id === 'alias' && 'w-[60px]',
+                    header.id === 'category' && 'w-[110px]',
+                    header.id === 'purchase_date' && 'w-[130px]',
+                    header.id === 'buy' && 'w-[100px]',
+                    header.id === 'tax' && 'w-[90px]',
+                    header.id === 'shipping' && 'w-[90px]',
+                    header.id === 'total' && 'w-[110px]',
+                    header.id === 'market' && 'w-[110px]',
+                    header.id === 'gain_loss' && 'w-[120px]',
+                    header.id === 'status' && 'w-[100px]',
                     header.id === 'actions' && 'w-[80px]'
                   )}
                   onClick={header.column.getToggleSortingHandler()}
@@ -310,7 +486,7 @@ export function InventoryTable({
             <div
               key={row.id}
               className={cn(
-                'absolute left-0 right-0 flex items-center border-b border-[#15251B]/40 transition-all duration-120',
+                'absolute left-0 right-0 flex items-center border-b border-[#15251B]/40 transition-all duration-120 motion-reduce:transition-none',
                 'hover:bg-[#0B1510] cursor-pointer',
                 virtualRow.index % 2 === 0 && 'bg-[#08100C]/30'
               )}
@@ -324,16 +500,19 @@ export function InventoryTable({
                 <div
                   key={cell.id}
                   className={cn(
-                    'px-4 py-2 flex-shrink-0',
-                    cell.column.id === 'item' && 'flex-1 min-w-[280px]',
-                    cell.column.id === 'purchase_date' && 'w-[140px]',
-                    cell.column.id === 'market' && 'w-[120px]',
-                    cell.column.id === 'chart' && 'w-[100px]',
-                    cell.column.id === 'qty' && 'w-[70px]',
-                    cell.column.id === 'total' && 'w-[120px]',
-                    cell.column.id === 'invested' && 'w-[120px]',
-                    cell.column.id === 'profit' && 'w-[140px]',
-                    cell.column.id === 'performance' && 'w-[130px]',
+                    'px-4 py-2 flex-shrink-0 border-r border-border/10 last:border-r-0',
+                    cell.column.id === 'item' && 'flex-1 min-w-[240px]',
+                    cell.column.id === 'sku' && 'w-[140px]',
+                    cell.column.id === 'alias' && 'w-[60px]',
+                    cell.column.id === 'category' && 'w-[110px]',
+                    cell.column.id === 'purchase_date' && 'w-[130px]',
+                    cell.column.id === 'buy' && 'w-[100px]',
+                    cell.column.id === 'tax' && 'w-[90px]',
+                    cell.column.id === 'shipping' && 'w-[90px]',
+                    cell.column.id === 'total' && 'w-[110px]',
+                    cell.column.id === 'market' && 'w-[110px]',
+                    cell.column.id === 'gain_loss' && 'w-[120px]',
+                    cell.column.id === 'status' && 'w-[100px]',
                     cell.column.id === 'actions' && 'w-[80px]'
                   )}
                 >
@@ -343,24 +522,35 @@ export function InventoryTable({
             </div>
           )
         })}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
 // Skeleton component
 export function InventoryTableSkeleton() {
   return (
-    <div className="rounded-2xl border border-[#15251B] bg-[#08100C] p-4 space-y-2">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4">
-          <Skeleton className="h-10 w-10 rounded-lg" />
-          <Skeleton className="h-4 flex-1" />
-          <Skeleton className="h-4 w-24" />
-          <SparklineSkeleton />
-          <Skeleton className="h-4 w-20" />
-        </div>
-      ))}
-    </div>
+    <>
+      {/* Mobile Skeleton */}
+      <div className="lg:hidden space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <InventoryCardSkeleton key={i} />
+        ))}
+      </div>
+
+      {/* Desktop Skeleton */}
+      <div className="hidden lg:block rounded-2xl border border-[#15251B] bg-[#08100C] p-4 space-y-2">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <Skeleton className="h-4 flex-1" />
+            <Skeleton className="h-4 w-24" />
+            <SparklineSkeleton />
+            <Skeleton className="h-4 w-20" />
+          </div>
+        ))}
+      </div>
+    </>
   )
 }

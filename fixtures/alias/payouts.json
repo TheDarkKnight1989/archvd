@@ -1,0 +1,22 @@
+{
+  "payouts": [
+    {
+      "id": "mock-payout-001",
+      "aliasPay outId": "payout_mock_001",
+      "grossAmount": 635.15,
+      "fees": 63.52,
+      "netAmount": 571.63,
+      "currency": "GBP",
+      "status": "completed",
+      "paymentMethod": "bank_transfer",
+      "periodStart": "2025-11-01",
+      "periodEnd": "2025-11-15",
+      "orderIds": ["mock-order-001", "mock-order-002"],
+      "orderCount": 2,
+      "initiatedAt": "2025-11-16T00:00:00Z",
+      "completedAt": "2025-11-17T10:30:00Z",
+      "createdAt": "2025-11-16T00:00:00Z",
+      "updatedAt": "2025-11-17T10:30:00Z"
+    }
+  ]
+}

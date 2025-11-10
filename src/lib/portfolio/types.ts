@@ -2,7 +2,7 @@ export const TABLE_ITEMS = 'Inventory'; // IMPORTANT: Must match Supabase table 
 export const TABLE_EXPENSES = 'expenses';
 
 export type Category = 'sneaker' | 'apparel' | 'accessory' | 'other';
-export type Status = 'in_stock' | 'sold' | 'reserved';
+export type Status = 'active' | 'listed' | 'worn' | 'sold';
 export type Platform = 'StockX' | 'eBay' | 'Vinted' | 'Instagram' | 'Other';
 export type ExpenseCategory = 'shipping' | 'fees' | 'ads' | 'supplies' | 'misc';
 
@@ -15,6 +15,8 @@ export type InventoryItem = {
   size: string;
   category?: Category;
   purchase_price: number;
+  tax?: number;
+  shipping?: number;
   purchase_date?: string;
   sale_price?: number | null;
   sold_price?: number | null;

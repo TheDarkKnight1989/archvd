@@ -104,7 +104,11 @@ export function usePnLItems(userId: string | undefined) {
 
         if (fetchError) throw fetchError
 
-        console.log('[usePnLItems] Raw data from view (first row):', items?.[0])
+        console.log('[usePnLItems] Raw data from view:', {
+          count: items?.length,
+          firstRow: items?.[0],
+          columns: items?.[0] ? Object.keys(items[0]) : []
+        })
 
         // Map from view columns to PnLItem interface
         const pnlItems: PnLItem[] = (items || []).map((item: PnLItemRow) => ({

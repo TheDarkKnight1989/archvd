@@ -31,6 +31,10 @@ export interface SalesItem {
   updated_at?: string | null
   margin_gbp?: number | null
   margin_percent?: number | null
+  // StockX fields
+  commission?: number | null
+  net_payout?: number | null
+  stockx_order_id?: string | null
 }
 
 export interface SalesTableParams {

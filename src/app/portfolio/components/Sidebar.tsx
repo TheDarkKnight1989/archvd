@@ -10,7 +10,6 @@ import {
   BarChart3,
   Settings,
   User,
-  CandlestickChart,
   ReceiptText,
   CalendarRange,
   Pin,
@@ -20,42 +19,56 @@ import {
   Moon,
   Sun,
   Package,
+  CreditCard,
+  Activity,
+  Eye,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useSidebar } from '@/contexts/SidebarContext'
+import { CurrencySwitcher } from '@/components/CurrencySwitcher'
+import { MarketQuickAdd } from '@/components/MarketQuickAdd'
+import { AddFromSearchModal } from '@/components/modals/AddFromSearchModal'
+import { useSearchParams } from 'next/navigation'
 
 // Navigation structure
 const primaryNav = [
   { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Portfolio' },
-  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Inventory' },
+  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Items' },
   { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
+  { id: 'pnl', icon: FileText, href: '/portfolio/pnl', label: 'P&L' },
   { id: 'analytics', icon: BarChart3, href: '/portfolio/analytics', label: 'Analytics', badge: 'ALPHA' },
 ]
 
 const secondaryNav = [
-  { id: 'market', icon: CandlestickChart, href: '/portfolio/market', label: 'Market' },
   { id: 'releases', icon: CalendarRange, href: '/portfolio/releases', label: 'Releases' },
+  { id: 'watchlists', icon: Eye, href: '/portfolio/watchlists', label: 'Watchlists' },
   { id: 'expenses', icon: ReceiptText, href: '/portfolio/expenses', label: 'Expenses' },
+  { id: 'subscriptions', icon: CreditCard, href: '/portfolio/subscriptions', label: 'Subscriptions' },
+  { id: 'activity', icon: Activity, href: '/portfolio/activity', label: 'Activity' },
   { id: 'packages', icon: Package, href: '/portfolio/packages', label: 'Packages', badge: 'BETA' },
 ]
 
 // Footer utilities (Settings, Import, Profile, Theme)
 const footerNav = [
   { id: 'settings', icon: Settings, href: '/settings', label: 'Settings' },
+  { id: 'accounting', icon: ReceiptText, href: '/portfolio/settings/accounting', label: 'Accounting' },
   { id: 'import', icon: UploadCloud, href: '/portfolio/import', label: 'Import' },
   { id: 'profile', icon: User, href: '/profile', label: 'Profile' },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { pinned, setPinned } = useSidebar()
   const [expanded, setExpanded] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [theme, setTheme] = useState<'matrix' | 'system'>('matrix')
+  const [commandSearchOpen, setCommandSearchOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const [addModalOpen, setAddModalOpen] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const leaveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const navRef = useRef<HTMLElement>(null)
-  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Determine if sidebar should be expanded
   const isExpanded = pinned || expanded
@@ -76,7 +89,6 @@ export function Sidebar() {
     clearTimeout(hoverTimeoutRef.current)
     leaveTimeoutRef.current = setTimeout(() => {
       setExpanded(false)
-      setSearchQuery('')
     }, 250)
   }
 
@@ -90,19 +102,8 @@ export function Sidebar() {
   const handleFocusOut = (e: React.FocusEvent) => {
     if (!navRef.current?.contains(e.relatedTarget as Node) && !pinned) {
       setExpanded(false)
-      setSearchQuery('')
     }
   }
-
-  // Focus search on expand
-  useEffect(() => {
-    if (isExpanded && searchInputRef.current) {
-      const timer = setTimeout(() => {
-        searchInputRef.current?.focus()
-      }, 150)
-      return () => clearTimeout(timer)
-    }
-  }, [isExpanded])
 
   // Cleanup timeouts
   useEffect(() => {
@@ -112,20 +113,51 @@ export function Sidebar() {
     }
   }, [])
 
-  // Filter nav items by search
-  const filterItems = (items: typeof primaryNav) => {
-    if (!searchQuery) return items
-    const query = searchQuery.toLowerCase()
-    return items.filter(item =>
-      item.label.toLowerCase().includes(query) ||
-      item.id.toLowerCase().includes(query)
-    )
+  // Auto-open search from URL parameter
+  useEffect(() => {
+    if (searchParams?.get('openSearch') === 'true') {
+      setCommandSearchOpen(true)
+    }
+  }, [searchParams])
+
+  // Global keyboard shortcut: Cmd+K / Ctrl+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandSearchOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Market Quick-Add handlers
+  const handleSelectProduct = (product: any) => {
+    setSelectedProduct({
+      sku: product.sku,
+      brand: 'Pokémon',
+      model: product.name,
+      colorway: product.subtitle,
+      imageUrl: product.imageUrl,
+      latestPrice: product.median ? {
+        price: product.median,
+        currency: product.currency,
+        asOf: new Date().toISOString(),
+        source: 'market',
+      } : null,
+    })
+    setAddModalOpen(true)
   }
 
-  const filteredPrimaryNav = filterItems(primaryNav)
-  const filteredSecondaryNav = filterItems(secondaryNav)
+  const handleAddSuccess = () => {
+    // Optionally refresh inventory or show notification
+    setSelectedProduct(null)
+  }
 
   return (
+    <>
     <nav
       ref={navRef}
       aria-label="Primary"
@@ -171,198 +203,234 @@ export function Sidebar() {
             </span>
           </div>
 
-          {/* QuickSearch */}
-          <div className={cn(
-            "relative transition-all duration-120",
-            isExpanded ? "block" : "hidden"
-          )}>
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-dim pointer-events-none" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search…"
-              className={cn(
-                "w-full h-8 pl-7 pr-2 rounded-lg bg-elev-1/80 border border-border/40",
-                "text-sm text-fg placeholder:text-dim",
-                "focus:outline-none focus:border-accent/50 focus:glow-accent-hover",
-                "transition-all duration-120"
-              )}
-              tabIndex={isExpanded ? 0 : -1}
-            />
-          </div>
+          {/* Command Search Trigger */}
+          <button
+            onClick={() => setCommandSearchOpen(true)}
+            className={cn(
+              "relative transition-all duration-120 w-full",
+              isExpanded ? "flex" : "hidden",
+              "h-8 pl-7 pr-2 rounded-lg bg-elev-1/80 border border-border/40",
+              "text-sm text-dim hover:text-fg hover:border-accent/50 hover:glow-accent-hover",
+              "focus:outline-none focus:border-accent/50 focus:glow-accent-hover",
+              "transition-all duration-120 text-left items-center gap-2"
+            )}
+            tabIndex={isExpanded ? 0 : -1}
+          >
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" />
+            <span className="flex-1">Search products...</span>
+            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-elev-2 px-1.5 font-mono text-[10px] font-medium text-muted">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </button>
         </div>
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-3 pb-3">
           <div className="flex flex-col gap-1.5 pt-3.5">
             {/* Primary Group */}
-            {filteredPrimaryNav.length > 0 && (
-              <div>
-                <h3
-                  className={cn(
-                    "px-3 pt-2 pb-1 text-[10px] tracking-widest uppercase transition-all duration-120",
-                    isExpanded ? "text-accent-200/60 opacity-100" : "opacity-0 pointer-events-none"
-                  )}
-                >
-                  Main
-                </h3>
-                <ul className="flex flex-col gap-0.5">
-                  {filteredPrimaryNav.map((item, index) => (
-                    <NavItem
-                      key={item.id}
-                      item={item}
-                      pathname={pathname}
-                      isExpanded={isExpanded}
-                      index={index}
-                    />
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div>
+              <h3
+                className={cn(
+                  "px-3 pt-2 pb-1 text-[10px] tracking-widest uppercase transition-all duration-120",
+                  isExpanded ? "text-accent-200/60 opacity-100" : "opacity-0 pointer-events-none"
+                )}
+              >
+                Main
+              </h3>
+              <ul className="flex flex-col gap-0.5">
+                {primaryNav.map((item, index) => (
+                  <NavItem
+                    key={item.id}
+                    item={item}
+                    pathname={pathname}
+                    isExpanded={isExpanded}
+                    index={index}
+                  />
+                ))}
+              </ul>
+            </div>
 
             {/* Secondary Group */}
-            {filteredSecondaryNav.length > 0 && (
-              <div className="mt-2">
-                <h3
-                  className={cn(
-                    "px-3 pt-2 pb-1 text-[10px] tracking-widest uppercase transition-all duration-120",
-                    isExpanded ? "text-accent-200/60 opacity-100" : "opacity-0 pointer-events-none"
-                  )}
-                >
-                  Tools
-                </h3>
-                <ul className="flex flex-col gap-0.5">
-                  {filteredSecondaryNav.map((item, index) => (
-                    <NavItem
-                      key={item.id}
-                      item={item}
-                      pathname={pathname}
-                      isExpanded={isExpanded}
-                      index={index}
-                    />
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* No Results */}
-            {searchQuery && filteredPrimaryNav.length === 0 && filteredSecondaryNav.length === 0 && (
-              <div className="px-3 py-8 text-center text-sm text-dim">
-                No results for "{searchQuery}"
-              </div>
-            )}
+            <div className="mt-2">
+              <h3
+                className={cn(
+                  "px-3 pt-2 pb-1 text-[10px] tracking-widest uppercase transition-all duration-120",
+                  isExpanded ? "text-accent-200/60 opacity-100" : "opacity-0 pointer-events-none"
+                )}
+              >
+                Tools
+              </h3>
+              <ul className="flex flex-col gap-0.5">
+                {secondaryNav.map((item, index) => (
+                  <NavItem
+                    key={item.id}
+                    item={item}
+                    pathname={pathname}
+                    isExpanded={isExpanded}
+                    index={index}
+                  />
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
-        {/* Footer Utility Strip */}
-        <div
-          className={cn(
-            "border-t border-border/30 bg-elev-1/90 backdrop-blur-sm",
-            "h-[48px] px-3",
-            "flex items-center",
-            isExpanded ? "justify-between gap-2" : "justify-center gap-1",
-            "pb-[env(safe-area-inset-bottom)]"
-          )}
-        >
-          {/* Settings */}
-          <Link
-            href="/settings"
+        {/* Footer - Two-section layout */}
+        <div className="border-t border-border/30 bg-elev-1/90 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
+          {/* Quick Actions - Vertical stack when expanded, horizontal when collapsed */}
+          <div
             className={cn(
-              "group h-9 rounded-lg flex items-center transition-all duration-120 ease-terminal",
-              "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
-              pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
-              isExpanded ? "gap-2 px-2 flex-1" : "w-9 justify-center"
+              "px-3 pt-3",
+              isExpanded ? "space-y-1" : "flex items-center justify-center gap-1 py-2"
             )}
-            title={!isExpanded ? 'Settings' : undefined}
           >
-            <Settings className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-            {isExpanded && (
-              <span className="text-xs font-medium truncate">Settings</span>
-            )}
-          </Link>
-
-          {/* Import */}
-          <Link
-            href="/portfolio/import"
-            className={cn(
-              "group h-9 rounded-lg flex items-center transition-all duration-120 ease-terminal",
-              "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
-              pathname === '/portfolio/import' ? 'text-accent' : 'text-muted hover:text-fg',
-              isExpanded ? "gap-2 px-2 flex-1" : "w-9 justify-center"
-            )}
-            title={!isExpanded ? 'Import' : undefined}
-          >
-            <UploadCloud className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-            {isExpanded && (
-              <span className="text-xs font-medium truncate">Import</span>
-            )}
-          </Link>
-
-          {/* Profile */}
-          <Link
-            href="/profile"
-            className={cn(
-              "group h-9 rounded-lg flex items-center transition-all duration-120 ease-terminal",
-              "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
-              pathname === '/profile' ? 'text-accent' : 'text-muted hover:text-fg',
-              isExpanded ? "gap-2 px-2 flex-1" : "w-9 justify-center"
-            )}
-            title={!isExpanded ? 'Profile' : undefined}
-          >
-            <User className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-            {isExpanded && (
-              <span className="text-xs font-medium truncate">Profile</span>
-            )}
-          </Link>
-
-          {/* Theme Toggle */}
-          <button
-            onClick={() => setTheme(theme === 'matrix' ? 'system' : 'matrix')}
-            className={cn(
-              "h-9 rounded-lg flex items-center justify-center transition-all duration-120 ease-terminal",
-              "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
-              theme === 'matrix' ? 'text-accent' : 'text-muted hover:text-fg',
-              isExpanded ? "gap-2 px-2 w-auto" : "w-9"
-            )}
-            title={!isExpanded ? (theme === 'matrix' ? 'Matrix Theme' : 'System Theme') : undefined}
-            aria-label="Toggle theme"
-          >
-            {theme === 'matrix' ? (
-              <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-            ) : (
-              <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-            )}
-            {isExpanded && (
-              <span className="text-xs font-medium">
-                {theme === 'matrix' ? 'Matrix' : 'System'}
-              </span>
-            )}
-          </button>
-
-          {/* Pin Toggle - Only show when expanded */}
-          {isExpanded && (
-            <button
-              onClick={() => setPinned(!pinned)}
+            {/* Settings */}
+            <Link
+              href="/settings"
               className={cn(
-                "h-9 w-9 rounded-lg flex items-center justify-center transition-all duration-120 ease-terminal",
+                "group rounded-lg flex items-center transition-all duration-120 ease-terminal",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
-                pinned ? 'text-accent' : 'text-muted hover:text-fg'
+                pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
+                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
-              title={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-              aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              title={!isExpanded ? 'Settings' : undefined}
             >
-              {pinned ? (
-                <Pin className="h-5 w-5" strokeWidth={1.75} />
-              ) : (
-                <PinOff className="h-5 w-5" strokeWidth={1.75} />
+              <Settings className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              {isExpanded && (
+                <span className="text-xs font-medium truncate">Settings</span>
               )}
-            </button>
+            </Link>
+
+            {/* Accounting */}
+            <Link
+              href="/portfolio/settings/accounting"
+              className={cn(
+                "group rounded-lg flex items-center transition-all duration-120 ease-terminal",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                pathname === '/portfolio/settings/accounting' ? 'text-accent' : 'text-muted hover:text-fg',
+                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
+              )}
+              title={!isExpanded ? 'Accounting' : undefined}
+            >
+              <ReceiptText className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              {isExpanded && (
+                <span className="text-xs font-medium truncate">Accounting</span>
+              )}
+            </Link>
+
+            {/* Import */}
+            <Link
+              href="/portfolio/import"
+              className={cn(
+                "group rounded-lg flex items-center transition-all duration-120 ease-terminal",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                pathname === '/portfolio/import' ? 'text-accent' : 'text-muted hover:text-fg',
+                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
+              )}
+              title={!isExpanded ? 'Import' : undefined}
+            >
+              <UploadCloud className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              {isExpanded && (
+                <span className="text-xs font-medium truncate">Import</span>
+              )}
+            </Link>
+
+            {/* Profile */}
+            <Link
+              href="/profile"
+              className={cn(
+                "group rounded-lg flex items-center transition-all duration-120 ease-terminal",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                pathname === '/profile' ? 'text-accent' : 'text-muted hover:text-fg',
+                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
+              )}
+              title={!isExpanded ? 'Profile' : undefined}
+            >
+              <User className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              {isExpanded && (
+                <span className="text-xs font-medium truncate">Profile</span>
+              )}
+            </Link>
+
+            {/* Pin Toggle - Only when expanded */}
+            {isExpanded && (
+              <button
+                onClick={() => setPinned(!pinned)}
+                className={cn(
+                  "h-9 w-full rounded-lg flex items-center gap-2 px-2 transition-all duration-120 ease-terminal",
+                  "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                  pinned ? 'text-accent' : 'text-muted hover:text-fg'
+                )}
+                title={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              >
+                {pinned ? (
+                  <Pin className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+                ) : (
+                  <PinOff className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+                )}
+                <span className="text-xs font-medium flex-1 text-left">
+                  {pinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Bottom Section: Preferences (only when expanded) */}
+          {isExpanded && (
+            <div className="px-3 pb-3 pt-3 border-t border-border/20 space-y-2">
+              <h3 className="text-[10px] tracking-widest uppercase text-accent-200/60 px-1 pb-1">
+                Preferences
+              </h3>
+
+              {/* Theme Toggle */}
+              <button
+                onClick={() => setTheme(theme === 'matrix' ? 'system' : 'matrix')}
+                className={cn(
+                  "w-full h-9 rounded-lg flex items-center gap-2 px-2 transition-all duration-120 ease-terminal",
+                  "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25",
+                  theme === 'matrix' ? 'text-accent' : 'text-muted hover:text-fg'
+                )}
+                aria-label="Toggle theme"
+              >
+                {theme === 'matrix' ? (
+                  <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+                ) : (
+                  <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+                )}
+                <span className="text-xs font-medium flex-1 text-left">
+                  {theme === 'matrix' ? 'Matrix Theme' : 'System Theme'}
+                </span>
+              </button>
+
+              {/* Currency Switcher */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted flex-shrink-0 w-16">Currency</span>
+                <div className="flex-1 min-w-0">
+                  <CurrencySwitcher />
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
     </nav>
+
+    {/* Market Quick-Add Modal */}
+    <MarketQuickAdd
+      open={commandSearchOpen}
+      onOpenChange={setCommandSearchOpen}
+      onSelectProduct={handleSelectProduct}
+    />
+
+    {/* Add From Search Modal */}
+    <AddFromSearchModal
+      open={addModalOpen}
+      onOpenChange={setAddModalOpen}
+      product={selectedProduct}
+      onSuccess={handleAddSuccess}
+    />
+    </>
   )
 }
 

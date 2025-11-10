@@ -96,7 +96,7 @@ export function QuickAddModal({ open, onOpenChange, onSuccess, userId }: QuickAd
         category: 'sneaker',
         purchase_price: parseFloat(buyPrice),
         purchase_date: new Date().toISOString(),
-        status: 'in_stock',
+        status: 'active',
         platform: platformMap[source] || 'Other',
         location: 'warehouse',
       })

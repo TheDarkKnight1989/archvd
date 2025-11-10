@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search, Download, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { useCurrency } from '@/hooks/useCurrency'
 import { SalesTable } from './_components/SalesTable'
 import type { SortingState } from '@tanstack/react-table'
 
@@ -15,6 +16,7 @@ export default function SalesPage() {
   const { user } = useRequireAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { convert, format } = useCurrency()
 
   // State
   const [searchQuery, setSearchQuery] = useState<string>(searchParams.get('search') || '')
@@ -101,7 +103,7 @@ export default function SalesPage() {
           <div className="bg-elev-1 border border-border/40 rounded-lg p-4 transition-colors hover:border-border">
             <div className="text-xs text-dim uppercase tracking-wider mb-1.5">Sales</div>
             <div className="text-2xl font-bold text-fg font-mono">
-              £{kpis.totalSales.toFixed(2)}
+              {format(convert(kpis.totalSales, 'GBP'))}
             </div>
             <div className="text-xs text-muted mt-1.5">{kpis.count} items</div>
           </div>
@@ -109,7 +111,7 @@ export default function SalesPage() {
           <div className="bg-elev-1 border border-border/40 rounded-lg p-4 transition-colors hover:border-border">
             <div className="text-xs text-dim uppercase tracking-wider mb-1.5">COGS</div>
             <div className="text-2xl font-bold text-fg font-mono">
-              £{kpis.totalCOGS.toFixed(2)}
+              {format(convert(kpis.totalCOGS, 'GBP'))}
             </div>
             <div className="text-xs text-muted mt-1.5">Cost of goods sold</div>
           </div>
@@ -120,7 +122,7 @@ export default function SalesPage() {
               "text-2xl font-bold font-mono",
               kpis.totalMargin >= 0 ? "text-success" : "text-danger"
             )}>
-              {kpis.totalMargin >= 0 ? '+' : ''}£{kpis.totalMargin.toFixed(2)}
+              {kpis.totalMargin >= 0 ? '+' : ''}{format(convert(kpis.totalMargin, 'GBP'))}
             </div>
             <div className="text-xs text-muted mt-1.5">Total margin</div>
           </div>
@@ -221,7 +223,7 @@ export default function SalesPage() {
                 onClick={handleExportCSV}
                 disabled={items.length === 0}
                 size="sm"
-                className="bg-accent text-black hover:bg-accent-600 max-md:hidden"
+                className="max-md:hidden"
               >
                 <Download className="h-4 w-4 mr-2" /> Export CSV
               </Button>
@@ -253,14 +255,14 @@ export default function SalesPage() {
           </div>
           <h3 className="text-lg font-semibold text-fg mb-2">No sales yet</h3>
           <p className="text-sm text-muted mb-4 text-center max-w-sm">
-            When you mark items as sold in your inventory, they'll appear here with profit tracking.
+            When you mark items as sold in your portfolio, they'll appear here with profit tracking.
           </p>
           <Button
             variant="outline"
             onClick={() => router.push('/portfolio/inventory')}
             className="border-accent text-accent hover:bg-accent/10"
           >
-            Go to Inventory
+            Go to Portfolio
           </Button>
         </div>
       )}

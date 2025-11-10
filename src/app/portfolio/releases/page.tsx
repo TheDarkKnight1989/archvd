@@ -1,20 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { useCurrency } from '@/hooks/useCurrency'
 import {
   Calendar,
   Search,
   RefreshCw,
   ExternalLink,
   ArrowRight,
-  Loader2
+  Loader2,
+  Bookmark,
+  X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
@@ -26,6 +31,7 @@ import {
 import { cn } from '@/lib/utils/cn'
 import { ReleaseCard, ReleaseCardSkeleton } from '@/components/ReleaseCard'
 import { toast } from 'sonner'
+import { AddToWatchlistPicker } from './components/AddToWatchlistPicker'
 
 type Release = {
   id: string
@@ -51,20 +57,59 @@ const STATUS_FILTERS = ['all', 'upcoming', 'dropped', 'tba'] as const
 
 export default function ReleasesPage() {
   useRequireAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { convert, format } = useCurrency()
 
   const [releases, setReleases] = useState<Release[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [filterBrand, setFilterBrand] = useState('All')
-  const [filterStatus, setFilterStatus] = useState<typeof STATUS_FILTERS[number]>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+
+  // Get initial state from URL
+  const [filterBrand, setFilterBrand] = useState(searchParams.get('brand') || 'All')
+  const [filterStatus, setFilterStatus] = useState<typeof STATUS_FILTERS[number]>(
+    (searchParams.get('status') as typeof STATUS_FILTERS[number]) || 'all'
+  )
+  const [filterDateFrom, setFilterDateFrom] = useState(searchParams.get('from') || '')
+  const [filterDateTo, setFilterDateTo] = useState(searchParams.get('to') || '')
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
+
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [watchlistPickerOpen, setWatchlistPickerOpen] = useState(false)
+
+  // Handle deep-link to release modal
+  useEffect(() => {
+    const releaseId = searchParams.get('release')
+    if (releaseId && releases.length > 0) {
+      const release = releases.find((r) => r.id === releaseId)
+      if (release) {
+        setSelectedRelease(release)
+        setModalOpen(true)
+      }
+    }
+  }, [searchParams, releases])
 
   useEffect(() => {
     fetchReleases()
-  }, [filterBrand, filterStatus])
+  }, [filterBrand, filterStatus, filterDateFrom, filterDateTo])
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams()
+
+    if (filterBrand !== 'All') params.set('brand', filterBrand)
+    if (filterStatus !== 'all') params.set('status', filterStatus)
+    if (filterDateFrom) params.set('from', filterDateFrom)
+    if (filterDateTo) params.set('to', filterDateTo)
+    if (searchQuery) params.set('q', searchQuery)
+
+    const queryString = params.toString()
+    router.replace(`/portfolio/releases${queryString ? `?${queryString}` : ''}`, {
+      scroll: false,
+    })
+  }, [filterBrand, filterStatus, filterDateFrom, filterDateTo, searchQuery, router])
 
   const fetchReleases = async () => {
     setLoading(true)
@@ -78,6 +123,12 @@ export default function ReleasesPage() {
       }
       if (filterStatus !== 'all') {
         params.set('status', filterStatus)
+      }
+      if (filterDateFrom) {
+        params.set('from', filterDateFrom)
+      }
+      if (filterDateTo) {
+        params.set('to', filterDateTo)
       }
       if (searchQuery.trim()) {
         params.set('q', searchQuery.trim())
@@ -119,7 +170,7 @@ export default function ReleasesPage() {
       const result = await response.json()
 
       toast.success(
-        `Sync complete! ${result.items_inserted} new, ${result.items_updated} updated, ${result.items_skipped} skipped`,
+        `${result.items_inserted + result.items_updated} releases updated`,
         { duration: 5000 }
       )
 
@@ -140,6 +191,22 @@ export default function ReleasesPage() {
   const handleCardClick = (release: Release) => {
     setSelectedRelease(release)
     setModalOpen(true)
+
+    // Update URL with deep-link
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('release', release.id)
+    router.replace(`/portfolio/releases?${params.toString()}`, { scroll: false })
+  }
+
+  const handleCloseModal = () => {
+    setModalOpen(false)
+    setSelectedRelease(null)
+
+    // Remove deep-link from URL
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('release')
+    const queryString = params.toString()
+    router.replace(`/portfolio/releases${queryString ? `?${queryString}` : ''}`, { scroll: false })
   }
 
   const formatDate = (dateString: string | null) => {
@@ -150,6 +217,35 @@ export default function ReleasesPage() {
       month: 'short',
       year: 'numeric',
     })
+  }
+
+  const formatRelativeDate = (dateString: string | null) => {
+    if (!dateString) return 'TBA'
+
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = date.getTime() - now.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) {
+      const absDays = Math.abs(diffDays)
+      if (absDays === 0) return 'Today'
+      if (absDays === 1) return 'Yesterday'
+      if (absDays < 7) return `${absDays} days ago`
+      if (absDays < 30) return `${Math.floor(absDays / 7)} weeks ago`
+      return `${Math.floor(absDays / 30)} months ago`
+    } else {
+      if (diffDays === 0) return 'Today'
+      if (diffDays === 1) return 'Tomorrow'
+      if (diffDays < 7) return `In ${diffDays} days`
+      if (diffDays < 30) return `In ${Math.floor(diffDays / 7)} weeks`
+      return `In ${Math.floor(diffDays / 30)} months`
+    }
+  }
+
+  const clearDateFilters = () => {
+    setFilterDateFrom('')
+    setFilterDateTo('')
   }
 
   // Filter releases by search query (client-side for instant feedback)
@@ -163,6 +259,13 @@ export default function ReleasesPage() {
       release.sku?.toLowerCase().includes(query)
     )
   })
+
+  const activeFilterCount =
+    (filterBrand !== 'All' ? 1 : 0) +
+    (filterStatus !== 'all' ? 1 : 0) +
+    (filterDateFrom ? 1 : 0) +
+    (filterDateTo ? 1 : 0) +
+    (searchQuery ? 1 : 0)
 
   return (
     <div className="mx-auto max-w-[1280px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-fg">
@@ -235,6 +338,48 @@ export default function ReleasesPage() {
           </div>
         </div>
 
+        {/* Date Range */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm text-muted font-medium">Date:</span>
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="date-from" className="text-xs text-muted">
+                From
+              </Label>
+              <Input
+                id="date-from"
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                className="w-[150px] bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20 text-sm"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="date-to" className="text-xs text-muted">
+                To
+              </Label>
+              <Input
+                id="date-to"
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                className="w-[150px] bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20 text-sm"
+              />
+            </div>
+            {(filterDateFrom || filterDateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearDateFilters}
+                className="mt-5 h-8 w-8 p-0 text-muted hover:text-fg"
+                aria-label="Clear date filters"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
@@ -247,6 +392,29 @@ export default function ReleasesPage() {
             className="pl-10 bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20 glow-accent-focus transition-all duration-120"
           />
         </div>
+
+        {/* Active Filters Summary */}
+        {activeFilterCount > 0 && (
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <p className="text-xs text-muted">
+              {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterBrand('All')
+                setFilterStatus('all')
+                setFilterDateFrom('')
+                setFilterDateTo('')
+                setSearchQuery('')
+              }}
+              className="text-xs text-accent hover:text-accent-600"
+            >
+              Clear all filters
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Error State */}
@@ -316,7 +484,7 @@ export default function ReleasesPage() {
       )}
 
       {/* Release Details Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={modalOpen} onOpenChange={handleCloseModal}>
         <DialogContent className="max-w-2xl">
           {selectedRelease && (
             <>
@@ -355,9 +523,14 @@ export default function ReleasesPage() {
                 {/* Release Date */}
                 <div className="flex items-center justify-between py-3 border-b border-border">
                   <span className="text-sm text-muted">Release Date</span>
-                  <span className="text-sm text-fg font-mono">
-                    {formatDate(selectedRelease.release_date)}
-                  </span>
+                  <div className="text-right">
+                    <p className="text-sm text-fg font-mono">
+                      {formatDate(selectedRelease.release_date)}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5">
+                      {formatRelativeDate(selectedRelease.release_date)}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Price */}
@@ -365,7 +538,7 @@ export default function ReleasesPage() {
                   <div className="flex items-center justify-between py-3 border-b border-border">
                     <span className="text-sm text-muted">Retail Price</span>
                     <span className="text-sm text-fg font-mono">
-                      £{selectedRelease.price_gbp.toFixed(2)}
+                      {format(convert(selectedRelease.price_gbp, 'GBP'))}
                     </span>
                   </div>
                 )}
@@ -376,7 +549,7 @@ export default function ReleasesPage() {
                     <span className="text-sm text-muted">SKU</span>
                     <Link
                       href={`/portfolio/market?sku=${selectedRelease.sku}`}
-                      onClick={() => setModalOpen(false)}
+                      onClick={() => handleCloseModal()}
                       className="group flex items-center gap-2 text-sm font-mono text-fg hover:text-accent transition-colors"
                     >
                       {selectedRelease.sku}
@@ -410,27 +583,51 @@ export default function ReleasesPage() {
               </div>
 
               <DialogFooter className="flex-row justify-between">
-                {selectedRelease.product_url ? (
-                  <a
-                    href={selectedRelease.product_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-accent hover:text-accent-600 transition-colors"
-                  >
-                    <span>View on {selectedRelease.source}</span>
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                ) : (
-                  <div />
-                )}
-                <Button variant="outline" onClick={() => setModalOpen(false)}>
-                  Close
-                </Button>
+                <div className="flex items-center gap-2">
+                  {selectedRelease.product_url && (
+                    <a
+                      href={selectedRelease.product_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-accent hover:text-accent-600 transition-colors"
+                    >
+                      <span>View on {selectedRelease.source}</span>
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedRelease.sku && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setWatchlistPickerOpen(true)
+                      }}
+                      className="border-accent-400/50 text-accent hover:bg-accent/10"
+                    >
+                      <Bookmark className="h-4 w-4 mr-2" />
+                      Add to Watchlist
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={handleCloseModal}>
+                    Close
+                  </Button>
+                </div>
               </DialogFooter>
             </>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Add to Watchlist Picker */}
+      {selectedRelease?.sku && (
+        <AddToWatchlistPicker
+          open={watchlistPickerOpen}
+          onOpenChange={setWatchlistPickerOpen}
+          sku={selectedRelease.sku}
+          defaultTargetPrice={selectedRelease.price_gbp || undefined}
+        />
+      )}
     </div>
   )
 }

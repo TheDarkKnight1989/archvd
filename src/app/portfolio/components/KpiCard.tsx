@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TrendingUp, TrendingDown } from 'lucide-react'
+import { TrendingUp, TrendingDown, Info } from 'lucide-react'
 
 interface KpiCardProps {
   label: string
@@ -11,9 +11,10 @@ interface KpiCardProps {
   delta?: number
   period?: string
   loading?: boolean
+  tooltip?: string
 }
 
-export function KpiCard({ label, value, delta, period, loading }: KpiCardProps) {
+export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCardProps) {
   if (loading) {
     return (
       <Card elevation={2} className="p-4 md:p-5 gradient-elev">
@@ -30,7 +31,18 @@ export function KpiCard({ label, value, delta, period, loading }: KpiCardProps) 
   return (
     <Card elevation={2} className="p-4 md:p-5 gradient-elev glow-accent-hover">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted">{label}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-medium text-muted">{label}</span>
+          {tooltip && (
+            <div className="group relative">
+              <Info className="h-3.5 w-3.5 text-muted cursor-help" />
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-elev-3 border border-border rounded-lg text-xs text-fg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10 shadow-lg">
+                {tooltip}
+                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-border"></div>
+              </div>
+            </div>
+          )}
+        </div>
         {period && (
           <Badge variant="outline" className="text-[11px] px-2 py-0.5">
             {period}

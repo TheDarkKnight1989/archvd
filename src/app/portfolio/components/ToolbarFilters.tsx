@@ -21,9 +21,10 @@ interface ToolbarFiltersProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'in_stock', label: 'In Stock' },
+  { value: 'active', label: 'Active' },
+  { value: 'listed', label: 'Listed' },
+  { value: 'worn', label: 'Worn' },
   { value: 'sold', label: 'Sold' },
-  { value: 'reserved', label: 'Reserved' },
 ]
 
 const SORT_OPTIONS = [

@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabase/client'
-import { Toast } from '@/components/ui/toast'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils/cn'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
@@ -40,59 +41,84 @@ const PLATFORMS = [
 ]
 
 export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsSoldModalProps) {
+  const router = useRouter()
   const [soldPrice, setSoldPrice] = useState('')
+  const [soldCurrency, setSoldCurrency] = useState<'GBP' | 'EUR' | 'USD'>('GBP')
   const [soldPlatform, setSoldPlatform] = useState('')
   const [soldFees, setSoldFees] = useState('')
+  const [soldShipping, setSoldShipping] = useState('')
   const [soldDate, setSoldDate] = useState(new Date().toISOString().split('T')[0])
+  const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null)
 
   // Calculate margin
   const purchaseTotal = (item?.purchase_price || 0) + (item?.tax || 0) + (item?.shipping || 0)
   const soldPriceNum = parseFloat(soldPrice) || 0
   const feesNum = parseFloat(soldFees) || 0
-  const margin = soldPriceNum - purchaseTotal - feesNum
+  const shippingNum = parseFloat(soldShipping) || 0
+  const margin = soldPriceNum - purchaseTotal - feesNum - shippingNum
   const marginPct = purchaseTotal > 0 ? (margin / purchaseTotal) * 100 : 0
 
   const handleSubmit = async () => {
     if (!item || !soldPrice || parseFloat(soldPrice) <= 0) {
-      setToast({ message: 'Please enter a valid sold price', variant: 'error' })
+      toast.error('Please enter a valid sold price')
+      return
+    }
+
+    if (!soldDate) {
+      toast.error('Please select a sold date')
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase
-        .from('Inventory')
-        .update({
-          status: 'sold',
+      const response = await fetch(`/api/items/${item.id}/mark-sold`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           sold_price: parseFloat(soldPrice),
-          platform: soldPlatform || null,
           sold_date: soldDate,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', item.id)
+          sale_currency: soldCurrency,
+          platform: soldPlatform || null,
+          fees: feesNum,
+          shipping: shippingNum,
+          notes: notes || null,
+        }),
+      })
 
-      if (error) throw error
+      const data = await response.json()
 
-      setToast({ message: 'Item marked as sold!', variant: 'success' })
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to mark as sold')
+      }
+
+      // Show success toast with link to sales page
+      toast.success('Moved to Sales', {
+        description: `${item.brand} ${item.model}`,
+        action: {
+          label: 'View',
+          onClick: () => router.push('/portfolio/sales')
+        },
+      })
 
       // Call onSuccess to refresh inventory
       onSuccess?.()
 
-      // Close modal after short delay
-      setTimeout(() => {
-        onOpenChange(false)
-        // Reset form
-        setSoldPrice('')
-        setSoldPlatform('')
-        setSoldFees('')
-        setSoldDate(new Date().toISOString().split('T')[0])
-      }, 1500)
+      // Close modal and reset form
+      onOpenChange(false)
+      setSoldPrice('')
+      setSoldCurrency('GBP')
+      setSoldPlatform('')
+      setSoldFees('')
+      setSoldShipping('')
+      setNotes('')
+      setSoldDate(new Date().toISOString().split('T')[0])
     } catch (error: any) {
       console.error('Mark as sold error:', error)
-      setToast({ message: error.message || 'Failed to mark as sold', variant: 'error' })
+      toast.error(error.message || 'Failed to mark as sold')
     } finally {
       setIsSubmitting(false)
     }
@@ -114,22 +140,39 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
           </DialogHeader>
 
           <div className="py-4 space-y-4">
-            {/* Sold Price */}
-            <div>
-              <Label htmlFor="soldPrice" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                Sold Price (£) <span className="text-accent">*</span>
-              </Label>
-              <Input
-                id="soldPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={soldPrice}
-                onChange={(e) => setSoldPrice(e.target.value)}
-                placeholder="0.00"
-                className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
-                autoFocus
-              />
+            {/* Sold Price & Currency */}
+            <div className="grid grid-cols-[1fr_120px] gap-3">
+              <div>
+                <Label htmlFor="soldPrice" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+                  Sold Price <span className="text-accent">*</span>
+                </Label>
+                <Input
+                  id="soldPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={soldPrice}
+                  onChange={(e) => setSoldPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <Label htmlFor="currency" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+                  Currency
+                </Label>
+                <Select value={soldCurrency} onValueChange={(v: any) => setSoldCurrency(v)}>
+                  <SelectTrigger className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-elev-1 border-border">
+                    <SelectItem value="GBP">GBP (£)</SelectItem>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Platform */}
@@ -168,6 +211,23 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
               />
             </div>
 
+            {/* Shipping */}
+            <div>
+              <Label htmlFor="shipping" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+                Shipping (£)
+              </Label>
+              <Input
+                id="shipping"
+                type="number"
+                step="0.01"
+                min="0"
+                value={soldShipping}
+                onChange={(e) => setSoldShipping(e.target.value)}
+                placeholder="0.00"
+                className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+              />
+            </div>
+
             {/* Sold Date */}
             <div>
               <Label htmlFor="soldDate" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
@@ -179,6 +239,21 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
                 value={soldDate}
                 onChange={(e) => setSoldDate(e.target.value)}
                 className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 font-mono focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label htmlFor="notes" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+                Notes
+              </Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Additional notes about the sale..."
+                rows={3}
+                className="text-sm bg-elev-1 border-border text-fg rounded-lg px-3 py-2 resize-none focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
               />
             </div>
 
@@ -197,6 +272,12 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-dim">Fees:</span>
                     <span className="font-mono text-fg">-£{feesNum.toFixed(2)}</span>
+                  </div>
+                )}
+                {shippingNum > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-dim">Shipping:</span>
+                    <span className="font-mono text-fg">-£{shippingNum.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="border-t border-border/40 pt-2 flex items-center justify-between">
@@ -245,15 +326,6 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          variant={toast.variant}
-          onClose={() => setToast(null)}
-        />
-      )}
     </>
   )
 }

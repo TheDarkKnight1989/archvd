@@ -10,10 +10,12 @@ import {
   type SortingState,
   type OnChangeFn,
 } from '@tanstack/react-table'
-import { gbp2, formatPct, deltaColor } from '@/lib/utils/format'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TrendingUp, TrendingDown, ArrowUpDown } from 'lucide-react'
+import { DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
+import { formatSize } from '@/lib/format/size'
 import type { SalesItem } from '@/hooks/useSalesTable'
 
 const columnHelper = createColumnHelper<SalesItem>()
@@ -31,6 +33,8 @@ export function SalesTable({
   sorting,
   onSortingChange,
 }: SalesTableProps) {
+  const { convert, format } = useCurrency()
+
   // Define columns
   const columns = useMemo(
     () => [
@@ -68,7 +72,7 @@ export function SalesTable({
           const size = info.getValue()
           return (
             <div className="text-sm text-[#E8F6EE]">
-              {size || <span className="text-[#7FA08F]">—</span>}
+              {formatSize(size, 'UK')}
             </div>
           )
         },
@@ -86,9 +90,7 @@ export function SalesTable({
 
           return (
             <div className="text-right">
-              <div className="text-sm font-mono font-medium text-[#E8F6EE]">
-                {gbp2.format(total)}
-              </div>
+              <PlainMoneyCell value={total} />
             </div>
           )
         },
@@ -98,61 +100,33 @@ export function SalesTable({
       columnHelper.accessor('sold_price', {
         id: 'sold_price',
         header: () => <div className="text-right">Sold £</div>,
-        cell: (info) => {
-          const price = info.getValue()
-          return price !== null && price !== undefined ? (
-            <div className="text-right text-sm font-mono font-medium text-[#E8F6EE]">
-              {gbp2.format(price)}
-            </div>
-          ) : (
-            <div className="text-right text-[#7FA08F]">—</div>
-          )
-        },
+        cell: (info) => (
+          <div className="text-right">
+            <PlainMoneyCell value={info.getValue()} />
+          </div>
+        ),
         enableSorting: true,
       }),
 
       columnHelper.accessor('margin_gbp', {
         id: 'margin_gbp',
         header: () => <div className="text-right">Margin £</div>,
-        cell: (info) => {
-          const margin = info.getValue()
-          return margin !== null && margin !== undefined ? (
-            <div className={cn(
-              "text-right text-sm font-mono font-semibold",
-              margin >= 0 ? "text-success" : "text-danger"
-            )}>
-              {margin >= 0 ? '+' : ''}{gbp2.format(margin)}
-            </div>
-          ) : (
-            <div className="text-right text-[#7FA08F]">—</div>
-          )
-        },
+        cell: (info) => (
+          <div className="text-right">
+            <MoneyCell value={info.getValue()} showArrow />
+          </div>
+        ),
         enableSorting: true,
       }),
 
       columnHelper.accessor('margin_percent', {
         id: 'margin_percent',
         header: () => <div className="text-right">Margin %</div>,
-        cell: (info) => {
-          const pct = info.getValue()
-          return pct !== null && pct !== undefined ? (
-            <div className="text-right flex items-center justify-end gap-1">
-              {pct >= 0 ? (
-                <TrendingUp className="h-3.5 w-3.5 text-success" />
-              ) : (
-                <TrendingDown className="h-3.5 w-3.5 text-danger" />
-              )}
-              <span className={cn(
-                "text-sm font-mono font-semibold",
-                pct >= 0 ? "text-success" : "text-danger"
-              )}>
-                {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
-              </span>
-            </div>
-          ) : (
-            <div className="text-right text-[#7FA08F]">—</div>
-          )
-        },
+        cell: (info) => (
+          <div className="text-right">
+            <PercentCell value={info.getValue()} />
+          </div>
+        ),
         enableSorting: true,
       }),
 
@@ -181,16 +155,70 @@ export function SalesTable({
         header: 'Platform',
         cell: (info) => {
           const platform = info.getValue()
+          const item = info.row.original
+          const isStockX = platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
+
           return platform ? (
-            <div className="text-sm text-[#E8F6EE]">{platform}</div>
+            <div className="flex items-center gap-2">
+              {isStockX && (
+                <div className="inline-flex items-center justify-center w-4 h-4 rounded bg-[#00B359]/20 text-[#00B359] text-[9px] font-bold border border-[#00B359]/30">
+                  Sx
+                </div>
+              )}
+              <div className="text-sm text-[#E8F6EE]">{platform}</div>
+            </div>
           ) : (
             <span className="text-[#7FA08F]">—</span>
           )
         },
         enableSorting: false,
       }),
+
+      columnHelper.accessor('commission', {
+        id: 'commission',
+        header: () => <div className="text-right">Commission £</div>,
+        cell: (info) => {
+          const commission = info.getValue()
+          const item = info.row.original
+          const isStockX = item.platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
+
+          // Only show commission for StockX sales
+          if (!isStockX || !commission) {
+            return <div className="text-right text-[#7FA08F]">—</div>
+          }
+
+          return (
+            <div className="text-right">
+              <PlainMoneyCell value={commission} />
+            </div>
+          )
+        },
+        enableSorting: false,
+      }),
+
+      columnHelper.accessor('net_payout', {
+        id: 'net_payout',
+        header: () => <div className="text-right">Net Payout £</div>,
+        cell: (info) => {
+          const netPayout = info.getValue()
+          const item = info.row.original
+          const isStockX = item.platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
+
+          // Only show net payout for StockX sales
+          if (!isStockX || !netPayout) {
+            return <div className="text-right text-[#7FA08F]">—</div>
+          }
+
+          return (
+            <div className="text-right">
+              <PlainMoneyCell value={netPayout} />
+            </div>
+          )
+        },
+        enableSorting: false,
+      }),
     ],
-    []
+    [convert, format]
   )
 
   const table = useReactTable({
@@ -236,6 +264,30 @@ export function SalesTable({
     )
   }
 
+  if (items.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px] rounded-2xl border border-[#15251B] bg-gradient-to-br from-[#08100C] to-[#0B1510]">
+        <div className="text-center px-6 py-12">
+          {/* Icon with accent glow */}
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full" />
+            <DollarSign className="h-16 w-16 mx-auto text-accent relative" strokeWidth={1.5} />
+          </div>
+
+          {/* Heading */}
+          <h3 className="text-xl font-semibold text-[#E8F6EE] mb-2">
+            No sales yet
+          </h3>
+
+          {/* Description */}
+          <p className="text-sm text-[#7FA08F] mb-8 max-w-sm mx-auto leading-relaxed">
+            When you mark items as sold, they'll appear here with complete sale details and margin analysis.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
       <div className="overflow-x-auto">
@@ -251,7 +303,7 @@ export function SalesTable({
                     {header.isPlaceholder ? null : (
                       <div
                         className={cn(
-                          header.column.getCanSort() && 'cursor-pointer select-none flex items-center gap-1 hover:text-[#E8F6EE] transition-colors',
+                          header.column.getCanSort() && 'cursor-pointer select-none flex items-center gap-1 hover:text-[#E8F6EE] transition-colors duration-120 motion-reduce:transition-none',
                           !header.column.getCanSort() && 'flex items-center'
                         )}
                         onClick={header.column.getToggleSortingHandler()}
@@ -277,7 +329,7 @@ export function SalesTable({
               <tr
                 key={row.id}
                 className={cn(
-                  "transition-all duration-120 hover:bg-[#0B1510]",
+                  "transition-all duration-120 motion-reduce:transition-none hover:bg-[#0B1510]",
                   idx % 2 === 0 && "bg-[#08100C]/30"
                 )}
               >

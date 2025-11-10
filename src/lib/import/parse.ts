@@ -171,7 +171,7 @@ export function generateTemplateCSV(): string {
       '120',
       '01/09/2025',
       'deadstock',
-      'in_stock',
+      'active',
       'Unit A',
     ],
     [
@@ -182,7 +182,7 @@ export function generateTemplateCSV(): string {
       '130',
       '2025-09-10',
       'worn',
-      'in_stock',
+      'active',
       'Shelf 3',
     ],
     [
@@ -193,7 +193,7 @@ export function generateTemplateCSV(): string {
       '250',
       '',
       'deadstock',
-      'in_stock',
+      'active',
       'Main',
     ],
   ]

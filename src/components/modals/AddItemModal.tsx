@@ -7,14 +7,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { SizeSelector } from '@/components/forms/SizeSelector'
 import { TagInput } from '@/components/forms/TagInput'
 import { WatchlistCombobox } from '@/components/forms/WatchlistCombobox'
-import { ModalFooter } from '@/components/modals/ModalFooter'
 import { Toast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils/cn'
 import { listWatchlists } from '@/lib/supabase/items'
+import { Loader2 } from 'lucide-react'
 
 // Form validation schema
 const formSchema = z.object({
@@ -91,6 +92,15 @@ function formatRelativeTime(timestamp: string): string {
     month: 'short',
   })
 }
+
+// Common input styles
+const inputClassName = cn(
+  "h-10 text-sm bg-elev-1 border border-border/40 text-fg rounded-lg px-3 placeholder:opacity-60",
+  "focus:ring-1 focus:ring-accent focus:shadow-[0_0_12px_rgba(0,255,148,0.2)] focus:border-accent/50",
+  "transition-all duration-[120ms] ease-out"
+)
+
+const labelClassName = "font-cinzel text-accent uppercase tracking-wider text-xs mb-2 block"
 
 export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProps) {
   const [formData, setFormData] = useState<FormData>({
@@ -331,424 +341,457 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[880px] w-full rounded-2xl border border-border bg-elev-2 shadow-soft p-6 md:p-7 max-h-[calc(100vh-60px)] overflow-y-auto">
-          <DialogHeader className="pb-4 border-b border-border/40">
-            <DialogTitle className="text-2xl font-bold text-fg">
+        <DialogContent className="max-w-[720px] w-[90vw] rounded-2xl border border-border bg-elev-3/95 backdrop-blur-md shadow-[0_0_32px_rgba(0,255,148,0.15)] p-0 max-h-[calc(100vh-60px)] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
+            <DialogTitle className="text-2xl font-cinzel font-bold text-fg">
               Add Item
             </DialogTitle>
           </DialogHeader>
 
-          <div className="py-4">
-            {/* Three Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="overflow-y-auto max-h-[calc(100vh-200px)] px-6 py-4">
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-              {/* COLUMN 1: Basic Information */}
+              {/* COLUMN 1: Basic Info + Category/Size */}
               <div className="space-y-4">
-                {/* Section Heading with Keyline */}
-                <div className="space-y-2">
-                  <h3 className="text-[11px] uppercase tracking-wider text-dim font-semibold">
-                    Basic Information
-                  </h3>
-                  <div className="h-[2px] w-8 bg-accent-400/25 rounded-full" />
-                </div>
-
-                <div className="space-y-3">
-                  {/* Name - Full Width */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="name" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Name <span className="text-accent">*</span>
-                    </Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      placeholder="e.g., Air Jordan 1 Retro High OG"
-                      className={cn(
-                        "h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3",
-                        "focus:border-accent/50 focus:glow-accent-hover transition-all duration-120",
-                        errors.name && "border-danger"
-                      )}
-                    />
-                    <div className="h-4 mt-1">
-                      {errors.name && (
-                        <p className="text-xs text-danger">{errors.name}</p>
-                      )}
-                    </div>
+                {/* Basic Information Card */}
+                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
+                  {/* Section Header */}
+                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
+                    <h3 className="font-cinzel text-accent uppercase tracking-wider text-xs">
+                      Basic Information
+                    </h3>
+                    <div className="h-[2px] w-12 bg-accent/40 rounded-full" />
                   </div>
 
-                  {/* Style ID */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="styleId" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Style ID / SKU
-                    </Label>
-                    <Input
-                      id="styleId"
-                      value={formData.styleId}
-                      onChange={(e) => updateField('styleId', e.target.value)}
-                      onBlur={handleStyleIdBlur}
-                      placeholder="e.g., DZ5485-612"
-                      className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 font-mono focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
-                    />
-                    <div className="h-4 mt-1">
-                      {isLoadingMarket && (
-                        <p className="text-xs text-accent">Looking up details...</p>
-                      )}
-                      {!isLoadingMarket && marketPreview && (
-                        <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
-                          <span className="text-accent">Market:</span>
-                          <span className="font-semibold">£{marketPreview.price.toFixed(2)}</span>
-                          <span className="text-dim">•</span>
-                          <span className="capitalize">{marketPreview.source}</span>
-                          <span className="text-dim">•</span>
-                          <span>{formatRelativeTime(marketPreview.timestamp)}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Brand */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="brand" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Brand
-                    </Label>
-                    <Input
-                      id="brand"
-                      value={formData.brand}
-                      onChange={(e) => updateField('brand', e.target.value)}
-                      placeholder="e.g., Nike"
-                      className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
-                    />
-                  </div>
-
-                  {/* Colorway */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="colorway" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Colorway
-                    </Label>
-                    <Input
-                      id="colorway"
-                      value={formData.colorway}
-                      onChange={(e) => updateField('colorway', e.target.value)}
-                      placeholder="e.g., Chicago Lost & Found"
-                      className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
-                    />
-                  </div>
-
-                  {/* Condition */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="condition" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Condition <span className="text-accent">*</span>
-                    </Label>
-                    <Select value={formData.condition} onValueChange={(value: any) => updateField('condition', value)}>
-                      <SelectTrigger className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-elev-1 border-border">
-                        {CONDITION_OPTIONS.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              {/* COLUMN 2: Category & Size */}
-              <div className="space-y-4">
-                {/* Section Heading with Keyline */}
-                <div className="space-y-2">
-                  <h3 className="text-[11px] uppercase tracking-wider text-dim font-semibold">
-                    Category & Size
-                  </h3>
-                  <div className="h-[2px] w-8 bg-accent-400/25 rounded-full" />
-                </div>
-
-                <div className="space-y-3">
-                  {/* Category Pills */}
-                  <div className="min-h-[70px]">
-                    <Label className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Category <span className="text-accent">*</span>
-                    </Label>
-                    <div className="flex gap-2">
-                      {(['shoes', 'clothes', 'other'] as const).map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => {
-                            updateField('category', cat)
-                            updateField('size', '') // Reset size when category changes
-                          }}
-                          className={cn(
-                            "flex-1 h-8 px-3 rounded-full text-sm font-medium transition-all duration-120",
-                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
-                            formData.category === cat
-                              ? "bg-accent-200 text-fg"
-                              : "bg-elev-1 text-muted hover:bg-elev-2"
-                          )}
-                        >
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Size Selector */}
-                  <SizeSelector
-                    value={formData.size}
-                    onChange={(size) => updateField('size', size)}
-                    category={formData.category}
-                  />
-
-                  {/* Other Size */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="sizeAlt" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Other Size <span className="text-muted text-[10px] lowercase">(if not listed)</span>
-                    </Label>
-                    <Input
-                      id="sizeAlt"
-                      value={formData.sizeAlt}
-                      onChange={(e) => updateField('sizeAlt', e.target.value)}
-                      placeholder="e.g., 9.5W, 42EU"
-                      className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* COLUMN 3: Purchase Info + Additional */}
-              <div className="space-y-4">
-                {/* Purchase Information Section */}
-                <div className="space-y-2">
-                  <h3 className="text-[11px] uppercase tracking-wider text-dim font-semibold">
-                    Purchase Information
-                  </h3>
-                  <div className="h-[2px] w-8 bg-accent-400/25 rounded-full" />
-                </div>
-
-                <div className="space-y-3">
-                  {/* Purchase Price */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="purchasePrice" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Purchase Price (£) <span className="text-accent">*</span>
-                    </Label>
-                    <Input
-                      id="purchasePrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.purchasePrice}
-                      onChange={(e) => updateField('purchasePrice', e.target.value)}
-                      placeholder="0.00"
-                      className={cn(
-                        "h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums",
-                        "focus:border-accent/50 focus:glow-accent-hover transition-all duration-120",
-                        errors.purchasePrice && "border-danger"
-                      )}
-                    />
-                    <div className="h-4 mt-1">
-                      {errors.purchasePrice && (
-                        <p className="text-xs text-danger">{errors.purchasePrice}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Purchase Date */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="purchaseDate" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Purchase Date <span className="text-accent">*</span>
-                    </Label>
-                    <Input
-                      id="purchaseDate"
-                      type="date"
-                      value={formData.purchaseDate}
-                      onChange={(e) => updateField('purchaseDate', e.target.value)}
-                      className={cn(
-                        "h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 font-mono",
-                        "focus:border-accent/50 focus:glow-accent-hover transition-all duration-120",
-                        errors.purchaseDate && "border-danger"
-                      )}
-                    />
-                    <div className="h-4 mt-1">
-                      {errors.purchaseDate && (
-                        <p className="text-xs text-danger">{errors.purchaseDate}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Tax */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="tax" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Tax (£)
-                    </Label>
-                    <Input
-                      id="tax"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.tax}
-                      onChange={(e) => updateField('tax', e.target.value)}
-                      placeholder="0.00"
-                      className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
-                    />
-                  </div>
-
-                  {/* Shipping */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="shipping" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Shipping (£)
-                    </Label>
-                    <Input
-                      id="shipping"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.shipping}
-                      onChange={(e) => updateField('shipping', e.target.value)}
-                      placeholder="0.00"
-                      className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
-                    />
-                  </div>
-
-                  {/* Purchase Total - Neutral Surface */}
-                  <div className="bg-elev-1 border border-border/40 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-dim uppercase tracking-wider">Total</span>
-                      <span className="text-base font-mono text-success font-semibold tabular-nums">
-                        £{purchaseTotal}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Place of Purchase */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="placeOfPurchase" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Place of Purchase
-                    </Label>
-                    <Select value={formData.placeOfPurchase} onValueChange={(value) => updateField('placeOfPurchase', value)}>
-                      <SelectTrigger className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120">
-                        <SelectValue placeholder="Select..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-elev-1 border-border">
-                        {PLACE_OF_PURCHASE_OPTIONS.map(place => (
-                          <SelectItem key={place} value={place}>
-                            {place}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Order Number */}
-                  <div className="min-h-[70px]">
-                    <Label htmlFor="orderNumber" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
-                      Order Number
-                    </Label>
-                    <Input
-                      id="orderNumber"
-                      value={formData.orderNumber}
-                      onChange={(e) => updateField('orderNumber', e.target.value)}
-                      placeholder="Optional"
-                      className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 font-mono focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
-                    />
-                  </div>
-                </div>
-
-                {/* Additional Information Section */}
-                <div className="space-y-2 pt-4 border-t border-border/40">
-                  <h3 className="text-[11px] uppercase tracking-wider text-dim font-semibold">
-                    Additional Information
-                  </h3>
-                  <div className="h-[2px] w-8 bg-accent-400/25 rounded-full" />
-                </div>
-
-                <div className="space-y-3">
-                  {/* Tags */}
-                  <TagInput
-                    value={formData.tags}
-                    onChange={(tags) => updateField('tags', tags)}
-                    placeholder="Type and press Enter to add tags"
-                  />
-
-                  {/* Watchlist */}
-                  <WatchlistCombobox
-                    value={formData.watchlist}
-                    onChange={(value) => updateField('watchlist', value)}
-                    options={watchlists}
-                    onCreateNew={handleCreateWatchlist}
-                  />
-
-                  {/* Custom Market Value */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <input
-                        type="checkbox"
-                        id="customMarketToggle"
-                        checked={showCustomMarket}
-                        onChange={(e) => setShowCustomMarket(e.target.checked)}
-                        className="w-4 h-4 rounded border-border bg-elev-1 text-accent focus:ring-accent/25"
-                      />
-                      <Label htmlFor="customMarketToggle" className="text-[11px] uppercase tracking-wider text-dim font-semibold cursor-pointer">
-                        Custom Market Value
+                  <div className="space-y-3">
+                    {/* Name */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="name" className={labelClassName}>
+                        Name <span className="text-accent">*</span>
                       </Label>
-                    </div>
-                    {showCustomMarket && (
                       <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => updateField('name', e.target.value)}
+                        placeholder="e.g., Air Jordan 1 Retro High OG"
+                        className={cn(inputClassName, errors.name && "border-danger")}
+                      />
+                      <div className="h-4 mt-1">
+                        {errors.name && (
+                          <p className="text-xs text-danger">{errors.name}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Style ID */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="styleId" className={labelClassName}>
+                        Style ID / SKU
+                      </Label>
+                      <Input
+                        id="styleId"
+                        value={formData.styleId}
+                        onChange={(e) => updateField('styleId', e.target.value)}
+                        onBlur={handleStyleIdBlur}
+                        placeholder="e.g., DZ5485-612"
+                        className={cn(inputClassName, "font-mono")}
+                      />
+                      <div className="h-4 mt-1">
+                        {isLoadingMarket && (
+                          <p className="text-xs text-accent">Looking up details...</p>
+                        )}
+                        {!isLoadingMarket && marketPreview && (
+                          <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
+                            <span className="text-accent">Market:</span>
+                            <span className="font-mono font-semibold">£{marketPreview.price.toFixed(2)}</span>
+                            <span className="text-dim">•</span>
+                            <span className="capitalize">{marketPreview.source}</span>
+                            <span className="text-dim">•</span>
+                            <span>{formatRelativeTime(marketPreview.timestamp)}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Brand */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="brand" className={labelClassName}>
+                        Brand
+                      </Label>
+                      <Input
+                        id="brand"
+                        value={formData.brand}
+                        onChange={(e) => updateField('brand', e.target.value)}
+                        placeholder="e.g., Nike"
+                        className={inputClassName}
+                      />
+                    </div>
+
+                    {/* Colorway */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="colorway" className={labelClassName}>
+                        Colorway
+                      </Label>
+                      <Input
+                        id="colorway"
+                        value={formData.colorway}
+                        onChange={(e) => updateField('colorway', e.target.value)}
+                        placeholder="e.g., Chicago Lost & Found"
+                        className={inputClassName}
+                      />
+                    </div>
+
+                    {/* Condition */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="condition" className={labelClassName}>
+                        Condition <span className="text-accent">*</span>
+                      </Label>
+                      <Select value={formData.condition} onValueChange={(value: any) => updateField('condition', value)}>
+                        <SelectTrigger className={inputClassName}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-elev-1 border-border">
+                          {CONDITION_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category & Size Card */}
+                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
+                  {/* Section Header */}
+                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
+                    <h3 className="font-cinzel text-accent uppercase tracking-wider text-xs">
+                      Category & Size
+                    </h3>
+                    <div className="h-[2px] w-12 bg-accent/40 rounded-full" />
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Category Pills */}
+                    <div className="min-h-[70px]">
+                      <Label className={labelClassName}>
+                        Category <span className="text-accent">*</span>
+                      </Label>
+                      <div className="flex gap-2">
+                        {(['shoes', 'clothes', 'other'] as const).map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => {
+                              updateField('category', cat)
+                              updateField('size', '') // Reset size when category changes
+                            }}
+                            className={cn(
+                              "flex-1 h-8 px-3 rounded-full text-sm font-medium transition-all duration-[200ms]",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                              "hover:scale-105",
+                              formData.category === cat
+                                ? "bg-accent text-black shadow-[0_0_16px_rgba(0,255,148,0.4)]"
+                                : "bg-elev-1 border border-border/30 text-muted hover:bg-elev-1 hover:border-accent/30"
+                            )}
+                          >
+                            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Size Selector */}
+                    <SizeSelector
+                      value={formData.size}
+                      onChange={(size) => updateField('size', size)}
+                      category={formData.category}
+                    />
+
+                    {/* Other Size */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="sizeAlt" className={labelClassName}>
+                        Other Size <span className="text-muted text-[10px] lowercase normal-case">(if not listed)</span>
+                      </Label>
+                      <Input
+                        id="sizeAlt"
+                        value={formData.sizeAlt}
+                        onChange={(e) => updateField('sizeAlt', e.target.value)}
+                        placeholder="e.g., 9.5W, 42EU"
+                        className={inputClassName}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* COLUMN 2: Purchase Info + Additional Info */}
+              <div className="space-y-4">
+                {/* Purchase Information Card */}
+                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
+                  {/* Section Header */}
+                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
+                    <h3 className="font-cinzel text-accent uppercase tracking-wider text-xs">
+                      Purchase Information
+                    </h3>
+                    <div className="h-[2px] w-12 bg-accent/40 rounded-full" />
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Purchase Price */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="purchasePrice" className={labelClassName}>
+                        Purchase Price (£) <span className="text-accent">*</span>
+                      </Label>
+                      <Input
+                        id="purchasePrice"
                         type="number"
                         step="0.01"
                         min="0"
-                        value={formData.customMarketValue}
-                        onChange={(e) => updateField('customMarketValue', e.target.value)}
+                        value={formData.purchasePrice}
+                        onChange={(e) => updateField('purchasePrice', e.target.value)}
                         placeholder="0.00"
-                        className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+                        className={cn(inputClassName, "font-mono text-right tabular-nums", errors.purchasePrice && "border-danger")}
                       />
-                    )}
+                      <div className="h-4 mt-1">
+                        {errors.purchasePrice && (
+                          <p className="text-xs text-danger">{errors.purchasePrice}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Purchase Date */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="purchaseDate" className={labelClassName}>
+                        Purchase Date <span className="text-accent">*</span>
+                      </Label>
+                      <Input
+                        id="purchaseDate"
+                        type="date"
+                        value={formData.purchaseDate}
+                        onChange={(e) => updateField('purchaseDate', e.target.value)}
+                        className={cn(inputClassName, "font-mono", errors.purchaseDate && "border-danger")}
+                      />
+                      <div className="h-4 mt-1">
+                        {errors.purchaseDate && (
+                          <p className="text-xs text-danger">{errors.purchaseDate}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tax */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="tax" className={labelClassName}>
+                        Tax (£)
+                      </Label>
+                      <Input
+                        id="tax"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.tax}
+                        onChange={(e) => updateField('tax', e.target.value)}
+                        placeholder="0.00"
+                        className={cn(inputClassName, "font-mono text-right tabular-nums")}
+                      />
+                    </div>
+
+                    {/* Shipping */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="shipping" className={labelClassName}>
+                        Shipping (£)
+                      </Label>
+                      <Input
+                        id="shipping"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.shipping}
+                        onChange={(e) => updateField('shipping', e.target.value)}
+                        placeholder="0.00"
+                        className={cn(inputClassName, "font-mono text-right tabular-nums")}
+                      />
+                    </div>
+
+                    {/* Purchase Total */}
+                    <div className="bg-elev-1 border border-border/40 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-cinzel text-xs text-accent uppercase tracking-wider">Total</span>
+                        <span className="text-base font-mono text-accent font-semibold tabular-nums">
+                          £{purchaseTotal}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Place of Purchase */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="placeOfPurchase" className={labelClassName}>
+                        Place of Purchase
+                      </Label>
+                      <Select value={formData.placeOfPurchase} onValueChange={(value) => updateField('placeOfPurchase', value)}>
+                        <SelectTrigger className={inputClassName}>
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-elev-1 border-border">
+                          {PLACE_OF_PURCHASE_OPTIONS.map(place => (
+                            <SelectItem key={place} value={place}>
+                              {place}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Order Number */}
+                    <div className="min-h-[70px]">
+                      <Label htmlFor="orderNumber" className={labelClassName}>
+                        Order Number
+                      </Label>
+                      <Input
+                        id="orderNumber"
+                        value={formData.orderNumber}
+                        onChange={(e) => updateField('orderNumber', e.target.value)}
+                        placeholder="Optional"
+                        className={cn(inputClassName, "font-mono")}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Information Card */}
+                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
+                  {/* Section Header */}
+                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
+                    <h3 className="font-cinzel text-accent uppercase tracking-wider text-xs">
+                      Additional Information
+                    </h3>
+                    <div className="h-[2px] w-12 bg-accent/40 rounded-full" />
                   </div>
 
-                  {/* Notes */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <Label htmlFor="notes" className="text-[11px] uppercase tracking-wider text-dim font-semibold">
-                        Notes
-                      </Label>
-                      <span className={cn(
-                        "text-xs font-mono tabular-nums",
-                        (formData.notes?.length || 0) > 250 ? "text-danger" : "text-muted"
-                      )}>
-                        {formData.notes?.length || 0}/250
-                      </span>
-                    </div>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) => updateField('notes', e.target.value)}
-                      placeholder="Any additional notes..."
-                      rows={3}
-                      maxLength={250}
-                      className={cn(
-                        "bg-elev-1 border-border text-fg text-sm resize-none p-3 rounded-lg",
-                        "focus:border-accent/50 focus:glow-accent-hover transition-all duration-120",
-                        errors.notes && "border-danger"
-                      )}
+                  <div className="space-y-3">
+                    {/* Tags */}
+                    <TagInput
+                      value={formData.tags}
+                      onChange={(tags) => updateField('tags', tags)}
+                      placeholder="Type and press Enter to add tags"
                     />
-                    {errors.notes && (
-                      <p className="text-xs text-danger mt-1">{errors.notes}</p>
-                    )}
+
+                    {/* Watchlist */}
+                    <WatchlistCombobox
+                      value={formData.watchlist}
+                      onChange={(value) => updateField('watchlist', value)}
+                      options={watchlists}
+                      onCreateNew={handleCreateWatchlist}
+                    />
+
+                    {/* Custom Market Value */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <input
+                          type="checkbox"
+                          id="customMarketToggle"
+                          checked={showCustomMarket}
+                          onChange={(e) => setShowCustomMarket(e.target.checked)}
+                          className="w-4 h-4 rounded border-border/40 bg-elev-1 text-accent focus:ring-accent/25"
+                        />
+                        <Label htmlFor="customMarketToggle" className={cn(labelClassName, "mb-0 cursor-pointer")}>
+                          Custom Market Value
+                        </Label>
+                      </div>
+                      {showCustomMarket && (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.customMarketValue}
+                          onChange={(e) => updateField('customMarketValue', e.target.value)}
+                          placeholder="0.00"
+                          className={cn(inputClassName, "font-mono text-right tabular-nums")}
+                        />
+                      )}
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label htmlFor="notes" className={cn(labelClassName, "mb-0")}>
+                          Notes
+                        </Label>
+                        <span className={cn(
+                          "text-xs font-mono tabular-nums",
+                          (formData.notes?.length || 0) > 250 ? "text-danger" : "text-muted"
+                        )}>
+                          {formData.notes?.length || 0}/250
+                        </span>
+                      </div>
+                      <Textarea
+                        id="notes"
+                        value={formData.notes}
+                        onChange={(e) => updateField('notes', e.target.value)}
+                        placeholder="Any additional notes..."
+                        rows={3}
+                        maxLength={250}
+                        className={cn(
+                          "bg-elev-1 border border-border/40 text-fg text-sm resize-none p-3 rounded-lg placeholder:opacity-60",
+                          "focus:ring-1 focus:ring-accent focus:shadow-[0_0_12px_rgba(0,255,148,0.2)] focus:border-accent/50",
+                          "transition-all duration-[120ms] ease-out",
+                          errors.notes && "border-danger"
+                        )}
+                      />
+                      {errors.notes && (
+                        <p className="text-xs text-danger mt-1">{errors.notes}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Sticky Footer */}
-          <div className="sticky bottom-0 pt-4 mt-2 bg-gradient-to-t from-elev-2/95 to-transparent">
-            <ModalFooter
-              onCancel={() => onOpenChange(false)}
-              onSave={() => handleSubmit(false)}
-              onSaveAndAddAnother={() => handleSubmit(true)}
-              isSubmitting={isSubmitting}
-            />
+          {/* Footer Bar */}
+          <div className="flex justify-end gap-3 border-t border-border/20 p-4 bg-elev-2/70 backdrop-blur">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+              className="border border-border/30 hover:bg-elev-1 transition-all duration-[200ms]"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleSubmit(true)}
+              disabled={isSubmitting}
+              className="border border-accent/40 text-accent hover:bg-accent/10 hover:shadow-[0_0_16px_rgba(0,255,148,0.3)] transition-all duration-[200ms]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save & Add Another'
+              )}
+            </Button>
+            <Button
+              type="submit"
+              onClick={() => handleSubmit(false)}
+              disabled={isSubmitting}
+              className="bg-accent text-black hover:bg-accent/90 hover:shadow-[0_0_16px_rgba(0,255,148,0.4)] transition-all duration-[200ms]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save'
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

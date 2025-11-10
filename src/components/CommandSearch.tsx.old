@@ -1,0 +1,349 @@
+'use client'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { Search, Plus, TrendingUp, TrendingDown, Loader2, X, Eye, Heart } from 'lucide-react'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Sparkline } from '@/components/ui/sparkline'
+import { cn } from '@/lib/utils/cn'
+import { useCurrency } from '@/hooks/useCurrency'
+
+type SearchResult = {
+  sku: string
+  brand: string
+  model: string
+  colorway: string
+  imageUrl?: string
+  retailPrice?: number
+  latest: {
+    price: number
+    currency: string
+    asOf: string
+    source: string
+  } | null
+  series: number[]
+  deltaPct7d: number
+  meta: {
+    synthetic: boolean
+    language?: string
+    setName?: string
+    sealedType?: string
+  }
+}
+
+interface CommandSearchProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSelectProduct?: (result: SearchResult) => void
+}
+
+export function CommandSearch({ open, onOpenChange, onSelectProduct }: CommandSearchProps) {
+  const router = useRouter()
+  const { currency, format } = useCurrency()
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
+
+  // Debounced search
+  useEffect(() => {
+    if (!open) {
+      setQuery('')
+      setResults([])
+      setSelectedIndex(0)
+      return
+    }
+
+    // Focus input when opened
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }, [open])
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (query.trim().length < 2) {
+        setResults([])
+        return
+      }
+
+      setLoading(true)
+      try {
+        const response = await fetch(
+          `/api/search?q=${encodeURIComponent(query)}&limit=10&category=sealed_pokemon&currency=${currency}`
+        )
+        const data = await response.json()
+
+        if (response.ok && data.results) {
+          setResults(data.results)
+          setSelectedIndex(0) // Reset selection
+        }
+      } catch (err) {
+        console.error('Search failed:', err)
+      } finally {
+        setLoading(false)
+      }
+    }, 300) // 300ms debounce
+
+    return () => clearTimeout(timer)
+  }, [query, currency])
+
+  // Action handlers
+  const handleViewDetails = (result: SearchResult) => {
+    router.push(`/product/${result.sku}`)
+    onOpenChange(false)
+  }
+
+  const handleAddToPortfolio = (result: SearchResult) => {
+    onSelectProduct?.(result)
+    onOpenChange(false)
+  }
+
+  const handleAddToWatchlist = async (result: SearchResult) => {
+    try {
+      await fetch('/api/watchlists/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: result.sku }),
+      })
+      // TODO: Show success toast
+    } catch (error) {
+      console.error('Failed to add to watchlist:', error)
+      // TODO: Show error toast
+    }
+  }
+
+  // Keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (results.length === 0) return
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev + 1) % results.length)
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          setSelectedIndex((prev) => (prev - 1 + results.length) % results.length)
+          break
+        case 'Enter':
+          e.preventDefault()
+          if (results[selectedIndex]) {
+            handleViewDetails(results[selectedIndex])
+          }
+          break
+        case 'Escape':
+          e.preventDefault()
+          onOpenChange(false)
+          break
+      }
+    },
+    [results, selectedIndex, onOpenChange, router]
+  )
+
+  // Scroll selected item into view
+  useEffect(() => {
+    if (resultsRef.current) {
+      const selectedElement = resultsRef.current.children[selectedIndex] as HTMLElement
+      if (selectedElement) {
+        selectedElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
+    }
+  }, [selectedIndex])
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          "max-w-[640px] w-[90vw] p-0 gap-0 bg-elev-3/95 backdrop-blur-md",
+          "border border-border shadow-[0_0_32px_rgba(0,255,148,0.15)]",
+          "animate-in fade-in-0 zoom-in-95 duration-150"
+        )}
+      >
+        {/* Search Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/20">
+          <Search className="h-5 w-5 text-accent flex-shrink-0" />
+          <Input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search sealed Pokémon products..."
+            className={cn(
+              "flex-1 border-0 bg-transparent text-base placeholder:text-muted",
+              "focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+            )}
+          />
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-accent flex-shrink-0" />}
+          <button
+            onClick={() => onOpenChange(false)}
+            className="text-muted hover:text-fg transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Results List */}
+        <div
+          ref={resultsRef}
+          className="max-h-[500px] overflow-y-auto overscroll-contain"
+        >
+          {results.length === 0 && query.trim().length >= 2 && !loading && (
+            <div className="p-8 text-center">
+              <p className="text-muted text-sm">
+                No sealed Pokémon found. Try another term.
+              </p>
+            </div>
+          )}
+
+          {results.length === 0 && query.trim().length < 2 && (
+            <div className="p-8 text-center">
+              <p className="text-muted text-sm">
+                Type at least 2 characters to search...
+              </p>
+            </div>
+          )}
+
+          {results.map((result, index) => {
+            const isSelected = index === selectedIndex
+            const deltaPositive = result.deltaPct7d > 0
+
+            return (
+              <div
+                key={result.sku}
+                onClick={() => handleViewDetails(result)}
+                onMouseEnter={() => setSelectedIndex(index)}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 transition-all duration-120 cursor-pointer",
+                  "border-b border-border/20 last:border-0",
+                  isSelected
+                    ? "bg-elev-2 shadow-[inset_2px_0_0_0_rgba(0,255,148,0.6)]"
+                    : "hover:bg-elev-2/50"
+                )}
+              >
+                {/* Product Image */}
+                {result.imageUrl && (
+                  <img
+                    src={result.imageUrl}
+                    alt={result.model}
+                    className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                  />
+                )}
+
+                {/* Product Info */}
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-semibold text-fg truncate">
+                    {result.brand} {result.model}
+                  </p>
+                  <p className="text-xs text-muted truncate">
+                    {result.sku} • {result.colorway}
+                  </p>
+                </div>
+
+                {/* Price & Sparkline */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  {result.series.length > 0 && (
+                    <Sparkline
+                      data={result.series}
+                      width={72}
+                      height={20}
+                      color={deltaPositive ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)'}
+                      className="opacity-70"
+                    />
+                  )}
+
+                  <div className="flex flex-col items-end gap-1">
+                    {result.latest && (
+                      <p className="text-sm font-mono font-semibold tabular-nums text-fg">
+                        {format(result.latest.price)}
+                      </p>
+                    )}
+                    {result.deltaPct7d !== 0 && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs font-mono tabular-nums px-1.5 py-0",
+                          deltaPositive
+                            ? "text-success border-success/40 bg-success/10"
+                            : "text-danger border-danger/40 bg-danger/10"
+                        )}
+                      >
+                        {deltaPositive ? <TrendingUp className="h-3 w-3 mr-0.5" /> : <TrendingDown className="h-3 w-3 mr-0.5" />}
+                        {deltaPositive ? '+' : ''}{result.deltaPct7d.toFixed(1)}%
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1.5">
+                    {/* Add to Watchlist */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAddToWatchlist(result)
+                      }}
+                      className={cn(
+                        "h-8 w-8 p-0 text-muted hover:text-accent border border-border/40 hover:border-accent/40",
+                        "hover:bg-elev-1 transition-all duration-120"
+                      )}
+                      title="Add to Watchlist"
+                    >
+                      <Heart className="h-3.5 w-3.5" />
+                    </Button>
+
+                    {/* View Details */}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleViewDetails(result)
+                      }}
+                      className={cn(
+                        "h-8 w-8 p-0 text-muted hover:text-fg border border-border/40 hover:border-border",
+                        "hover:bg-elev-1 transition-all duration-120"
+                      )}
+                      title="View Details"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+
+                    {/* Add to Portfolio */}
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAddToPortfolio(result)
+                      }}
+                      className={cn(
+                        "h-8 px-2 bg-accent/10 text-accent border border-accent/40 hover:bg-accent/20",
+                        "hover:shadow-[0_0_12px_rgba(0,255,148,0.3)] transition-all duration-120"
+                      )}
+                      title="Add to Portfolio"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Footer Hint */}
+        {results.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-2 border-t border-border/20 bg-elev-2/50 text-xs text-muted">
+            <span>Use ↑↓ to navigate</span>
+            <span>Enter to view • Esc to close</span>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}

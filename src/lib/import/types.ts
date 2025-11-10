@@ -10,7 +10,7 @@ export type NormalisedRow = {
   purchase_price: number
   purchase_date: string // ISO yyyy-mm-dd
   condition?: 'deadstock' | 'worn'
-  status?: 'in_stock' | 'sold' | 'worn'
+  status?: 'active' | 'listed' | 'worn' | 'sold'
   location?: string
 }
 

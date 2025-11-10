@@ -41,10 +41,9 @@ export async function POST(req: Request) {
       purchase_date: input.purchase_date ? new Date(input.purchase_date) : null,
       order_number: input.order_number ?? null,
       tags: input.tags ?? null,
-      watchlist_id: input.watchlist_id ?? null,
       custom_market_value: input.custom_market_value ?? null,
       notes: input.notes ?? null,
-      status: 'in_stock',
+      status: 'active',
     };
 
     const { data, error } = await supabase

@@ -89,7 +89,7 @@ export function exportTaxCsv(
 }
 
 export function exportInsuranceCsv(items: InventoryItem[]): void {
-  const activeItems = items.filter((item) => item.status === 'in_stock');
+  const activeItems = items.filter((item) => ['active', 'listed', 'worn'].includes(item.status));
 
   const rows: InsuranceExportRow[] = activeItems.map((item) => ({
     brand: item.brand,

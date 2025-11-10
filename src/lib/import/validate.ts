@@ -63,13 +63,15 @@ function normaliseCondition(value: string): 'deadstock' | 'worn' | null {
 /**
  * Normalise status from aliases
  */
-function normaliseStatus(value: string): 'in_stock' | 'sold' | 'worn' | null {
+function normaliseStatus(value: string): 'active' | 'listed' | 'worn' | 'sold' | null {
   if (!value) return null
 
   const normalized = value.toLowerCase().trim()
 
   if (normalized === 'in_stock' || normalized === 'active' || normalized === 'available')
-    return 'in_stock'
+    return 'active'
+  if (normalized === 'listed' || normalized === 'for_sale' || normalized === 'selling')
+    return 'listed'
   if (normalized === 'sold') return 'sold'
   if (normalized === 'worn') return 'worn'
 
@@ -162,7 +164,7 @@ export function validateRow(
     purchase_price: mapped.purchase_price || 0,
     purchase_date: mapped.purchase_date || new Date().toISOString().split('T')[0],
     condition: mapped.condition || 'deadstock',
-    status: mapped.status || 'in_stock',
+    status: mapped.status || 'active',
     location: mapped.location,
   }
 

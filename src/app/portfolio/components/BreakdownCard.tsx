@@ -2,7 +2,7 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { gbp2 } from '@/lib/utils/format'
+import { useCurrency } from '@/hooks/useCurrency'
 
 interface BreakdownItem {
   label: string
@@ -17,6 +17,8 @@ interface BreakdownCardProps {
 }
 
 export function BreakdownCard({ title, items, loading }: BreakdownCardProps) {
+  const { convert, format } = useCurrency()
+
   if (loading) {
     return (
       <Card>
@@ -74,7 +76,7 @@ export function BreakdownCard({ title, items, loading }: BreakdownCardProps) {
                   <span className="text-muted">{item.label}</span>
                   <div className="flex items-center gap-3">
                     <span className="num text-xs text-dim">{displayPct}%</span>
-                    <span className="num text-sm text-fg">{gbp2.format(item.value)}</span>
+                    <span className="num text-sm text-fg">{format(convert(item.value, 'GBP'))}</span>
                   </div>
                 </div>
                 <div className="h-1.5 rounded-full bg-accent-200">

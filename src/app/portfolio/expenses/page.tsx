@@ -181,33 +181,34 @@ export default function ExpensesPage() {
     setSuccess(null)
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const userId = sessionData.session?.user?.id
-
-      if (!userId) {
-        throw new Error('No authenticated user found')
-      }
-
       const parsedAmount = parseFloat(amount)
       if (parsedAmount <= 0) {
         throw new Error('Amount must be positive')
       }
 
-      const insertData: any = {
-        user_id: userId,
+      const requestData: any = {
         category,
         amount: parsedAmount,
         date,
         description,
+        expense_currency: 'GBP', // Default to GBP, will be configurable later
       }
 
       if (linkedItemId) {
-        insertData.linked_item_id = linkedItemId
+        requestData.linked_item_id = linkedItemId
       }
 
-      const { error } = await supabase.from(TABLE_EXPENSES).insert(insertData)
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData),
+      })
 
-      if (error) throw error
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add expense')
+      }
 
       // Reset form
       setCategory('shipping')

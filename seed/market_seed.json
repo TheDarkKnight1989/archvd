@@ -1,0 +1,515 @@
+{
+  "catalog": [
+    {
+      "sku": "DZ5485-612",
+      "brand": "Jordan",
+      "model": "Air Jordan 1 Low",
+      "colorway": "Bred Toe",
+      "retail_price": 110.00,
+      "retail_currency": "GBP",
+      "release_date": "2023-08-24",
+      "image_url": "https://images.stockx.com/images/Air-Jordan-1-Low-Bred-Toe.png",
+      "slug": "air-jordan-1-low-bred-toe"
+    },
+    {
+      "sku": "FD0774-101",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "Panda",
+      "retail_price": 100.00,
+      "retail_currency": "GBP",
+      "release_date": "2021-03-10",
+      "image_url": "https://images.stockx.com/images/Nike-Dunk-Low-Retro-White-Black-Panda.png",
+      "slug": "nike-dunk-low-panda"
+    },
+    {
+      "sku": "555088-134",
+      "brand": "Jordan",
+      "model": "Air Jordan 1 Retro High OG",
+      "colorway": "University Blue",
+      "retail_price": 150.00,
+      "retail_currency": "GBP",
+      "release_date": "2021-03-06",
+      "image_url": "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-University-Blue.png",
+      "slug": "air-jordan-1-high-university-blue"
+    },
+    {
+      "sku": "DV0833-103",
+      "brand": "Nike",
+      "model": "Air Force 1 Low",
+      "colorway": "White",
+      "retail_price": 95.00,
+      "retail_currency": "GBP",
+      "release_date": "1982-01-01",
+      "image_url": "https://images.stockx.com/images/Nike-Air-Force-1-Low-White-07.png",
+      "slug": "nike-air-force-1-low-white"
+    },
+    {
+      "sku": "DC3728-102",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "Kentucky",
+      "retail_price": 100.00,
+      "retail_currency": "GBP",
+      "release_date": "2021-03-18",
+      "image_url": "https://images.stockx.com/images/Nike-Dunk-Low-Kentucky.png",
+      "slug": "nike-dunk-low-kentucky"
+    },
+    {
+      "sku": "DH6927-061",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "Black White",
+      "retail_price": 100.00,
+      "retail_currency": "GBP",
+      "release_date": "2021-01-14",
+      "image_url": "https://images.stockx.com/images/Nike-Dunk-Low-Black-White-2021.png",
+      "slug": "nike-dunk-low-black-white"
+    },
+    {
+      "sku": "CT8532-148",
+      "brand": "Jordan",
+      "model": "Air Jordan 1 Low",
+      "colorway": "Triple White",
+      "retail_price": 90.00,
+      "retail_currency": "GBP",
+      "release_date": "2020-05-30",
+      "image_url": "https://images.stockx.com/images/Air-Jordan-1-Low-White.png",
+      "slug": "air-jordan-1-low-triple-white"
+    },
+    {
+      "sku": "553558-063",
+      "brand": "Jordan",
+      "model": "Air Jordan 1 Retro High OG",
+      "colorway": "Shadow 2.0",
+      "retail_price": 150.00,
+      "retail_currency": "GBP",
+      "release_date": "2021-05-15",
+      "image_url": "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Shadow-2.png",
+      "slug": "air-jordan-1-high-shadow-2"
+    },
+    {
+      "sku": "DD1391-100",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "Coast",
+      "retail_price": 100.00,
+      "retail_currency": "GBP",
+      "release_date": "2020-11-19",
+      "image_url": "https://images.stockx.com/images/Nike-Dunk-Low-Coast.png",
+      "slug": "nike-dunk-low-coast"
+    },
+    {
+      "sku": "U990GL6",
+      "brand": "New Balance",
+      "model": "990v6",
+      "colorway": "Grey",
+      "retail_price": 185.00,
+      "retail_currency": "GBP",
+      "release_date": "2023-03-01",
+      "image_url": "https://images.stockx.com/images/New-Balance-990v6-Grey.png",
+      "slug": "new-balance-990v6-grey"
+    },
+    {
+      "sku": "M2002RDA",
+      "brand": "New Balance",
+      "model": "2002R",
+      "colorway": "Protection Pack Rain Cloud",
+      "retail_price": 140.00,
+      "retail_currency": "GBP",
+      "release_date": "2022-09-22",
+      "image_url": "https://images.stockx.com/images/New-Balance-2002R-Rain-Cloud.png",
+      "slug": "new-balance-2002r-rain-cloud"
+    },
+    {
+      "sku": "FB8708-001",
+      "brand": "Jordan",
+      "model": "Air Jordan 4 Retro",
+      "colorway": "Black Canvas",
+      "retail_price": 185.00,
+      "retail_currency": "GBP",
+      "release_date": "2023-05-13",
+      "image_url": "https://images.stockx.com/images/Air-Jordan-4-Black-Canvas.png",
+      "slug": "air-jordan-4-black-canvas"
+    },
+    {
+      "sku": "DD1503-109",
+      "brand": "Nike",
+      "model": "Dunk High",
+      "colorway": "Panda",
+      "retail_price": 110.00,
+      "retail_currency": "GBP",
+      "release_date": "2021-10-08",
+      "image_url": "https://images.stockx.com/images/Nike-Dunk-High-Black-White.png",
+      "slug": "nike-dunk-high-panda"
+    },
+    {
+      "sku": "FD0383-161",
+      "brand": "Nike",
+      "model": "SB Dunk Low",
+      "colorway": "Raygun Tie-Dye",
+      "retail_price": 110.00,
+      "retail_currency": "GBP",
+      "release_date": "2024-01-27",
+      "image_url": "https://images.stockx.com/images/Nike-SB-Dunk-Low-Raygun-Tie-Dye.png",
+      "slug": "nike-sb-dunk-low-raygun-tie-dye"
+    },
+    {
+      "sku": "DZ5485-410",
+      "brand": "Jordan",
+      "model": "Air Jordan 1 Low",
+      "colorway": "True Blue",
+      "retail_price": 110.00,
+      "retail_currency": "GBP",
+      "release_date": "2023-11-23",
+      "image_url": "https://images.stockx.com/images/Air-Jordan-1-Low-True-Blue.png",
+      "slug": "air-jordan-1-low-true-blue"
+    },
+    {
+      "sku": "DV0821-001",
+      "brand": "Nike",
+      "model": "Air Force 1 Low",
+      "colorway": "Black",
+      "retail_price": 95.00,
+      "retail_currency": "GBP",
+      "release_date": "2007-01-25",
+      "image_url": "https://images.stockx.com/images/Nike-Air-Force-1-Low-Black.png",
+      "slug": "nike-air-force-1-low-black"
+    },
+    {
+      "sku": "U574LGG",
+      "brand": "New Balance",
+      "model": "574",
+      "colorway": "Grey",
+      "retail_price": 85.00,
+      "retail_currency": "GBP",
+      "release_date": "1988-01-01",
+      "image_url": "https://images.stockx.com/images/New-Balance-574-Grey.png",
+      "slug": "new-balance-574-grey"
+    },
+    {
+      "sku": "DV1748-700",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "Goldenrod",
+      "retail_price": 100.00,
+      "retail_currency": "GBP",
+      "release_date": "2022-03-24",
+      "image_url": "https://images.stockx.com/images/Nike-Dunk-Low-Goldenrod.png",
+      "slug": "nike-dunk-low-goldenrod"
+    },
+    {
+      "sku": "553558-173",
+      "brand": "Jordan",
+      "model": "Air Jordan 1 Retro High OG",
+      "colorway": "Heritage",
+      "retail_price": 150.00,
+      "retail_currency": "GBP",
+      "release_date": "2022-01-15",
+      "image_url": "https://images.stockx.com/images/Air-Jordan-1-Heritage.png",
+      "slug": "air-jordan-1-high-heritage"
+    },
+    {
+      "sku": "DV3853-001",
+      "brand": "Nike",
+      "model": "Air Max 1",
+      "colorway": "Obsidian",
+      "retail_price": 130.00,
+      "retail_currency": "GBP",
+      "release_date": "2023-03-25",
+      "image_url": "https://images.stockx.com/images/Nike-Air-Max-1-Obsidian.png",
+      "slug": "nike-air-max-1-obsidian"
+    },
+    {
+      "sku": "U9060GRY",
+      "brand": "New Balance",
+      "model": "9060",
+      "colorway": "Grey Matter",
+      "retail_price": 150.00,
+      "retail_currency": "GBP",
+      "release_date": "2023-06-01",
+      "image_url": "https://images.stockx.com/images/New-Balance-9060-Grey-Matter.png",
+      "slug": "new-balance-9060-grey-matter"
+    },
+    {
+      "sku": "DM9652-101",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "Valentine's Day",
+      "retail_price": 100.00,
+      "retail_currency": "GBP",
+      "release_date": "2022-02-10",
+      "image_url": "https://images.stockx.com/images/Nike-Dunk-Low-Valentines-Day.png",
+      "slug": "nike-dunk-low-valentines-day"
+    },
+    {
+      "sku": "554724-132",
+      "brand": "Jordan",
+      "model": "Air Jordan 5 Retro",
+      "colorway": "Midnight Navy",
+      "retail_price": 175.00,
+      "retail_currency": "GBP",
+      "release_date": "2024-01-20",
+      "image_url": "https://images.stockx.com/images/Air-Jordan-5-Midnight-Navy.png",
+      "slug": "air-jordan-5-midnight-navy"
+    },
+    {
+      "sku": "DD1399-103",
+      "brand": "Nike",
+      "model": "Dunk Low",
+      "colorway": "Syracuse",
+      "retail_price": 100.00,
+      "retail_currency": "GBP",
+      "release_date": "2020-12-02",
+      "image_url": "https://images.stockx.com/images/Nike-Dunk-Low-Syracuse-2020.png",
+      "slug": "nike-dunk-low-syracuse"
+    },
+    {
+      "sku": "M1906RGA",
+      "brand": "New Balance",
+      "model": "1906R",
+      "colorway": "Grey",
+      "retail_price": 130.00,
+      "retail_currency": "GBP",
+      "release_date": "2023-08-10",
+      "image_url": "https://images.stockx.com/images/New-Balance-1906R-Grey.png",
+      "slug": "new-balance-1906r-grey"
+    }
+  ],
+  "prices": [
+    {
+      "sku": "DZ5485-612",
+      "sizes": [
+        {"size": "UK8", "price": 135.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 145.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 140.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 138.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "FD0774-101",
+      "sizes": [
+        {"size": "UK8", "price": 118.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 125.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 122.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 119.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 120.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "555088-134",
+      "sizes": [
+        {"size": "UK8", "price": 285.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 305.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 295.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 280.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DV0833-103",
+      "sizes": [
+        {"size": "UK8", "price": 102.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 105.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 103.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 104.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DC3728-102",
+      "sizes": [
+        {"size": "UK8", "price": 165.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 180.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 175.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 168.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 170.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DH6927-061",
+      "sizes": [
+        {"size": "UK8", "price": 148.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 155.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 152.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 150.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "CT8532-148",
+      "sizes": [
+        {"size": "UK8", "price": 98.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 102.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 100.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 99.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "553558-063",
+      "sizes": [
+        {"size": "UK8", "price": 225.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 245.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 235.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 230.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 228.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DD1391-100",
+      "sizes": [
+        {"size": "UK8", "price": 142.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 155.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 150.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 145.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "U990GL6",
+      "sizes": [
+        {"size": "UK8", "price": 195.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 205.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 200.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 198.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "M2002RDA",
+      "sizes": [
+        {"size": "UK8", "price": 158.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 168.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 165.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 162.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 160.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "FB8708-001",
+      "sizes": [
+        {"size": "UK8", "price": 255.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 275.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 268.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 260.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DD1503-109",
+      "sizes": [
+        {"size": "UK8", "price": 128.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 138.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 135.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 132.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "FD0383-161",
+      "sizes": [
+        {"size": "UK8", "price": 168.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 185.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 178.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 172.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 170.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DZ5485-410",
+      "sizes": [
+        {"size": "UK8", "price": 125.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 132.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 130.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 128.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DV0821-001",
+      "sizes": [
+        {"size": "UK8", "price": 100.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 103.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 102.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 101.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "U574LGG",
+      "sizes": [
+        {"size": "UK8", "price": 88.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 92.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 90.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 89.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 88.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DV1748-700",
+      "sizes": [
+        {"size": "UK8", "price": 115.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 122.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 120.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 118.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "553558-173",
+      "sizes": [
+        {"size": "UK8", "price": 188.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 202.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 195.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 192.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DV3853-001",
+      "sizes": [
+        {"size": "UK8", "price": 145.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 155.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 152.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 148.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 150.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "U9060GRY",
+      "sizes": [
+        {"size": "UK8", "price": 165.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 178.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 172.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 168.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DM9652-101",
+      "sizes": [
+        {"size": "UK8", "price": 112.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 118.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 115.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 113.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "554724-132",
+      "sizes": [
+        {"size": "UK8", "price": 235.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 255.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 248.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 242.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 240.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "DD1399-103",
+      "sizes": [
+        {"size": "UK8", "price": 138.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 148.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 145.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 142.00, "source": "mock-stockx"}
+      ]
+    },
+    {
+      "sku": "M1906RGA",
+      "sizes": [
+        {"size": "UK8", "price": 142.00, "source": "mock-stockx"},
+        {"size": "UK9", "price": 152.00, "source": "mock-stockx"},
+        {"size": "UK10", "price": 148.00, "source": "mock-stockx"},
+        {"size": "UK11", "price": 145.00, "source": "mock-stockx"},
+        {"size": "UK12", "price": 144.00, "source": "mock-stockx"}
+      ]
+    }
+  ]
+}

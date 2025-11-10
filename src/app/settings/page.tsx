@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, KeyboardEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { SubscriptionRow } from '@/components/SubscriptionRow'
 import { IntegrationCard } from '@/components/IntegrationCard'
@@ -27,9 +28,10 @@ import {
   Download,
   Eye,
   EyeOff,
+  Plug,
 } from 'lucide-react'
 
-type TabId = 'account' | 'cache' | 'appearance' | 'notifications' | 'security' | 'import' | 'subscriptions'
+type TabId = 'account' | 'cache' | 'appearance' | 'notifications' | 'security' | 'import' | 'subscriptions' | 'integrations'
 
 interface Tab {
   id: TabId
@@ -44,11 +46,13 @@ const tabs: Tab[] = [
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'import', label: 'Import', icon: Upload },
+  { id: 'integrations', label: 'Integrations', icon: Plug },
   { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
 ]
 
 export default function SettingsPage() {
   useRequireAuth()
+  const router = useRouter()
 
   const [activeTab, setActiveTab] = useState<TabId>('account')
   const tabsRef = useRef<HTMLDivElement>(null)
@@ -266,8 +270,12 @@ export default function SettingsPage() {
                   aria-controls={`${tab.id}-panel`}
                   tabIndex={isActive ? 0 : -1}
                   onClick={() => {
-                    setActiveTab(tab.id)
-                    setFocusedTabIndex(index)
+                    if (tab.id === 'integrations') {
+                      router.push('/portfolio/settings/integrations')
+                    } else {
+                      setActiveTab(tab.id)
+                      setFocusedTabIndex(index)
+                    }
                   }}
                   onKeyDown={(e) => handleTabKeyDown(e, index)}
                   className={cn(

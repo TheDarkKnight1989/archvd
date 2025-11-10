@@ -57,35 +57,81 @@ export async function insertBatch(
   importBatchId: string,
   userId: string
 ) {
-  // Map NormalisedRow to DB rows
-  const rows = inputs.map(input => ({
-    user_id: userId,
-    sku: input.sku,
-    brand: input.brand ?? null,
-    model: input.model ?? null,
-    colorway: null,
-    style_id: null,
-    size: input.size_uk?.toString() ?? null,
-    size_uk: input.size_uk?.toString() ?? null,
-    size_alt: null,
-    category: 'sneaker',
-    condition: input.condition === 'deadstock' ? 'New' : input.condition === 'worn' ? 'Worn' : null,
-    purchase_price: input.purchase_price ?? 0,
-    tax: null,
-    shipping: null,
-    place_of_purchase: input.location ?? null,
-    purchase_date: input.purchase_date ? new Date(input.purchase_date) : null,
-    order_number: null,
-    tags: null,
-    watchlist_id: null,
-    custom_market_value: null,
-    notes: null,
-    status: input.status ?? 'active',
+  // Fetch user's base currency
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('base_currency')
+    .eq('id', userId)
+    .single();
+
+  if (profileError) {
+    console.error('[insertBatch] Profile fetch error:', profileError);
+  }
+
+  const baseCurrency = profile?.base_currency || 'GBP';
+
+  // Map NormalisedRow to DB rows with FX snapshots
+  const rowsWithFX = await Promise.all(inputs.map(async (input) => {
+    const purchasePrice = input.purchase_price ?? 0;
+    const purchaseDate = input.purchase_date ? new Date(input.purchase_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    const purchaseCurrency = 'GBP'; // Default to GBP for CSV imports, can be made configurable later
+
+    // Calculate FX rate using database function
+    let fxRate = 1.0;
+    let amountBase = purchasePrice;
+
+    try {
+      const { data: fxData, error: fxError } = await supabase
+        .rpc('fx_rate_for', {
+          date_in: purchaseDate,
+          from_ccy: purchaseCurrency,
+          to_ccy: baseCurrency
+        });
+
+      if (!fxError && fxData) {
+        fxRate = fxData;
+        amountBase = purchasePrice * fxRate;
+      }
+    } catch (err) {
+      console.error('[insertBatch] FX rate calculation error:', err);
+      // Continue with default rate if FX calculation fails
+    }
+
+    return {
+      user_id: userId,
+      sku: input.sku,
+      brand: input.brand ?? null,
+      model: input.model ?? null,
+      colorway: null,
+      style_id: null,
+      size: input.size_uk?.toString() ?? null,
+      size_uk: input.size_uk?.toString() ?? null,
+      size_alt: null,
+      category: 'sneaker',
+      condition: input.condition === 'deadstock' ? 'New' : input.condition === 'worn' ? 'Worn' : null,
+      purchase_price: purchasePrice,
+      tax: null,
+      shipping: null,
+      place_of_purchase: input.location ?? null,
+      order_number: null,
+      tags: null,
+      watchlist_id: null,
+      custom_market_value: null,
+      notes: null,
+      status: input.status ?? 'active',
+      // FX snapshot fields
+      purchase_currency: purchaseCurrency,
+      purchase_date: purchaseDate,
+      purchase_base_ccy: baseCurrency,
+      purchase_fx_rate: fxRate,
+      purchase_amount_base: amountBase,
+      purchase_fx_source: 'auto',
+    };
   }));
 
   const { data, error } = await supabase
     .from(TABLE)
-    .insert(rows)
+    .insert(rowsWithFX)
     .select('*');
 
   if (error) throw error;

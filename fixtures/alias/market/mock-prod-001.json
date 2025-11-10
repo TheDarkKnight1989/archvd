@@ -1,0 +1,67 @@
+{
+  "productTemplateId": "mock-prod-001",
+  "sku": "DD1391-100",
+  "variants": [
+    {
+      "size": "UK7",
+      "lowestAsk": 105,
+      "highestBid": 98,
+      "lastSale": 102,
+      "salesCount": 234,
+      "askCount": 42,
+      "bidCount": 38,
+      "salesLast72h": 12
+    },
+    {
+      "size": "UK8",
+      "lowestAsk": 110,
+      "highestBid": 102,
+      "lastSale": 108,
+      "salesCount": 567,
+      "askCount": 56,
+      "bidCount": 51,
+      "salesLast72h": 18
+    },
+    {
+      "size": "UK9",
+      "lowestAsk": 115,
+      "highestBid": 108,
+      "lastSale": 112,
+      "salesCount": 789,
+      "askCount": 67,
+      "bidCount": 61,
+      "salesLast72h": 24
+    },
+    {
+      "size": "UK10",
+      "lowestAsk": 120,
+      "highestBid": 112,
+      "lastSale": 118,
+      "salesCount": 892,
+      "askCount": 78,
+      "bidCount": 72,
+      "salesLast72h": 28
+    },
+    {
+      "size": "UK11",
+      "lowestAsk": 118,
+      "highestBid": 110,
+      "lastSale": 115,
+      "salesCount": 643,
+      "askCount": 61,
+      "bidCount": 57,
+      "salesLast72h": 20
+    }
+  ],
+  "currency": "GBP",
+  "asOf": "2025-11-14T12:00:00Z",
+  "priceHistory7d": [
+    {"date": "2025-11-08", "lowestAsk": 108, "highestBid": 100, "lastSale": 105, "salesVolume": 67},
+    {"date": "2025-11-09", "lowestAsk": 110, "highestBid": 102, "lastSale": 107, "salesVolume": 71},
+    {"date": "2025-11-10", "lowestAsk": 112, "highestBid": 104, "lastSale": 109, "salesVolume": 82},
+    {"date": "2025-11-11", "lowestAsk": 113, "highestBid": 106, "lastSale": 110, "salesVolume": 88},
+    {"date": "2025-11-12", "lowestAsk": 114, "highestBid": 107, "lastSale": 111, "salesVolume": 76},
+    {"date": "2025-11-13", "lowestAsk": 115, "highestBid": 108, "lastSale": 112, "salesVolume": 91},
+    {"date": "2025-11-14", "lowestAsk": 115, "highestBid": 108, "lastSale": 112, "salesVolume": 24}
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "productTemplateId": "mock-prod-002",
+  "sku": "555088-101",
+  "variants": [
+    {
+      "size": "UK8",
+      "lowestAsk": 820,
+      "highestBid": 780,
+      "lastSale": 805,
+      "salesCount": 89,
+      "askCount": 12,
+      "bidCount": 8,
+      "salesLast72h": 2
+    },
+    {
+      "size": "UK9",
+      "lowestAsk": 850,
+      "highestBid": 810,
+      "lastSale": 835,
+      "salesCount": 124,
+      "askCount": 15,
+      "bidCount": 11,
+      "salesLast72h": 3
+    },
+    {
+      "size": "UK10",
+      "lowestAsk": 880,
+      "highestBid": 840,
+      "lastSale": 865,
+      "salesCount": 156,
+      "askCount": 18,
+      "bidCount": 14,
+      "salesLast72h": 4
+    },
+    {
+      "size": "UK11",
+      "lowestAsk": 860,
+      "highestBid": 820,
+      "lastSale": 845,
+      "salesCount": 98,
+      "askCount": 13,
+      "bidCount": 9,
+      "salesLast72h": 2
+    }
+  ],
+  "currency": "GBP",
+  "asOf": "2025-11-14T12:00:00Z",
+  "priceHistory7d": [
+    {"date": "2025-11-08", "lowestAsk": 830, "highestBid": 790, "lastSale": 815, "salesVolume": 9},
+    {"date": "2025-11-09", "lowestAsk": 835, "highestBid": 795, "lastSale": 820, "salesVolume": 11},
+    {"date": "2025-11-10", "lowestAsk": 840, "highestBid": 800, "lastSale": 825, "salesVolume": 8},
+    {"date": "2025-11-11", "lowestAsk": 845, "highestBid": 805, "lastSale": 830, "salesVolume": 10},
+    {"date": "2025-11-12", "lowestAsk": 848, "highestBid": 808, "lastSale": 833, "salesVolume": 12},
+    {"date": "2025-11-13", "lowestAsk": 850, "highestBid": 810, "lastSale": 835, "salesVolume": 14},
+    {"date": "2025-11-14", "lowestAsk": 850, "highestBid": 810, "lastSale": 835, "salesVolume": 4}
+  ]
+}

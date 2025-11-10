@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import { useCurrency, type Currency } from '@/hooks/useCurrency'
 import {
   Select,
   SelectContent,
@@ -8,14 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils/cn'
-
-export type Currency = 'GBP' | 'EUR' | 'USD'
-
-export interface CurrencySwitcherProps {
-  value: Currency
-  onChange: (currency: Currency) => void
-  className?: string
-}
+import { toast } from 'sonner'
 
 const CURRENCIES: { value: Currency; label: string; symbol: string }[] = [
   { value: 'GBP', label: 'GBP', symbol: '£' },
@@ -23,15 +18,45 @@ const CURRENCIES: { value: Currency; label: string; symbol: string }[] = [
   { value: 'USD', label: 'USD', symbol: '$' },
 ]
 
-export function CurrencySwitcher({
-  value,
-  onChange,
-  className,
-}: CurrencySwitcherProps) {
-  const currentCurrency = CURRENCIES.find((c) => c.value === value)
+export interface CurrencySwitcherProps {
+  className?: string
+}
+
+/**
+ * Currency Switcher Component
+ *
+ * Allows users to switch between GBP, EUR, and USD.
+ * Persists preference to user profile and updates all prices across the app.
+ */
+export function CurrencySwitcher({ className }: CurrencySwitcherProps) {
+  const { currency, setCurrency, loading } = useCurrency()
+  const [updating, setUpdating] = useState(false)
+
+  const handleCurrencyChange = async (newCurrency: string) => {
+    if (newCurrency === currency) return
+
+    setUpdating(true)
+    try {
+      await setCurrency(newCurrency as Currency)
+      toast.success(`Currency changed to ${newCurrency}`)
+      // Reload page to refresh all prices
+      window.location.reload()
+    } catch (error) {
+      console.error('[CurrencySwitcher] Failed to update currency:', error)
+      toast.error('Failed to update currency preference')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const currentCurrency = CURRENCIES.find((c) => c.value === currency)
 
   return (
-    <Select value={value} onValueChange={(v) => onChange(v as Currency)}>
+    <Select
+      value={currency}
+      onValueChange={handleCurrencyChange}
+      disabled={loading || updating}
+    >
       <SelectTrigger
         className={cn(
           'w-[100px] bg-elev-1 border-border hover:border-accent/60 transition-all duration-120 glow-accent-hover focus:ring-accent/40',
@@ -46,16 +71,15 @@ export function CurrencySwitcher({
           </span>
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="bg-elev-2 border-border">
-        {CURRENCIES.map((currency) => (
+      <SelectContent>
+        {CURRENCIES.map((curr) => (
           <SelectItem
-            key={currency.value}
-            value={currency.value}
-            className="cursor-pointer hover:bg-elev-3 focus:bg-elev-3 transition-colors duration-120"
+            key={curr.value}
+            value={curr.value}
           >
             <span className="flex items-center gap-2">
-              <span className="font-mono w-5">{currency.symbol}</span>
-              <span>{currency.label}</span>
+              <span className="font-mono w-5">{curr.symbol}</span>
+              <span>{curr.label}</span>
             </span>
           </SelectItem>
         ))}

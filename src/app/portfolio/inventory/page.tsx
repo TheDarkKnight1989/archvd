@@ -14,6 +14,7 @@ import { Search, Download, Plus, Bookmark } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { AddItemModal } from '@/components/modals/AddItemModal'
 import { MarkAsSoldModal } from '@/components/modals/MarkAsSoldModal'
+import { AddToWatchlistPicker } from '@/components/AddToWatchlistPicker'
 import type { SortingState } from '@tanstack/react-table'
 
 // Matrix V2 Phase 3 Components
@@ -21,8 +22,8 @@ import { SavedViewChip } from '@/components/SavedViewChip'
 import { ColumnChooser, type ColumnConfig } from '@/components/ColumnChooser'
 import { MarketModal } from '@/components/MarketModal'
 
-// Inventory V2 Components
-import { InventoryTable } from './_components/InventoryTable'
+// Portfolio V2 Components
+import { PortfolioTable } from './_components/PortfolioTable'
 import { FilterTabs } from './_components/FilterTabs'
 
 export default function InventoryPage() {
@@ -58,17 +59,19 @@ export default function InventoryPage() {
     { id: 'purchase_date', desc: true }, // Default: newest first
   ])
 
-  // Column visibility state
+  // Column visibility state - Updated to match new Portfolio table spec
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
     { key: 'item', label: 'Item', visible: true, lock: true },
+    { key: 'sku', label: 'SKU', visible: true },
+    { key: 'category', label: 'Category', visible: true },
     { key: 'purchase_date', label: 'Purchase Date', visible: true },
-    { key: 'market', label: 'Market £', visible: true },
-    { key: 'chart', label: 'Price Chart', visible: true },
-    { key: 'qty', label: 'Qty', visible: true },
+    { key: 'buy', label: 'Buy £', visible: true },
+    { key: 'tax', label: 'Tax £', visible: false }, // Hidden by default
+    { key: 'shipping', label: 'Ship £', visible: false }, // Hidden by default
     { key: 'total', label: 'Total £', visible: true },
-    { key: 'invested', label: 'Invested £', visible: true },
-    { key: 'profit', label: 'Profit/Loss £', visible: true },
-    { key: 'performance', label: 'Performance %', visible: true },
+    { key: 'market', label: 'Market £', visible: true },
+    { key: 'gain_loss_pct', label: '% Gain/Loss', visible: true },
+    { key: 'status', label: 'Status', visible: true },
     { key: 'actions', label: 'Actions', visible: true },
   ])
 
@@ -79,6 +82,8 @@ export default function InventoryPage() {
   const [selectedMarketItem, setSelectedMarketItem] = useState<EnrichedInventoryItem | null>(null)
   const [markAsSoldModalOpen, setMarkAsSoldModalOpen] = useState(false)
   const [itemToSell, setItemToSell] = useState<EnrichedInventoryItem | null>(null)
+  const [watchlistPickerOpen, setWatchlistPickerOpen] = useState(false)
+  const [selectedItemForWatchlist, setSelectedItemForWatchlist] = useState<EnrichedInventoryItem | null>(null)
 
   // Update URL params
   const updateParams = (updates: Partial<TableParams>) => {
@@ -170,43 +175,50 @@ export default function InventoryPage() {
   // Export CSV
   const exportCSV = () => {
     const headers = [
+      'item',
       'sku',
       'brand',
       'model',
-      'size_uk',
       'category',
-      'purchase_price',
+      'size_uk',
+      'purchase_date',
+      'buy_price',
       'tax',
       'shipping',
-      'invested',
+      'total_cost',
       'market_value',
-      'sold_price',
-      'profit',
-      'performance_pct',
+      'gain_loss_pct',
       'status',
       'location',
       'created_at',
     ]
-    const rows = filteredItems.map((item) =>
-      [
+    const rows = filteredItems.map((item) => {
+      const buy = item.purchase_price || 0
+      const tax = item.tax || 0
+      const shipping = item.shipping || 0
+      const total = buy + tax + shipping
+      const market = item.market_value
+      const gainLossPct = market && total > 0 ? ((market - total) / total) * 100 : ''
+
+      return [
+        item.full_title,
         item.sku,
         item.brand ?? '',
         item.model ?? '',
-        item.size_uk ?? '',
         item.category ?? '',
+        item.size_uk ?? '',
+        item.purchase_date ?? '',
         item.purchase_price,
-        item.tax ?? '',
-        item.shipping ?? '',
-        item.invested,
+        item.tax ?? 0,
+        item.shipping ?? 0,
+        total.toFixed(2),
         item.market_value ?? '',
-        item.sold_price ?? '',
-        item.profit ?? '',
-        item.performance_pct ?? '',
+        gainLossPct !== '' ? gainLossPct.toFixed(2) : '',
         item.status ?? '',
         item.location ?? '',
         item.created_at,
       ].map((field) => `"${field}"`)
-    )
+    })
 
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -214,7 +226,7 @@ export default function InventoryPage() {
     const a = document.createElement('a')
     a.href = url
     const date = new Date().toISOString().split('T')[0]
-    a.download = `archvd-inventory-${date}.csv`
+    a.download = `archvd-portfolio-${date}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -238,6 +250,11 @@ export default function InventoryPage() {
   const handleAddExpense = (item: EnrichedInventoryItem) => {
     // TODO: Implement add expense modal
     console.log('Add expense:', item.sku)
+  }
+
+  const handleAddToWatchlist = (item: EnrichedInventoryItem) => {
+    setSelectedItemForWatchlist(item)
+    setWatchlistPickerOpen(true)
   }
 
   // Active filter count
@@ -264,6 +281,7 @@ export default function InventoryPage() {
 
   const categoryTabs = [
     { key: 'sneaker', label: 'Sneakers', count: counts.category['sneaker'] ?? 0 },
+    { key: 'pokemon', label: 'Pokémon (sealed)', count: counts.category['pokemon'] ?? 0 },
     { key: 'apparel', label: 'Apparel', count: counts.category['apparel'] ?? 0 },
     { key: 'accessory', label: 'Accessories', count: counts.category['accessory'] ?? 0 },
     { key: 'other', label: 'Other', count: counts.category['other'] ?? 0 },
@@ -279,7 +297,7 @@ export default function InventoryPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-fg relative inline-block">
-          Inventory
+          Portfolio
           <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent opacity-40"></span>
         </h1>
 
@@ -325,7 +343,7 @@ export default function InventoryPage() {
               onClick={() => setAddItemModalOpen(true)}
               variant="default"
               size="sm"
-              className="ml-auto bg-accent text-black hover:bg-accent-600"
+              className="ml-auto transition-all duration-120 hover:shadow-[0_0_20px_rgba(0,255,148,0.4)] glow-accent-hover"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Item
@@ -451,7 +469,7 @@ export default function InventoryPage() {
       )}
 
       {/* Portfolio Table */}
-      <InventoryTable
+      <PortfolioTable
         items={filteredItems}
         loading={loading}
         sorting={sorting}
@@ -461,6 +479,8 @@ export default function InventoryPage() {
         onEdit={handleEdit}
         onToggleSold={handleToggleSold}
         onAddExpense={handleAddExpense}
+        onAddToWatchlist={handleAddToWatchlist}
+        onAddItem={() => setAddItemModalOpen(true)}
       />
 
       {/* Add Item Modal */}
@@ -507,6 +527,16 @@ export default function InventoryPage() {
           }))}
           sourceBadge={selectedMarketItem.market_source}
           lastUpdatedISO={selectedMarketItem.market_updated_at || new Date().toISOString()}
+        />
+      )}
+
+      {/* Add to Watchlist Picker */}
+      {selectedItemForWatchlist && (
+        <AddToWatchlistPicker
+          open={watchlistPickerOpen}
+          onOpenChange={setWatchlistPickerOpen}
+          sku={selectedItemForWatchlist.sku}
+          defaultSize={selectedItemForWatchlist.size_uk || selectedItemForWatchlist.size || undefined}
         />
       )}
     </div>

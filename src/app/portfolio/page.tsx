@@ -8,6 +8,7 @@ import { gbp0 } from '@/lib/utils/format'
 import { Toast } from '@/components/ui/toast'
 import { parseParams, buildQuery, type TableParams } from '@/lib/url/params'
 import { Plus } from 'lucide-react'
+import { useCurrency } from '@/hooks/useCurrency'
 
 // Matrix UI Components
 import { KpiCard } from './components/KpiCard'
@@ -17,6 +18,8 @@ import { ItemsTable } from './components/ItemsTable'
 import { ToolbarFilters } from './components/ToolbarFilters'
 import { QuickAddModal } from './components/QuickAddModal'
 import { BulkImportModal } from './components/BulkImportModal'
+import { PortfolioOverview } from './components/PortfolioOverview'
+import { PortfolioActivityFeed } from './components/PortfolioActivityFeed'
 
 // Matrix V2 Phase 3 Components
 import { ActivityFeedItem, ActivityFeedItemSkeleton } from '@/components/ActivityFeedItem'
@@ -38,6 +41,7 @@ export default function DashboardPage() {
   useRequireAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { currency, convert, format } = useCurrency()
 
   const [isOffline, setIsOffline] = useState(false)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
@@ -48,7 +52,6 @@ export default function DashboardPage() {
   const [toast, setToast] = useState<{ message: string; variant: 'default' | 'success' | 'error' | 'warning' } | null>(null)
 
   // Matrix V2 Phase 3 state
-  const [currency, setCurrency] = useState<Currency>('GBP')
   const [marketModalOpen, setMarketModalOpen] = useState(false)
   const [selectedMarketItem, setSelectedMarketItem] = useState<any>(null)
   const [marketSize, setMarketSize] = useState('UK9')
@@ -169,7 +172,7 @@ export default function DashboardPage() {
 
       if (response.ok) {
         setToast({
-          message: `Updated ${result.updated} of ${result.total} items • Portfolio: ${gbp0.format(result.portfolioValue || 0)}`,
+          message: `Updated ${result.updated} of ${result.total} items • Portfolio: ${format(convert(result.portfolioValue || 0, 'GBP'))}`,
           variant: 'success',
         })
         // Reload page to refresh all data
@@ -212,75 +215,63 @@ export default function DashboardPage() {
               Dashboard
               <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
             </h1>
-            <CurrencySwitcher value={currency} onChange={setCurrency} />
+            <CurrencySwitcher />
           </div>
         </header>
 
         {/* Content */}
         <section className="px-3 md:px-6 lg:px-8 py-4 md:py-6">
           <div className="mx-auto max-w-[1280px] space-y-4 md:space-y-6">
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
-              <KpiCard label="Total Items" value={kpiStats.data.totalItems} loading={kpiStats.loading} />
-              <KpiCard label="In Stock" value={kpiStats.data.inStock} loading={kpiStats.loading} />
-              <KpiCard label="Sold" value={kpiStats.data.sold} loading={kpiStats.loading} />
-              <KpiCard
-                label="Inventory Value"
-                value={gbp0.format(kpiStats.data.totalValue)}
-                loading={kpiStats.loading}
-              />
+            {/* Portfolio Overview V1 */}
+            <PortfolioOverview onOpenQuickAdd={() => setQuickAddOpen(true)} />
+
+            {/* Inventory Section Header */}
+            <div className="pt-4">
+              <h2 className="text-lg font-semibold text-fg mb-4">Inventory</h2>
             </div>
 
-            {/* Portfolio Chart */}
-            <PortfolioChart
-              series={portfolioChart.data}
-              loading={portfolioChart.loading}
-              onRangeChange={setChartRange}
-              currentRange={chartRange}
-            />
+            {/* Recent Activity - Now with portfolio activity feed */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-3">
+                <h2 className="text-lg font-semibold text-fg">Recent Activity</h2>
+                <div className="space-y-2">
+                  {itemsTable.loading ? (
+                    <>
+                      <ActivityFeedItemSkeleton />
+                      <ActivityFeedItemSkeleton />
+                      <ActivityFeedItemSkeleton />
+                    </>
+                  ) : itemsTable.data.length === 0 ? (
+                    <div className="text-center py-8 text-dim text-sm">
+                      No recent activity. Add your first item to get started!
+                    </div>
+                  ) : (
+                    itemsTable.data.slice(0, 5).map((item, idx) => (
+                      <ActivityFeedItem
+                        key={item.sku + idx}
+                        type={item.status === 'sold' ? 'sale' : 'purchase'}
+                        title={`${item.status === 'sold' ? 'Sold' : 'Added'} — ${item.title}`}
+                        subtitle={item.status === 'sold' ? 'Marketplace' : 'Inventory'}
+                        timestampISO={new Date().toISOString()}
+                        amountGBP={item.status === 'sold' ? item.market || item.buy : item.buy}
+                        deltaPct={item.pl && item.buy > 0 ? (item.pl / item.buy) : undefined}
+                        tags={[item.size]}
+                        cta={{
+                          label: 'View market',
+                          onClick: () => {
+                            setSelectedMarketItem(item)
+                            setMarketModalOpen(true)
+                          },
+                        }}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
 
-            {/* Breakdown Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-              <BreakdownCard title="By Status" items={statusBreakdown.data} loading={statusBreakdown.loading} />
-              <BreakdownCard title="By Brand" items={brandBreakdown.data} loading={brandBreakdown.loading} />
-              <BreakdownCard title="By Size" items={sizeBreakdown.data} loading={sizeBreakdown.loading} />
-            </div>
-
-            {/* Recent Activity */}
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold text-fg">Recent Activity</h2>
-              <div className="space-y-2">
-                {itemsTable.loading ? (
-                  <>
-                    <ActivityFeedItemSkeleton />
-                    <ActivityFeedItemSkeleton />
-                    <ActivityFeedItemSkeleton />
-                  </>
-                ) : itemsTable.data.length === 0 ? (
-                  <div className="text-center py-8 text-dim text-sm">
-                    No recent activity. Add your first item to get started!
-                  </div>
-                ) : (
-                  itemsTable.data.slice(0, 5).map((item, idx) => (
-                    <ActivityFeedItem
-                      key={item.sku + idx}
-                      type={item.status === 'sold' ? 'sale' : 'purchase'}
-                      title={`${item.status === 'sold' ? 'Sold' : 'Added'} — ${item.title}`}
-                      subtitle={item.status === 'sold' ? 'Marketplace' : 'Inventory'}
-                      timestampISO={new Date().toISOString()}
-                      amountGBP={item.status === 'sold' ? item.market || item.buy : item.buy}
-                      deltaPct={item.pl && item.buy > 0 ? (item.pl / item.buy) : undefined}
-                      tags={[item.size]}
-                      cta={{
-                        label: 'View market',
-                        onClick: () => {
-                          setSelectedMarketItem(item)
-                          setMarketModalOpen(true)
-                        },
-                      }}
-                    />
-                  ))
-                )}
+              {/* Activity Feed Panel */}
+              <div className="hidden lg:block">
+                <PortfolioActivityFeed />
               </div>
             </div>
 
