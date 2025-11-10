@@ -59,7 +59,7 @@ export function CurrencySwitcher({ className }: CurrencySwitcherProps) {
     >
       <SelectTrigger
         className={cn(
-          'w-[100px] bg-elev-1 border-border hover:border-accent/60 transition-all duration-120 glow-accent-hover focus:ring-accent/40',
+          'w-[100px] bg-elev-1 border-border hover:border-accent/60 transition-boutique shadow-soft focus:ring-focus',
           className
         )}
         aria-label="Select currency"

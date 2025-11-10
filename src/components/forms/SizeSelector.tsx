@@ -37,12 +37,12 @@ export function SizeSelector({ value, onChange, category = 'shoes' }: SizeSelect
                 type="button"
                 onClick={() => onChange(size)}
                 className={cn(
-                  "h-8 min-w-[42px] rounded-md border text-sm font-medium transition-all duration-120",
+                  "h-8 min-w-[42px] rounded-md border text-sm font-medium transition-boutique",
                   "flex items-center justify-center",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
                   isSelected
-                    ? "bg-elev-2 border-accent ring-1 ring-accent-400/40 text-fg"
-                    : "border-border/40 text-muted hover:bg-elev-2 hover:text-fg hover:glow-accent-hover"
+                    ? "bg-elev-2 border-accent ring-1 ring-accent/40 text-fg"
+                    : "border-border/40 text-muted hover:bg-elev-2 hover:text-fg shadow-soft"
                 )}
               >
                 {size}

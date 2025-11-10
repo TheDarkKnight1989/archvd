@@ -38,8 +38,8 @@ export function TagInput({ value = [], onChange, placeholder = "Type and press E
       </label>
       <div className={cn(
         "min-h-[48px] p-3 rounded-lg border bg-[#08100C] border-[#15251B]",
-        "focus-within:border-[#0F8D65]/50 focus-within:glow-accent-hover",
-        "transition-all duration-[120ms]"
+        "focus-within:border-[#0F8D65]/50 focus-within:shadow-soft",
+        "transition-boutique"
       )}>
         <div className="flex flex-wrap gap-2">
           {value.map((tag) => (

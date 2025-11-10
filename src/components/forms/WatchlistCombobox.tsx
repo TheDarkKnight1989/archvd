@@ -73,8 +73,8 @@ export function WatchlistCombobox({
             aria-expanded={open}
             className={cn(
               "w-full h-12 justify-between bg-[#08100C] border-[#15251B] text-[#E8F6EE] hover:bg-[#0B1510] hover:border-[#0F8D65]/50",
-              "transition-all duration-[120ms] text-base",
-              open && "border-[#0F8D65]/50 glow-accent-hover"
+              "transition-boutique text-base",
+              open && "border-[#0F8D65]/50 shadow-soft"
             )}
           >
             <span className={cn(!selectedOption && "text-[#7FA08F]")}>
