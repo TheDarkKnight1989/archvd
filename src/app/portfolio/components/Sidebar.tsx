@@ -497,42 +497,60 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
           'group relative h-11 px-3 rounded-xl',
           'flex items-center gap-3',
           'whitespace-nowrap overflow-hidden',
-          'transition-boutique',
+          'transition-all duration-200',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
           isActive
-            ? 'bg-accent/10 text-accent font-medium shadow-soft border border-accent/20'
+            ? 'bg-accent/15 text-accent font-semibold border border-accent/30'
             : 'text-fg/90 hover:bg-elev-2/80'
         )}
+        style={isActive ? {
+          boxShadow: `
+            0 0 20px rgba(var(--archvd-accent-rgb), 0.15),
+            0 0 40px rgba(var(--archvd-accent-rgb), 0.08),
+            inset 0 1px 0 rgba(var(--archvd-accent-rgb), 0.1)
+          `
+        } : undefined}
       >
         {/* Active indicator bar with hover animation */}
         {(isActive || isHovered) && (
           <span
             className={cn(
-              "absolute left-0 top-1.5 w-[3px] bg-accent rounded-r transition-all duration-120 ease-in-out",
+              "absolute left-0 top-1.5 w-[3px] bg-accent rounded-r transition-all duration-200 ease-out",
               isActive ? (isHovered ? "h-[calc(100%-12px)]" : "h-[calc(60%)]") : "h-[calc(60%)]"
             )}
+            style={isActive ? {
+              boxShadow: `
+                0 0 8px rgba(var(--archvd-accent-rgb), 0.6),
+                0 0 16px rgba(var(--archvd-accent-rgb), 0.3)
+              `
+            } : undefined}
           />
         )}
 
         {/* Icon */}
         <Icon
           className={cn(
-            'h-5 w-5 flex-shrink-0',
+            'h-5 w-5 flex-shrink-0 transition-all duration-200',
             isActive ? 'text-accent' : 'text-muted group-hover:text-accent'
           )}
-          strokeWidth={1.75}
+          strokeWidth={isActive ? 2 : 1.75}
+          style={isActive ? {
+            filter: 'drop-shadow(0 0 4px rgba(var(--archvd-accent-rgb), 0.4))'
+          } : undefined}
         />
 
         {/* Label - opacity transition with translateX */}
         <span
           className={cn(
-            "flex-1 min-w-0 text-sm font-medium truncate transition-all duration-120",
+            "flex-1 min-w-0 text-sm truncate transition-all duration-120",
+            isActive ? "font-semibold" : "font-medium",
             isExpanded
               ? "opacity-100 translate-x-0"
               : "opacity-0 translate-x-1 pointer-events-none"
           )}
           style={{
             transitionDelay: isExpanded ? `${staggerDelay}ms` : '0ms',
+            textShadow: isActive ? '0 0 12px rgba(var(--archvd-accent-rgb), 0.3)' : undefined,
           }}
           title={item.label}
         >
