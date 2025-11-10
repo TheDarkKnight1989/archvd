@@ -133,7 +133,7 @@ function parseReleaseCards(html: string): Array<{
     return []
   }
 
-  cardElements.each((_, cardEl) => {
+  cardElements.each((_: number, cardEl: any) => {
     const $card = $(cardEl)
 
     try {

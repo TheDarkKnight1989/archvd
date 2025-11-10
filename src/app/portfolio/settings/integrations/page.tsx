@@ -465,7 +465,7 @@ export default function IntegrationsPage() {
                 <>
                   <Button
                     onClick={handleStockxSyncListings}
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     disabled={syncing}
                   >
@@ -473,7 +473,7 @@ export default function IntegrationsPage() {
                   </Button>
                   <Button
                     onClick={handleStockxSyncSales}
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     disabled={syncing}
                   >
@@ -481,7 +481,7 @@ export default function IntegrationsPage() {
                   </Button>
                   <Button
                     onClick={handleStockxSyncPrices}
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     disabled={syncing}
                   >
@@ -489,7 +489,7 @@ export default function IntegrationsPage() {
                   </Button>
                   <Button
                     onClick={handleStockxDisconnect}
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
                     disabled={syncing}
                   >

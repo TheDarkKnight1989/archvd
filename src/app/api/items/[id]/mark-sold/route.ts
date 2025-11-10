@@ -34,7 +34,7 @@ export async function POST(
     const validation = markAsSoldSchema.safeParse(body)
     if (!validation.success) {
       // Return old-style error format for backwards compatibility
-      const firstError = validation.error.errors[0]
+      const firstError = validation.error.issues[0]
       return NextResponse.json(
         { error: firstError.message },
         { status: 400 }
