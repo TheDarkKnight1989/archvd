@@ -9,6 +9,7 @@ import {
   getStockxClientId,
   getStockxClientSecret,
   getStockxAccessToken,
+  getStockxApiKey,
   maskStockxToken,
   isStockxMockMode,
 } from '@/lib/config/stockx'
@@ -50,6 +51,7 @@ export class StockxClient {
   private clientId: string
   private clientSecret: string
   private accessToken: string | undefined
+  private apiKey: string | undefined
   private tokenExpiresAt: number = 0
   private userId: string | null = null // User ID for OAuth user tokens
   private refreshToken: string | null = null // For user OAuth
@@ -59,6 +61,7 @@ export class StockxClient {
     this.clientId = getStockxClientId()
     this.clientSecret = getStockxClientSecret()
     this.accessToken = getStockxAccessToken()
+    this.apiKey = getStockxApiKey()
     this.userId = userId || null
   }
 
@@ -269,11 +272,16 @@ export class StockxClient {
 
     // Build request
     const url = `${this.baseUrl}${endpoint}`
-    const requestHeaders = {
+    const requestHeaders: Record<string, string> = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       ...headers,
+    }
+
+    // Add x-api-key header if configured (required for StockX v2 API)
+    if (this.apiKey) {
+      requestHeaders['x-api-key'] = this.apiKey
     }
 
     console.log('[StockX] API Request', {

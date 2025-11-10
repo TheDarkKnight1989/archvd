@@ -16,6 +16,7 @@ const stockxConfigSchema = z.object({
   clientId: z.string().optional(),
   clientSecret: z.string().optional(),
   accessToken: z.string().optional(),
+  apiKey: z.string().optional(),
 })
 
 type StockxConfig = z.infer<typeof stockxConfigSchema>
@@ -37,6 +38,7 @@ function loadConfig(): StockxConfig {
       clientId: process.env.STOCKX_CLIENT_ID,
       clientSecret: process.env.STOCKX_CLIENT_SECRET,
       accessToken: process.env.STOCKX_ACCESS_TOKEN,
+      apiKey: process.env.STOCKX_API_KEY,
     })
 
     // Log configuration (without secrets)
@@ -48,6 +50,7 @@ function loadConfig(): StockxConfig {
         hasClientId: !!config.clientId,
         hasClientSecret: !!config.clientSecret,
         hasAccessToken: !!config.accessToken,
+        hasApiKey: !!config.apiKey,
       })
 
       // Warn if enabled but missing credentials (and not in mock mode)
@@ -60,6 +63,9 @@ function loadConfig(): StockxConfig {
         }
         if (!config.clientSecret) {
           console.warn('[StockX] NEXT_PUBLIC_STOCKX_ENABLE=true but STOCKX_CLIENT_SECRET is missing')
+        }
+        if (!config.apiKey) {
+          console.warn('[StockX] NEXT_PUBLIC_STOCKX_ENABLE=true but STOCKX_API_KEY is missing')
         }
       }
     }
@@ -130,6 +136,14 @@ export function getStockxClientSecret(): string {
 export function getStockxAccessToken(): string | undefined {
   const cfg = loadConfig()
   return cfg.accessToken
+}
+
+/**
+ * Get StockX API key (x-api-key header)
+ */
+export function getStockxApiKey(): string | undefined {
+  const cfg = loadConfig()
+  return cfg.apiKey
 }
 
 /**
