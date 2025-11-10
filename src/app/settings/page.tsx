@@ -246,7 +246,7 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-3xl font-cinzel font-bold text-fg relative inline-block mb-2">
             Settings
-            <span className="absolute bottom-0 left-0 w-16 h-[2px] bg-accent-400/40"></span>
+            <span className="absolute bottom-0 left-0 w-16 h-[2px] bg-accent/40"></span>
           </h1>
           <p className="text-sm text-muted">Manage your account, preferences, and integrations</p>
         </div>
@@ -279,17 +279,17 @@ export default function SettingsPage() {
                   }}
                   onKeyDown={(e) => handleTabKeyDown(e, index)}
                   className={cn(
-                    'relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-120 whitespace-nowrap snap-start',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
+                    'relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-boutique whitespace-nowrap snap-start',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
                     isActive
-                      ? 'bg-accent-200 text-fg border border-accent-400'
-                      : 'bg-elev-1 text-muted border border-border hover:bg-elev-2 hover:border-accent-400/50 hover:text-fg'
+                      ? 'bg-accent-200 text-fg border border-accent'
+                      : 'bg-elev-1 text-muted border border-border hover:bg-elev-2 hover:border-accent/50 hover:text-fg'
                   )}
                 >
                   <Icon className="h-4 w-4" />
                   <span>{tab.label}</span>
                   {isActive && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] bg-accent-400 animate-[slideIn_120ms_ease-out]" />
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-[2px] bg-accent animate-[slideIn_120ms_ease-out]" />
                   )}
                 </button>
               )
@@ -323,7 +323,7 @@ export default function SettingsPage() {
                           setAccountDirty(true)
                         }}
                         placeholder="Enter your name"
-                        className="mt-2 bg-bg border-border focus:border-accent-400/50 focus:glow-accent-hover transition-all duration-120"
+                        className="mt-2 bg-bg border-border focus:ring-focus transition-boutique"
                       />
                     </div>
 
@@ -376,7 +376,7 @@ export default function SettingsPage() {
                       <Button
                         onClick={handleAccountSave}
                         disabled={accountSaving}
-                        className="bg-accent text-black hover:bg-accent-600 glow-accent-hover"
+                        className="bg-accent text-black hover:bg-accent-600 shadow-soft"
                       >
                         {accountSaving ? 'Saving...' : 'Save Changes'}
                       </Button>
@@ -455,11 +455,11 @@ export default function SettingsPage() {
                       <button
                         onClick={() => setTheme('matrix')}
                         className={cn(
-                          'p-4 rounded-lg border-2 transition-all duration-120 text-left',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
+                          'p-4 rounded-lg border-2 transition-boutique text-left',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
                           theme === 'matrix'
-                            ? 'border-accent-400 bg-accent-200 glow-accent-hover'
-                            : 'border-border bg-elev-2 hover:border-accent-400/50'
+                            ? 'border-accent bg-accent-200 shadow-soft'
+                            : 'border-border bg-elev-2 hover:border-accent/50'
                         )}
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -471,11 +471,11 @@ export default function SettingsPage() {
                       <button
                         onClick={() => setTheme('system')}
                         className={cn(
-                          'p-4 rounded-lg border-2 transition-all duration-120 text-left',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
+                          'p-4 rounded-lg border-2 transition-boutique text-left',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
                           theme === 'system'
-                            ? 'border-accent-400 bg-accent-200 glow-accent-hover'
-                            : 'border-border bg-elev-2 hover:border-accent-400/50'
+                            ? 'border-accent bg-accent-200 shadow-soft'
+                            : 'border-border bg-elev-2 hover:border-accent/50'
                         )}
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -494,11 +494,11 @@ export default function SettingsPage() {
                       <button
                         onClick={() => setDensity('comfortable')}
                         className={cn(
-                          'p-4 rounded-lg border-2 transition-all duration-120 text-left',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
+                          'p-4 rounded-lg border-2 transition-boutique text-left',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
                           density === 'comfortable'
-                            ? 'border-accent-400 bg-accent-200 glow-accent-hover'
-                            : 'border-border bg-elev-2 hover:border-accent-400/50'
+                            ? 'border-accent bg-accent-200 shadow-soft'
+                            : 'border-border bg-elev-2 hover:border-accent/50'
                         )}
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -510,11 +510,11 @@ export default function SettingsPage() {
                       <button
                         onClick={() => setDensity('compact')}
                         className={cn(
-                          'p-4 rounded-lg border-2 transition-all duration-120 text-left',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/25',
+                          'p-4 rounded-lg border-2 transition-boutique text-left',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
                           density === 'compact'
-                            ? 'border-accent-400 bg-accent-200 glow-accent-hover'
-                            : 'border-border bg-elev-2 hover:border-accent-400/50'
+                            ? 'border-accent bg-accent-200 shadow-soft'
+                            : 'border-border bg-elev-2 hover:border-accent/50'
                         )}
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -580,7 +580,7 @@ export default function SettingsPage() {
                     >
                       <span
                         className={cn(
-                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-120',
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-boutique',
                           priceAlerts ? 'translate-x-6' : 'translate-x-1'
                         )}
                       />
@@ -610,7 +610,7 @@ export default function SettingsPage() {
                     >
                       <span
                         className={cn(
-                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-120',
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-boutique',
                           salesNotif ? 'translate-x-6' : 'translate-x-1'
                         )}
                       />
@@ -640,7 +640,7 @@ export default function SettingsPage() {
                     >
                       <span
                         className={cn(
-                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-120',
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-boutique',
                           payoutsNotif ? 'translate-x-6' : 'translate-x-1'
                         )}
                       />
@@ -670,7 +670,7 @@ export default function SettingsPage() {
                     >
                       <span
                         className={cn(
-                          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-120',
+                          'inline-block h-4 w-4 transform rounded-full bg-white transition-boutique',
                           releasesNotif ? 'translate-x-6' : 'translate-x-1'
                         )}
                       />
@@ -694,7 +694,7 @@ export default function SettingsPage() {
                       <Button
                         onClick={handleNotifSave}
                         disabled={notifSaving}
-                        className="bg-accent text-black hover:bg-accent-600 glow-accent-hover"
+                        className="bg-accent text-black hover:bg-accent-600 shadow-soft"
                       >
                         {notifSaving ? 'Saving...' : 'Save Changes'}
                       </Button>
@@ -889,7 +889,7 @@ export default function SettingsPage() {
                       <p className="text-sm font-semibold text-fg">Drop your file here</p>
                       <p className="text-xs text-dim mt-1">or click to browse</p>
                     </div>
-                    <Button className="bg-accent text-black hover:bg-accent-600 glow-accent-hover">
+                    <Button className="bg-accent text-black hover:bg-accent-600 shadow-soft">
                       Select File
                     </Button>
                   </div>
