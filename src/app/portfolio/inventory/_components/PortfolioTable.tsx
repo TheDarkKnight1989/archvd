@@ -339,7 +339,7 @@ export function PortfolioTable({
       >
         <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
           {/* Sticky Header */}
-          <div className="sticky top-0 z-10 bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
+          <div className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
               <div key={headerGroup.id} className="flex">
                 {headerGroup.headers.map((header) => (
@@ -385,9 +385,8 @@ export function PortfolioTable({
               <div
                 key={row.id}
                 className={cn(
-                  'absolute left-0 right-0 flex items-center border-b border-[#15251B]/40 transition-all duration-120',
-                  'hover:bg-[#0B1510] cursor-pointer',
-                  virtualRow.index % 2 === 0 && 'bg-[#08100C]/30'
+                  'absolute left-0 right-0 flex items-center border-b border-[#15251B]/40 min-h-12 hover:bg-table-hover transition-boutique cursor-pointer',
+                  virtualRow.index % 2 === 0 ? 'bg-table-zebra' : 'bg-panel'
                 )}
                 style={{
                   height: `${virtualRow.size}px`,

@@ -203,7 +203,7 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
 
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
               <TableRow>
                 <TableHead className="label-up">Product</TableHead>
                 <TableHead className="label-up">Size</TableHead>
@@ -215,7 +215,7 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => {
+              {items.map((item, index) => {
                 const diff = calculateDiff(item.latest_price, item.target_price)
                 const latestPriceGBP = item.latest_price
                   ? parseFloat(item.latest_price.toString())
@@ -225,7 +225,13 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
                   : null
 
                 return (
-                  <TableRow key={item.id} className="group">
+                  <TableRow
+                    key={item.id}
+                    className={cn(
+                      "group min-h-12 hover:bg-table-hover transition-boutique",
+                      index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
+                    )}
+                  >
                     {/* Product */}
                     <TableCell>
                       <div className="flex items-center gap-3">

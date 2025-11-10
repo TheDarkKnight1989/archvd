@@ -438,7 +438,7 @@ export function InventoryTable({
       >
         <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
           {/* Sticky Header */}
-          <div className="sticky top-0 z-10 bg-soft border-b border-border">
+          <div className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
               <div key={headerGroup.id} className="flex">
                 {headerGroup.headers.map((header, idx) => (
@@ -485,8 +485,8 @@ export function InventoryTable({
             <div
               key={row.id}
               className={cn(
-                'absolute left-0 right-0 flex items-center border-b border-border transition-boutique',
-                'hover:bg-soft/50 cursor-pointer'
+                'absolute left-0 right-0 flex items-center border-b border-border min-h-12 hover:bg-table-hover transition-boutique cursor-pointer',
+                virtualRow.index % 2 === 0 ? 'bg-table-zebra' : 'bg-panel'
               )}
               style={{
                 height: `${virtualRow.size}px`,

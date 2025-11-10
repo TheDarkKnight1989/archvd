@@ -367,18 +367,18 @@ export default function PnLPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-elev-2 border-b border-t border-t-accent/10 border-b-border">
+            <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
               <tr>
-                <th className="label-uppercase px-4 py-3 text-left text-muted">Sold Date</th>
-                <th className="label-uppercase px-4 py-3 text-left text-muted">SKU</th>
-                <th className="label-uppercase px-4 py-3 text-left text-muted">Item</th>
-                <th className="label-uppercase px-4 py-3 text-left text-muted">Size</th>
-                <th className="label-uppercase px-4 py-3 text-right text-muted">Purchase £</th>
-                <th className="label-uppercase px-4 py-3 text-right text-muted">Sold £</th>
-                <th className="label-uppercase px-4 py-3 text-right text-muted">Margin £</th>
-                <th className="label-uppercase px-4 py-3 text-right text-muted">Margin %</th>
-                <th className="label-uppercase px-4 py-3 text-right text-muted">VAT Due £</th>
-                <th className="label-uppercase px-4 py-3 text-left text-muted">Platform</th>
+                <th className="px-4 py-3 text-left label-up">Sold Date</th>
+                <th className="px-4 py-3 text-left label-up">SKU</th>
+                <th className="px-4 py-3 text-left label-up">Item</th>
+                <th className="px-4 py-3 text-left label-up">Size</th>
+                <th className="px-4 py-3 text-right label-up">Purchase £</th>
+                <th className="px-4 py-3 text-right label-up">Sold £</th>
+                <th className="px-4 py-3 text-right label-up">Margin £</th>
+                <th className="px-4 py-3 text-right label-up">Margin %</th>
+                <th className="px-4 py-3 text-right label-up">VAT Due £</th>
+                <th className="px-4 py-3 text-left label-up">Platform</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
@@ -395,11 +395,17 @@ export default function PnLPage() {
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => {
+                filteredItems.map((item, index) => {
                   const marginPct = item.buyPrice > 0 ? (item.margin / item.buyPrice) * 100 : null
 
                   return (
-                    <tr key={item.id} className="hover:bg-elev-2 transition-boutique">
+                    <tr
+                      key={item.id}
+                      className={cn(
+                        "min-h-12 hover:bg-table-hover transition-boutique",
+                        index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
+                      )}
+                    >
                       <td className="px-4 py-4 text-sm text-fg">{formatDate(item.date)}</td>
                       <td className="px-4 py-4 text-sm text-fg font-mono">{item.sku}</td>
                       <td className="px-4 py-4 text-sm text-fg">
@@ -468,12 +474,12 @@ export default function PnLPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-elev-2 border-b border-t border-t-accent/10 border-b-border">
+            <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
               <tr>
-                <th className="label-uppercase px-4 py-3 text-left text-muted">Date</th>
-                <th className="label-uppercase px-4 py-3 text-left text-muted">Description</th>
-                <th className="label-uppercase px-4 py-3 text-left text-muted">Category</th>
-                <th className="label-uppercase px-4 py-3 text-right text-muted">Amount £</th>
+                <th className="px-4 py-3 text-left label-up">Date</th>
+                <th className="px-4 py-3 text-left label-up">Description</th>
+                <th className="px-4 py-3 text-left label-up">Category</th>
+                <th className="px-4 py-3 text-right label-up">Amount £</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
@@ -490,8 +496,14 @@ export default function PnLPage() {
                   </td>
                 </tr>
               ) : (
-                filteredExpenses.map((expense) => (
-                  <tr key={expense.id} className="hover:bg-elev-2 transition-boutique">
+                filteredExpenses.map((expense, index) => (
+                  <tr
+                    key={expense.id}
+                    className={cn(
+                      "min-h-12 hover:bg-table-hover transition-boutique",
+                      index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
+                    )}
+                  >
                     <td className="px-4 py-4 text-sm text-fg">{formatDate(expense.date)}</td>
                     <td className="px-4 py-4 text-sm text-fg">{expense.description}</td>
                     <td className="px-4 py-4 text-sm text-muted">{expense.category}</td>

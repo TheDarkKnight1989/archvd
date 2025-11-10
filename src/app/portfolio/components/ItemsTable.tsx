@@ -98,7 +98,7 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
         style={{ maxHeight: shouldVirtualize ? '600px' : 'auto' }}
       >
         <table className="min-w-full">
-          <thead className="sticky top-0 bg-soft border-b border-border z-10">
+          <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
             <tr>
               <th className="px-4 md:px-5 py-3.5 text-left label-up min-w-[220px]">Item</th>
               <th className="px-4 md:px-5 py-3.5 text-left label-up w-[72px]">Size</th>
@@ -121,7 +121,10 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
               return (
                 <tr
                   key={row.id}
-                  className="hover:bg-soft/50 transition-boutique"
+                  className={cn(
+                    "min-h-12 hover:bg-table-hover transition-boutique",
+                    virtualRow.index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
+                  )}
                   style={
                     shouldVirtualize
                       ? {

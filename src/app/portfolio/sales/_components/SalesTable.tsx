@@ -238,7 +238,7 @@ export function SalesTable({
       <div className="table-wrap">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
+            <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
               <tr>
                 {columns.map((col, i) => (
                   <th key={i} className="px-4 py-3 text-left label-up">
@@ -292,7 +292,7 @@ export function SalesTable({
     <div className="table-wrap">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="sticky top-0 z-10 bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
+          <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
@@ -329,8 +329,8 @@ export function SalesTable({
               <tr
                 key={row.id}
                 className={cn(
-                  "transition-all duration-120 motion-reduce:transition-none hover:bg-[#0B1510]",
-                  idx % 2 === 0 && "bg-[#08100C]/30"
+                  "min-h-12 hover:bg-table-hover transition-boutique",
+                  idx % 2 === 0 ? "bg-table-zebra" : "bg-panel"
                 )}
               >
                 {row.getVisibleCells().map((cell) => (

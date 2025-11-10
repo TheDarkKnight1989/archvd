@@ -340,18 +340,24 @@ function PreviewStep({ validations, summary }: { validations: RowValidation[]; s
       <div className="border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto max-h-96">
           <table className="w-full text-sm">
-            <thead className="bg-surface sticky top-0">
+            <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-muted">#</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-muted">SKU</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-muted">Brand</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-muted">Price</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-muted">Status</th>
+                <th className="px-3 py-2 text-left label-up">#</th>
+                <th className="px-3 py-2 text-left label-up">SKU</th>
+                <th className="px-3 py-2 text-left label-up">Brand</th>
+                <th className="px-3 py-2 text-left label-up">Price</th>
+                <th className="px-3 py-2 text-left label-up">Status</th>
               </tr>
             </thead>
             <tbody>
-              {previewRows.map((validation) => (
-                <tr key={validation.rowIndex} className={validation.ok ? '' : 'bg-danger/5'}>
+              {previewRows.map((validation, index) => (
+                <tr
+                  key={validation.rowIndex}
+                  className={cn(
+                    "min-h-12 hover:bg-table-hover transition-boutique",
+                    validation.ok ? (index % 2 === 0 ? 'bg-table-zebra' : 'bg-panel') : 'bg-danger/5'
+                  )}
+                >
                   <td className="px-3 py-2 text-dim">
                     {validation.ok ? (
                       <CheckCircle2 className="h-4 w-4 text-success" />

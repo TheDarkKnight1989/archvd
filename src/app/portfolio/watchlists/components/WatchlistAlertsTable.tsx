@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { TrendingDown, Bell } from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
 
 interface WatchlistAlert {
   id: string;
@@ -112,25 +113,28 @@ export function WatchlistAlertsTable({ currency = 'GBP' }: WatchlistAlertsTableP
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
-        <thead>
-          <tr className="border-b border-white/10">
-            <th className="pb-3 label-up text-left">Item</th>
-            <th className="pb-3 label-up text-left">SKU</th>
-            <th className="pb-3 label-up text-right">Target {currency}</th>
-            <th className="pb-3 label-up text-right">Current {currency}</th>
-            <th className="pb-3 label-up text-right">Δ %</th>
-            <th className="pb-3 label-up text-left">Triggered</th>
+        <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
+          <tr>
+            <th className="px-4 py-3 label-up text-left">Item</th>
+            <th className="px-4 py-3 label-up text-left">SKU</th>
+            <th className="px-4 py-3 label-up text-right">Target {currency}</th>
+            <th className="px-4 py-3 label-up text-right">Current {currency}</th>
+            <th className="px-4 py-3 label-up text-right">Δ %</th>
+            <th className="px-4 py-3 label-up text-left">Triggered</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
-          {alerts.map((alert) => {
+          {alerts.map((alert, index) => {
             const isBelow = alert.currentPrice !== null && alert.currentPrice <= alert.targetPrice;
             const deltaColor = alert.deltaPct && alert.deltaPct < 0 ? 'money-pos' : 'text-white/60';
 
             return (
               <tr
                 key={alert.id}
-                className="hover:bg-white/5 transition-colors"
+                className={cn(
+                  "min-h-12 hover:bg-table-hover transition-boutique",
+                  index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
+                )}
               >
                 {/* Item */}
                 <td className="py-3 pr-4">
