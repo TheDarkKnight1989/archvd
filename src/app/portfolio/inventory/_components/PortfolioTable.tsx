@@ -90,7 +90,7 @@ export function PortfolioTable({
         id: 'sku',
         header: 'SKU',
         cell: (info) => (
-          <div className="text-sm font-mono text-[#E8F6EE]">{info.getValue()}</div>
+          <div className="text-sm mono text-[#E8F6EE]">{info.getValue()}</div>
         ),
         enableSorting: false,
       }),
@@ -138,7 +138,7 @@ export function PortfolioTable({
         id: 'buy',
         header: () => <div className="text-right">Buy £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PlainMoneyCell value={info.getValue()} />
           </div>
         ),
@@ -150,7 +150,7 @@ export function PortfolioTable({
         id: 'tax',
         header: () => <div className="text-right">Tax £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PlainMoneyCell value={info.getValue()} />
           </div>
         ),
@@ -162,7 +162,7 @@ export function PortfolioTable({
         id: 'shipping',
         header: () => <div className="text-right">Ship £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PlainMoneyCell value={info.getValue()} />
           </div>
         ),
@@ -174,7 +174,7 @@ export function PortfolioTable({
         id: 'total',
         header: () => <div className="text-right">Total £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PlainMoneyCell value={info.getValue()} />
           </div>
         ),
@@ -190,10 +190,10 @@ export function PortfolioTable({
           const source = info.row.original.market_source
 
           return value !== null && value !== undefined ? (
-            <div className="text-right">
+            <div className="text-right mono">
               <PlainMoneyCell value={value} />
               {source !== '-' && (
-                <div className="text-[10px] text-[#7FA08F] font-mono mt-0.5">{source}</div>
+                <div className="text-[10px] text-[#7FA08F] mono mt-0.5">{source}</div>
               )}
             </div>
           ) : (
@@ -210,7 +210,7 @@ export function PortfolioTable({
         cell: (info) => {
           const value = info.getValue()
           return (
-            <div className="text-right">
+            <div className="text-right mono">
               <PercentCell value={value != null ? value * 100 : null} />
             </div>
           )
@@ -346,7 +346,7 @@ export function PortfolioTable({
                   <div
                     key={header.id}
                     className={cn(
-                      'px-4 py-3 text-xs font-medium text-[#B7D0C2] uppercase tracking-wider flex-shrink-0',
+                      'px-4 py-3 label-up flex-shrink-0',
                       header.column.getCanSort() && 'cursor-pointer select-none hover:text-[#E8F6EE] transition-colors duration-120',
                       header.id === 'item' && 'flex-1 min-w-[220px]',
                       header.id === 'sku' && 'w-[120px]',

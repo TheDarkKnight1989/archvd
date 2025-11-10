@@ -86,7 +86,7 @@ export function InventoryTable({
         id: 'sku',
         header: 'SKU',
         cell: (info) => (
-          <div className="text-sm text-muted num">{info.getValue()}</div>
+          <div className="text-sm text-muted mono">{info.getValue()}</div>
         ),
         enableSorting: true,
       }),
@@ -116,7 +116,7 @@ export function InventoryTable({
         header: () => (
           <div className="flex justify-center">
             <span
-              className="inline-flex items-center justify-center w-4 h-4 rounded bg-profit-bg profit-text text-[9px] font-bold border border-profit/30"
+              className="inline-flex items-center justify-center w-4 h-4 rounded money-pos-tint text-[9px] font-bold border border-profit/30"
               title="StockX"
             >
               Sx
@@ -130,7 +130,7 @@ export function InventoryTable({
           return (
             <div className="flex justify-center group relative">
               {status === 'mapped' && (
-                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-profit-bg profit-text border border-profit/30">
+                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full money-pos-tint border border-profit/30">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 20 20"
@@ -158,7 +158,7 @@ export function InventoryTable({
                   <div className="bg-surface border border-border rounded-lg px-2.5 py-1.5 shadow-medium whitespace-nowrap">
                     <div className="text-2xs text-fg">
                       Mapped to StockX
-                      <div className="text-dim num mt-0.5">{item.stockx_product_sku}</div>
+                      <div className="text-dim mono mt-0.5">{item.stockx_product_sku}</div>
                     </div>
                   </div>
                 </div>
@@ -191,7 +191,7 @@ export function InventoryTable({
         cell: (info) => {
           const date = info.getValue()
           return date ? (
-            <div className="text-sm text-fg num">
+            <div className="text-sm text-fg mono">
               {new Date(date).toLocaleDateString('en-GB', {
                 day: 'numeric',
                 month: 'short',
@@ -209,7 +209,7 @@ export function InventoryTable({
         id: 'buy',
         header: () => <div className="text-right">Buy £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PlainMoneyCell value={convert(info.getValue(), 'GBP')} />
           </div>
         ),
@@ -220,7 +220,7 @@ export function InventoryTable({
         id: 'tax',
         header: () => <div className="text-right">Tax £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PlainMoneyCell value={convert(info.getValue() || 0, 'GBP')} />
           </div>
         ),
@@ -231,7 +231,7 @@ export function InventoryTable({
         id: 'shipping',
         header: () => <div className="text-right">Ship £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PlainMoneyCell value={convert(info.getValue() || 0, 'GBP')} />
           </div>
         ),
@@ -249,7 +249,7 @@ export function InventoryTable({
           const total = buy + tax + shipping
 
           return (
-            <div className="text-right">
+            <div className="text-right mono">
               <PlainMoneyCell value={convert(total, 'GBP')} />
             </div>
           )
@@ -272,18 +272,18 @@ export function InventoryTable({
             : source !== '-' ? source : null
 
           return (
-            <div className="text-right group relative">
+            <div className="text-right group relative mono">
               <PlainMoneyCell value={value ? convert(value, 'GBP') : null} />
 
               {/* Source badge */}
               {source !== '-' && value && (
                 <div className="flex items-center justify-end gap-1 mt-0.5">
                   {isStockX && (
-                    <div className="inline-flex items-center justify-center w-4 h-4 rounded bg-profit-bg profit-text text-[9px] font-bold border border-profit/30">
+                    <div className="inline-flex items-center justify-center w-4 h-4 rounded money-pos-tint text-[9px] font-bold border border-profit/30">
                       Sx
                     </div>
                   )}
-                  <div className="text-2xs text-dim num">{source}</div>
+                  <div className="text-2xs text-dim mono">{source}</div>
                 </div>
               )}
 
@@ -315,7 +315,7 @@ export function InventoryTable({
           const gainLoss = market != null && total > 0 ? ((market - total) / total) * 100 : null
 
           return (
-            <div className="text-right">
+            <div className="text-right mono">
               <PercentCell value={gainLoss} />
             </div>
           )
@@ -445,7 +445,7 @@ export function InventoryTable({
                 <div
                   key={header.id}
                   className={cn(
-                    'px-4 py-3.5 label-uppercase flex-shrink-0 border-r border-border/20 last:border-r-0',
+                    'px-4 py-3.5 label-up flex-shrink-0 border-r border-border/20 last:border-r-0',
                     header.column.getCanSort() && 'cursor-pointer select-none hover:text-fg transition-boutique',
                     header.id === 'item' && 'flex-1 min-w-[240px]',
                     header.id === 'sku' && 'w-[140px]',

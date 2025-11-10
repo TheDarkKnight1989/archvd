@@ -89,7 +89,7 @@ export function SalesTable({
           const total = price + tax + shipping
 
           return (
-            <div className="text-right">
+            <div className="text-right mono">
               <PlainMoneyCell value={total} />
             </div>
           )
@@ -101,7 +101,7 @@ export function SalesTable({
         id: 'sold_price',
         header: () => <div className="text-right">Sold £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PlainMoneyCell value={info.getValue()} />
           </div>
         ),
@@ -112,7 +112,7 @@ export function SalesTable({
         id: 'margin_gbp',
         header: () => <div className="text-right">Margin £</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <MoneyCell value={info.getValue()} showArrow />
           </div>
         ),
@@ -123,7 +123,7 @@ export function SalesTable({
         id: 'margin_percent',
         header: () => <div className="text-right">Margin %</div>,
         cell: (info) => (
-          <div className="text-right">
+          <div className="text-right mono">
             <PercentCell value={info.getValue()} />
           </div>
         ),
@@ -188,7 +188,7 @@ export function SalesTable({
           }
 
           return (
-            <div className="text-right">
+            <div className="text-right mono">
               <PlainMoneyCell value={commission} />
             </div>
           )
@@ -210,7 +210,7 @@ export function SalesTable({
           }
 
           return (
-            <div className="text-right">
+            <div className="text-right mono">
               <PlainMoneyCell value={netPayout} />
             </div>
           )
@@ -235,13 +235,13 @@ export function SalesTable({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
+      <div className="table-wrap">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
               <tr>
                 {columns.map((col, i) => (
-                  <th key={i} className="px-4 py-3 text-left text-xs text-[#B7D0C2] uppercase tracking-wider">
+                  <th key={i} className="px-4 py-3 text-left label-up">
                     <Skeleton className="h-4 w-20" />
                   </th>
                 ))}
@@ -289,7 +289,7 @@ export function SalesTable({
   }
 
   return (
-    <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
+    <div className="table-wrap">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="sticky top-0 z-10 bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
@@ -298,7 +298,7 @@ export function SalesTable({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs text-[#B7D0C2] uppercase tracking-wider font-medium"
+                    className="px-4 py-3 text-left label-up"
                   >
                     {header.isPlaceholder ? null : (
                       <div

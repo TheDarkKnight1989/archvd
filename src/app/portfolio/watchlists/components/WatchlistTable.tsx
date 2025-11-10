@@ -205,13 +205,13 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Latest Price</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Diff %</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="label-up">Product</TableHead>
+                <TableHead className="label-up">Size</TableHead>
+                <TableHead className="label-up">Latest Price</TableHead>
+                <TableHead className="label-up">Target</TableHead>
+                <TableHead className="label-up">Diff %</TableHead>
+                <TableHead className="label-up">Source</TableHead>
+                <TableHead className="text-right label-up">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -246,7 +246,7 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
                             </p>
                             <ArrowRight className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity flex-shrink-0" />
                           </Link>
-                          <p className="text-xs text-muted font-mono">{item.sku}</p>
+                          <p className="text-xs text-muted mono">{item.sku}</p>
                           {item.product_catalog?.colorway && (
                             <p className="text-xs text-dim mt-0.5">
                               {item.product_catalog.colorway}
@@ -257,21 +257,21 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
                     </TableCell>
 
                     {/* Size */}
-                    <TableCell>
-                      <span className="text-sm text-fg font-mono">
+                    <TableCell className="mono">
+                      <span className="text-sm text-fg">
                         {item.size || '—'}
                       </span>
                     </TableCell>
 
                     {/* Latest Price */}
-                    <TableCell>
+                    <TableCell className="mono">
                       {latestPriceGBP ? (
                         <div className="space-y-1">
-                          <span className="text-sm font-medium text-fg font-mono">
+                          <span className="text-sm font-medium text-fg">
                             {format(convert(latestPriceGBP, 'GBP'))}
                           </span>
                           {item.alert && (
-                            <Badge className="ml-2 bg-success/20 text-success text-xs">
+                            <Badge className="ml-2 money-pos-tint text-xs">
                               Target met
                             </Badge>
                           )}
@@ -282,9 +282,9 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
                     </TableCell>
 
                     {/* Target Price */}
-                    <TableCell>
+                    <TableCell className="mono">
                       {targetPriceGBP ? (
-                        <span className="text-sm text-fg font-mono">
+                        <span className="text-sm text-fg">
                           {format(convert(targetPriceGBP, 'GBP'))}
                         </span>
                       ) : (
@@ -293,20 +293,20 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
                     </TableCell>
 
                     {/* Diff % */}
-                    <TableCell>
+                    <TableCell className="mono">
                       {diff !== null ? (
                         <div className="flex items-center gap-1">
                           {diff > 0 ? (
                             <>
-                              <TrendingUp className="h-3 w-3 text-danger" />
-                              <span className="text-sm text-danger font-medium">
+                              <TrendingUp className="h-3 w-3 money-neg" />
+                              <span className="text-sm money-neg font-medium">
                                 +{diff.toFixed(1)}%
                               </span>
                             </>
                           ) : (
                             <>
-                              <TrendingDown className="h-3 w-3 text-success" />
-                              <span className="text-sm text-success font-medium">
+                              <TrendingDown className="h-3 w-3 money-pos" />
+                              <span className="text-sm money-pos font-medium">
                                 {diff.toFixed(1)}%
                               </span>
                             </>

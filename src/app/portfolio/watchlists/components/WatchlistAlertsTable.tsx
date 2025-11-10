@@ -113,19 +113,19 @@ export function WatchlistAlertsTable({ currency = 'GBP' }: WatchlistAlertsTableP
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wider text-white/50">
-            <th className="pb-3 font-medium">Item</th>
-            <th className="pb-3 font-medium">SKU</th>
-            <th className="pb-3 font-medium text-right">Target {currency}</th>
-            <th className="pb-3 font-medium text-right">Current {currency}</th>
-            <th className="pb-3 font-medium text-right">Δ %</th>
-            <th className="pb-3 font-medium">Triggered</th>
+          <tr className="border-b border-white/10">
+            <th className="pb-3 label-up text-left">Item</th>
+            <th className="pb-3 label-up text-left">SKU</th>
+            <th className="pb-3 label-up text-right">Target {currency}</th>
+            <th className="pb-3 label-up text-right">Current {currency}</th>
+            <th className="pb-3 label-up text-right">Δ %</th>
+            <th className="pb-3 label-up text-left">Triggered</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
           {alerts.map((alert) => {
             const isBelow = alert.currentPrice !== null && alert.currentPrice <= alert.targetPrice;
-            const deltaColor = alert.deltaPct && alert.deltaPct < 0 ? 'text-[#00FF94]' : 'text-white/60';
+            const deltaColor = alert.deltaPct && alert.deltaPct < 0 ? 'money-pos' : 'text-white/60';
 
             return (
               <tr
@@ -159,31 +159,31 @@ export function WatchlistAlertsTable({ currency = 'GBP' }: WatchlistAlertsTableP
                 </td>
 
                 {/* SKU */}
-                <td className="py-3 px-4">
-                  <code className="text-xs text-white/70 font-mono">
+                <td className="py-3 px-4 mono">
+                  <code className="text-xs text-white/70">
                     {alert.sku}
                   </code>
                 </td>
 
                 {/* Target Price */}
-                <td className="py-3 px-4 text-right font-mono text-sm text-white/70">
+                <td className="py-3 px-4 text-right mono text-sm text-white/70">
                   {formatPrice(alert.targetPrice, alert.currency)}
                 </td>
 
                 {/* Current Price */}
-                <td className="py-3 px-4 text-right">
+                <td className="py-3 px-4 text-right mono">
                   <div className="flex items-center justify-end gap-1.5">
                     {isBelow && (
-                      <TrendingDown className="w-3.5 h-3.5 text-[#00FF94]" />
+                      <TrendingDown className="w-3.5 h-3.5 money-pos" />
                     )}
-                    <span className={`font-mono text-sm ${isBelow ? 'text-[#00FF94]' : 'text-white/70'}`}>
+                    <span className={`text-sm ${isBelow ? 'money-pos' : 'text-white/70'}`}>
                       {formatPrice(alert.currentPrice, alert.currency)}
                     </span>
                   </div>
                 </td>
 
                 {/* Delta % */}
-                <td className={`py-3 px-4 text-right font-mono text-sm ${deltaColor}`}>
+                <td className={`py-3 px-4 text-right mono text-sm ${deltaColor}`}>
                   {formatDelta(alert.deltaPct)}
                 </td>
 
