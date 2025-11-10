@@ -500,7 +500,7 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
           'transition-boutique',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
           isActive
-            ? 'bg-[#F3EFE8] text-ink font-medium shadow-soft'
+            ? 'bg-accent/10 text-accent font-medium shadow-soft border border-accent/20'
             : 'text-fg/90 hover:bg-elev-2/80'
         )}
       >
