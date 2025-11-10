@@ -62,13 +62,33 @@ export function Sidebar() {
   const searchParams = useSearchParams()
   const { pinned, setPinned } = useSidebar()
   const [expanded, setExpanded] = useState(false)
-  const [theme, setTheme] = useState<'matrix' | 'system'>('matrix')
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    // Initialize from localStorage or system preference
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme')
+      if (saved === 'light' || saved === 'dark') return saved
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    return 'light'
+  })
   const [commandSearchOpen, setCommandSearchOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const leaveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const navRef = useRef<HTMLElement>(null)
+
+  // Apply theme to document root
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark')
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+      document.documentElement.classList.remove('dark')
+    }
+    localStorage.setItem('theme', theme)
+  }, [theme])
 
   // Determine if sidebar should be expanded
   const isExpanded = pinned || expanded
@@ -387,21 +407,21 @@ export function Sidebar() {
 
               {/* Theme Toggle */}
               <button
-                onClick={() => setTheme(theme === 'matrix' ? 'system' : 'matrix')}
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className={cn(
                   "w-full h-9 rounded-lg flex items-center gap-2 px-2 transition-boutique",
                   "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                  theme === 'matrix' ? 'text-accent' : 'text-muted hover:text-fg'
+                  theme === 'dark' ? 'text-accent' : 'text-muted hover:text-fg'
                 )}
                 aria-label="Toggle theme"
               >
-                {theme === 'matrix' ? (
+                {theme === 'dark' ? (
                   <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
                 ) : (
                   <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
                 )}
                 <span className="text-xs font-medium flex-1 text-left">
-                  {theme === 'matrix' ? 'Matrix Theme' : 'System Theme'}
+                  {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
                 </span>
               </button>
 

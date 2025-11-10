@@ -121,103 +121,107 @@
   --font-mono: 'SF Mono', ui-monospace, monospace;
 }
 
-/* Boutique Theme Tokens - Dark Mode (Charcoal + Beige like Kith) */
+/* Premium Dark Mode - Black, Blue, White */
 :root[data-theme="dark"],
 .dark {
   /* ==========================================
-     Boutique v2 - Simplified Token Naming (Dark)
+     Dark Mode v2 - Black, Blue, White (Clean & Minimal)
      ========================================== */
 
-  /* Backgrounds */
-  --bg: #171513;              /* Warm charcoal canvas */
-  --panel: #1E1B18;           /* Dark panels */
-  --panel-soft: #23201D;      /* Raised panels */
+  /* Backgrounds - Pure blacks with subtle depth */
+  --bg: #000000;              /* Pure black canvas */
+  --panel: #0A0A0A;           /* Slightly elevated black panels */
+  --panel-soft: #111111;      /* Raised panels with depth */
 
-  /* Borders */
-  --keyline: rgba(255, 255, 255, 0.08);
-  --keyline-strong: rgba(255, 255, 255, 0.12);
+  /* Borders - Subtle white borders for separation */
+  --keyline: rgba(255, 255, 255, 0.06);
+  --keyline-strong: rgba(255, 255, 255, 0.10);
 
-  /* Text */
-  --ink: #E8E4DD;             /* Primary text */
-  --muted: #9A9388;           /* Secondary text */
-  --dim: #6B6560;             /* Tertiary text */
+  /* Text - Pure white with gray secondaries */
+  --ink: #FFFFFF;             /* Pure white primary text */
+  --muted: #A1A1AA;           /* Zinc-400 - secondary text */
+  --dim: #71717A;             /* Zinc-500 - tertiary text */
 
-  /* Accent */
-  --accent: #CDBBA7;          /* Lighter beige for dark mode */
+  /* Accent - Rich blue */
+  --accent: #3B82F6;          /* Blue-500 - vibrant primary blue */
 
-  /* Profit / Loss - Adjusted for dark */
-  --profit: #4ADE80;          /* Lighter green for dark */
-  --profit-tint: rgba(74, 222, 128, 0.12);
-  --loss: #F87171;            /* Lighter red for dark */
-  --loss-tint: rgba(248, 113, 113, 0.12);
+  /* Profit / Loss - Vibrant for dark backgrounds */
+  --profit: #22C55E;          /* Green-500 - bright profit green */
+  --profit-tint: rgba(34, 197, 94, 0.10);
+  --loss: #EF4444;            /* Red-500 - bright loss red */
+  --loss-tint: rgba(239, 68, 68, 0.10);
 
-  /* Table colors - Dark mode */
+  /* Table colors - Subtle zebra with blue hover */
   --table-zebra: rgba(255, 255, 255, 0.02);
-  --table-hover: rgba(255, 255, 255, 0.04);
+  --table-hover: rgba(59, 130, 246, 0.08); /* Blue hover tint */
 
-  /* Elevation shadows - Deeper in dark mode */
-  --elev-1: 0 2px 8px rgba(0,0,0,.3);
-  --elev-2: 0 4px 18px rgba(0,0,0,.4);
+  /* Elevation shadows - Deep blacks with subtle blue glow */
+  --elev-1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 1px rgba(59,130,246,.05);
+  --elev-2: 0 4px 20px rgba(0,0,0,.6), 0 0 0 1px rgba(59,130,246,.08);
 
   /* ==========================================
      Legacy archvd tokens (backward compat)
      ========================================== */
 
-  /* Backgrounds - Warm charcoal */
-  --archvd-bg: #171513;
-  --archvd-surface: #23201D;
-  --archvd-soft: #1E1B18;
+  /* Backgrounds */
+  --archvd-bg: #000000;
+  --archvd-surface: #0A0A0A;
+  --archvd-soft: #111111;
 
   /* Elevation scale */
-  --archvd-bg-elev-0: #171513; /* Page shell - deep charcoal */
-  --archvd-bg-elev-1: #1E1B18; /* Standard cards - warm dark panel */
-  --archvd-bg-elev-2: #23201D; /* Raised cards */
-  --archvd-bg-elev-3: #2A2722; /* Modals/dialogs */
-  --archvd-overlay: rgba(23, 21, 19, 0.95);
+  --archvd-bg-elev-0: #000000; /* Page shell - pure black */
+  --archvd-bg-elev-1: #0A0A0A; /* Standard cards - subtle elevation */
+  --archvd-bg-elev-2: #111111; /* Raised cards - more depth */
+  --archvd-bg-elev-3: #1A1A1A; /* Modals/dialogs - highest elevation */
+  --archvd-overlay: rgba(0, 0, 0, 0.95);
 
   /* Borders & dividers */
-  --archvd-border: rgba(255, 255, 255, 0.07);
-  --archvd-border-strong: rgba(255, 255, 255, 0.12);
+  --archvd-border: rgba(255, 255, 255, 0.06);
+  --archvd-border-strong: rgba(255, 255, 255, 0.10);
 
-  /* Text - Warmer tones for dark boutique */
-  --archvd-fg: #E8E4DD;
-  --archvd-fg-muted: #9A9388;
-  --archvd-fg-dim: #6B6560;
+  /* Text - Pure white with zinc grays */
+  --archvd-fg: #FFFFFF;
+  --archvd-fg-muted: #A1A1AA;
+  --archvd-fg-dim: #71717A;
 
-  /* Accent (Lighter beige for dark mode) */
-  --archvd-accent: #CDBBA7;
-  --archvd-accent-600: #B8976F;
-  --archvd-accent-500: #C4A484;
-  --archvd-accent-400: #CDBBA7;
-  --archvd-accent-300: #DCC9B0;
-  --archvd-accent-200: #E8DBC6;
+  /* Accent - Blue scale */
+  --archvd-accent: #3B82F6;   /* Blue-500 */
+  --archvd-accent-600: #2563EB; /* Blue-600 - darker */
+  --archvd-accent-500: #3B82F6; /* Blue-500 */
+  --archvd-accent-400: #60A5FA; /* Blue-400 - lighter */
+  --archvd-accent-300: #93C5FD; /* Blue-300 */
+  --archvd-accent-200: #BFDBFE; /* Blue-200 */
 
-  /* Profit / Loss (adjusted for dark) */
-  --archvd-profit: #4ADE80;
-  --archvd-profit-bg: rgba(74, 222, 128, 0.12);
-  --archvd-loss: #F87171;
-  --archvd-loss-bg: rgba(248, 113, 113, 0.12);
+  /* Profit / Loss */
+  --archvd-profit: #22C55E;   /* Green-500 */
+  --archvd-profit-bg: rgba(34, 197, 94, 0.10);
+  --archvd-loss: #EF4444;     /* Red-500 */
+  --archvd-loss-bg: rgba(239, 68, 68, 0.10);
 
   /* Legacy compatibility */
-  --archvd-success: #74C39A;
-  --archvd-warning: #E8C16A;
-  --archvd-danger: #E07A7A;
-  --archvd-danger-200: rgba(224, 122, 122, 0.15);
+  --archvd-success: #22C55E;  /* Green-500 */
+  --archvd-warning: #F59E0B;  /* Amber-500 */
+  --archvd-danger: #EF4444;   /* Red-500 */
+  --archvd-danger-200: rgba(239, 68, 68, 0.15);
 
-  /* Data Series */
-  --archvd-series-1: #C4A484;
-  --archvd-series-2: #A0A0A0;
-  --archvd-series-3: #B8976F;
-  --archvd-series-4: #808080;
+  /* RGB variants for rgba() */
+  --archvd-accent-rgb: 59, 130, 246;      /* Blue-500 */
+  --archvd-accent-400-rgb: 96, 165, 250;  /* Blue-400 */
 
-  /* Focus ring */
-  --archvd-focus: #C4A484;
-  --archvd-ring: rgba(196, 164, 132, 0.25);
+  /* Data Series - Blue scale */
+  --archvd-series-1: #3B82F6;  /* Blue-500 */
+  --archvd-series-2: #60A5FA;  /* Blue-400 */
+  --archvd-series-3: #93C5FD;  /* Blue-300 */
+  --archvd-series-4: #BFDBFE;  /* Blue-200 */
 
-  /* Shadows - Deeper in dark mode */
-  --archvd-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
-  --archvd-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.5);
-  --archvd-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.6);
+  /* Focus ring - Blue */
+  --archvd-focus: #3B82F6;
+  --archvd-ring: rgba(59, 130, 246, 0.25);
+
+  /* Shadows - Deep with subtle blue glow */
+  --archvd-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(59, 130, 246, 0.05);
+  --archvd-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.08);
+  --archvd-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(59, 130, 246, 0.10);
 }
 
 /* High contrast mode */
