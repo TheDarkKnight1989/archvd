@@ -109,13 +109,15 @@ function parseReleaseCards(html: string): Array<{
 
   // Try multiple selectors for cards
   const cardSelectors = [
+    'a[href*="/sneakers/"]',  // thedropdate.com uses links with /sneakers/ in href
+    'a.group',  // thedropdate.com uses <a class="group ..."> for each card
     '.release-card',
     '.product-card',
     '.item-card',
     'article',
   ]
 
-  let cardElements: cheerio.Cheerio<cheerio.Element> | null = null
+  let cardElements: any = null
 
   for (const selector of cardSelectors) {
     cardElements = $(selector)
@@ -127,6 +129,7 @@ function parseReleaseCards(html: string): Array<{
 
   if (!cardElements || cardElements.length === 0) {
     console.warn('[Scraper] No release cards found on page')
+    console.warn(`[Scraper] HTML sample: ${html.substring(0, 500)}`)
     return []
   }
 
@@ -135,8 +138,8 @@ function parseReleaseCards(html: string): Array<{
 
     try {
       // Extract product URL (required for external_id)
-      const productLink = $card.find('a').first()
-      const productUrl = productLink.attr('href')
+      // $card is now the <a> tag itself
+      const productUrl = $card.attr('href')
 
       if (!productUrl) {
         return // Skip cards without URL
@@ -146,16 +149,12 @@ function parseReleaseCards(html: string): Array<{
       const urlPath = productUrl.split('/').filter(Boolean).pop() || productUrl
       const external_id = urlPath.replace(/[^a-z0-9-]/gi, '-').toLowerCase()
 
-      // Extract title
-      const titleSelectors = ['.product-title', 'h3', '.release-title', '.title']
-      let title = ''
-      for (const sel of titleSelectors) {
-        title = $card.find(sel).first().text().trim()
-        if (title) break
-      }
+      // Extract title from h2
+      let title = $card.find('h2').first().text().trim()
 
       if (!title) {
-        title = productLink.attr('title')?.trim() || 'Untitled Release'
+        // Fallback to img alt text
+        title = $card.find('img').first().attr('alt')?.trim() || 'Untitled Release'
       }
 
       // Extract image
@@ -187,27 +186,41 @@ function parseReleaseCards(html: string): Array<{
         if (sku) break
       }
 
-      // Extract release date
-      const dateText = $card.find('.release-date, .date, time').first().text().trim()
+      // Extract release date from date badge
+      // thedropdate.com uses a badge with month (text) and day (number)
+      const dateBadge = $card.find('.absolute.left-3.top-3')
       let release_date: string | null = null
 
-      if (dateText && dateText.toLowerCase() !== 'tba') {
-        try {
-          // Parse common date formats (e.g., "Nov 15, 2024" or "15/11/2024")
-          const parsed = new Date(dateText)
-          if (!isNaN(parsed.getTime())) {
-            release_date = parsed.toISOString()
+      if (dateBadge.length > 0) {
+        const monthText = dateBadge.find('div').first().text().trim() // e.g., "Nov"
+        const dayText = dateBadge.find('div').eq(1).text().trim() // e.g., "11"
+
+        if (monthText && dayText) {
+          try {
+            // Assume current or next year
+            const currentYear = new Date().getFullYear()
+            const dateString = `${monthText} ${dayText}, ${currentYear}`
+            const parsed = new Date(dateString)
+
+            if (!isNaN(parsed.getTime())) {
+              // If the parsed date is in the past, assume next year
+              if (parsed < new Date()) {
+                parsed.setFullYear(currentYear + 1)
+              }
+              release_date = parsed.toISOString()
+            }
+          } catch {
+            // Keep as null if parsing fails
           }
-        } catch {
-          // Keep as null if parsing fails
         }
       }
 
-      // Extract price (GBP)
-      const priceText = $card.find('.price').first().text().trim()
+      // Extract price (GBP) from span.font-bold
+      const priceSpan = $card.find('span.font-bold').first()
       let price_gbp: number | null = null
 
-      if (priceText) {
+      if (priceSpan.length > 0) {
+        const priceText = priceSpan.text().trim() // e.g., "£180"
         const priceMatch = priceText.match(/[\d.]+/)
         if (priceMatch) {
           price_gbp = parseFloat(priceMatch[0])
