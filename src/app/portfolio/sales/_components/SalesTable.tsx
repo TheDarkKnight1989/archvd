@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
-import { formatSize } from '@/lib/format/size'
+import { ProductLineItem } from '@/components/product/ProductLineItem'
 import type { SalesItem } from '@/hooks/useSalesTable'
 
 const columnHelper = createColumnHelper<SalesItem>()
@@ -43,37 +43,21 @@ export function SalesTable({
         header: 'Item',
         cell: (info) => {
           const item = info.row.original
-          const initials = item.brand?.slice(0, 2).toUpperCase() || 'IT'
 
           return (
-            <div className="flex items-center gap-3 min-w-[220px]">
-              {/* Thumb */}
-              <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 text-xs font-medium text-accent">
-                {initials}
-              </div>
-
-              {/* Title stack */}
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-fg truncate">
-                  {item.brand} {item.model}
-                </div>
-                <div className="text-xs text-muted font-mono">{item.sku}</div>
-              </div>
-            </div>
-          )
-        },
-        enableSorting: false,
-      }),
-
-      columnHelper.accessor('size_uk', {
-        id: 'size',
-        header: 'Size',
-        cell: (info) => {
-          const size = info.getValue()
-          return (
-            <div className="text-sm text-fg">
-              {formatSize(size, 'UK')}
-            </div>
+            <ProductLineItem
+              imageUrl={item.image_url || null}
+              imageAlt={`${item.brand} ${item.model}`}
+              brand={item.brand || ''}
+              model={item.model || ''}
+              variant={item.colorway || item.variant}
+              sku={item.sku}
+              href={`/product/${item.sku}`}
+              sizeUk={item.size_uk}
+              sizeSystem="UK"
+              category={(item.category?.toLowerCase() as any) || 'other'}
+              className="min-w-[280px]"
+            />
           )
         },
         enableSorting: false,

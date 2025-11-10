@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Package, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { MoneyCell, PercentCell, PlainMoneyCell } from '@/lib/format/money'
-import { formatSize } from '@/lib/format/size'
+import { ProductLineItem } from '@/components/product/ProductLineItem'
 import { RowActions } from './RowActions'
 import { InventoryCard, InventoryCardSkeleton } from './InventoryCard'
 import type { EnrichedInventoryItem } from '@/hooks/usePortfolioInventory'
@@ -62,36 +62,29 @@ export function PortfolioTable({
   // Define columns matching spec: Item | SKU | Category | Purchase Date | Buy £ | Tax £ | Ship £ | Total £ | Market £ | % Gain/Loss | Status | Actions
   const columns = useMemo(
     () => [
-      // Item
+      // Item - Standardized product line item with image, brand/model, variant, size chip, and SKU chip
       columnHelper.accessor('full_title', {
         id: 'item',
         header: 'Item',
         cell: (info) => {
           const item = info.row.original
-          const initials = item.brand?.slice(0, 2).toUpperCase() || 'IT'
 
           return (
-            <div className="flex items-center gap-3 min-w-[200px]">
-              <div className="h-10 w-10 rounded-lg bg-[#0E1A15] flex items-center justify-center shrink-0 text-xs font-medium text-[#7FA08F]">
-                {initials}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-[#E8F6EE] truncate">{info.getValue()}</div>
-                <div className="text-xs text-[#7FA08F]">{formatSize(item.size_uk || item.size, 'UK')}</div>
-              </div>
-            </div>
+            <ProductLineItem
+              imageUrl={item.image_url || null}
+              imageAlt={item.full_title}
+              brand={item.brand || ''}
+              model={item.model || ''}
+              variant={item.colorway || item.variant}
+              sku={item.sku}
+              href={`/product/${item.sku}`}
+              sizeUk={item.size_uk || item.size}
+              sizeSystem="UK"
+              category={(item.category?.toLowerCase() as any) || 'other'}
+              className="min-w-[280px]"
+            />
           )
         },
-        enableSorting: false,
-      }),
-
-      // SKU
-      columnHelper.accessor('sku', {
-        id: 'sku',
-        header: 'SKU',
-        cell: (info) => (
-          <div className="text-sm mono text-[#E8F6EE]">{info.getValue()}</div>
-        ),
         enableSorting: false,
       }),
 
@@ -347,9 +340,8 @@ export function PortfolioTable({
                     key={header.id}
                     className={cn(
                       'px-4 py-3 label-up flex-shrink-0',
-                      header.column.getCanSort() && 'cursor-pointer select-none hover:text-[#E8F6EE] transition-colors duration-120',
-                      header.id === 'item' && 'flex-1 min-w-[220px]',
-                      header.id === 'sku' && 'w-[120px]',
+                      header.column.getCanSort() && 'cursor-pointer select-none hover:text-fg transition-colors duration-120',
+                      header.id === 'item' && 'flex-1 min-w-[300px]',
                       header.id === 'category' && 'w-[100px]',
                       header.id === 'purchase_date' && 'w-[130px]',
                       header.id === 'buy' && 'w-[100px]',
@@ -399,8 +391,7 @@ export function PortfolioTable({
                     key={cell.id}
                     className={cn(
                       'px-4 py-2 flex-shrink-0',
-                      cell.column.id === 'item' && 'flex-1 min-w-[220px]',
-                      cell.column.id === 'sku' && 'w-[120px]',
+                      cell.column.id === 'item' && 'flex-1 min-w-[300px]',
                       cell.column.id === 'category' && 'w-[100px]',
                       cell.column.id === 'purchase_date' && 'w-[130px]',
                       cell.column.id === 'buy' && 'w-[100px]',
