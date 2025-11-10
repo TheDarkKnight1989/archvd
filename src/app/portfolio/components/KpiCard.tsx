@@ -49,7 +49,7 @@ export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCa
         )}
       </div>
       <div className="flex items-baseline gap-3">
-        <span className="heading mono text-[32px] leading-none text-fg">
+        <span className="heading mono kpi-number text-fg">
           {value}
         </span>
         {delta !== undefined && (

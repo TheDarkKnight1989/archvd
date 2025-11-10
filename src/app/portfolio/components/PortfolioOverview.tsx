@@ -173,7 +173,7 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
               </Badge>
             )}
           </div>
-          <p className="heading mono text-[32px] leading-none text-fg mb-2">
+          <p className="heading mono kpi-number text-fg mb-2">
             {format(kpis.estimatedValue)}
           </p>
           <p className="kbd text-[10px]">
@@ -186,7 +186,7 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
           <span className="label-up mb-3 block">
             Invested
           </span>
-          <p className="heading mono text-[32px] leading-none text-fg">
+          <p className="heading mono kpi-number text-fg">
             {format(kpis.invested)}
           </p>
         </Card>
@@ -198,7 +198,7 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
           </span>
           <div className="flex items-baseline gap-2 mb-1">
             <p className={cn(
-              "heading mono text-[32px] leading-none",
+              "heading mono kpi-number",
               plPositive ? "money-pos" : "money-neg"
             )}>
               {plPositive ? '+' : ''}{format(kpis.unrealisedPL)}
@@ -223,7 +223,7 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
             ROI %
           </span>
           <p className={cn(
-            "heading mono text-[32px] leading-none",
+            "heading mono kpi-number",
             roiPositive ? "money-pos" : "money-neg"
           )}>
             {roiPositive ? '+' : ''}{kpis.roi.toFixed(2)}%

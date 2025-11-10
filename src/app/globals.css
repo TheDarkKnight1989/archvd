@@ -260,7 +260,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Boutique heading typography */
+  /* Boutique heading typography - Hierarchy */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     letter-spacing: -0.01em;
@@ -286,6 +286,15 @@
   h4 {
     font-size: 1.125rem;
     font-weight: 500;
+  }
+
+  /* Page headlines - 28/32, weight 650, tracking-tight */
+  .headline {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 32px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -317,19 +326,33 @@
     box-shadow: var(--elev-2);
   }
 
-  /* Typography */
+  /* Typography - Hierarchy system */
   .heading {
     font-family: "Neue Haas Display", "DM Sans", var(--font-display);
     letter-spacing: -0.01em;
     font-weight: 600;
   }
 
+  /* KPI numbers - 34/36px hierarchy */
+  .kpi-number {
+    font-size: 34px;
+    line-height: 36px;
+  }
+
+  /* Table headers - 12/16px with font-medium */
   .label-up {
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    font-size: 11px;
+    font-size: 12px;
+    line-height: 16px;
     color: var(--muted);
-    font-weight: 600;
+    font-weight: 500;
+  }
+
+  /* Row body text - 14/20px */
+  .row-text {
+    font-size: 14px;
+    line-height: 20px;
   }
 
   .mono {
