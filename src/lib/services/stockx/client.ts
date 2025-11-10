@@ -169,37 +169,70 @@ export class StockxClient {
    * Supports both user OAuth tokens and client credentials
    */
   private async getAccessToken(): Promise<string> {
+    console.log('[StockX Auth] getAccessToken called', {
+      hasManualToken: !!this.accessToken,
+      hasUserId: !!this.userId,
+      userId: this.userId,
+      hasRefreshToken: !!this.refreshToken,
+      tokenExpiresAt: this.tokenExpiresAt ? new Date(this.tokenExpiresAt).toISOString() : 'not set',
+    })
+
     // If we have a manually configured token, use it
     if (this.accessToken && !this.userId) {
+      console.log('[StockX Auth] Using manually configured token')
       return this.accessToken
     }
 
     // User OAuth flow
     if (this.userId) {
+      console.log('[StockX Auth] User OAuth flow', { userId: this.userId })
+
       // Load user tokens if not cached
       if (!this.accessToken || !this.refreshToken) {
+        console.log('[StockX Auth] Loading user tokens from database')
         const userTokens = await this.loadUserTokens()
         if (userTokens) {
           this.accessToken = userTokens.access_token
           this.refreshToken = userTokens.refresh_token
           this.tokenExpiresAt = new Date(userTokens.expires_at).getTime()
+          console.log('[StockX Auth] User tokens loaded', {
+            token: maskStockxToken(this.accessToken),
+            expiresAt: userTokens.expires_at,
+          })
         } else {
+          console.error('[StockX Auth] No user tokens found in database')
           throw new Error('User not connected to StockX. Please connect your account first.')
         }
       }
 
       // Check if token needs refresh
       const now = Date.now()
-      if (this.tokenExpiresAt <= now + 60000) {
-        // Token expired or expiring soon
+      const needsRefresh = this.tokenExpiresAt <= now + 60000
+      console.log('[StockX Auth] Token refresh check', {
+        now: new Date(now).toISOString(),
+        expiresAt: new Date(this.tokenExpiresAt).toISOString(),
+        needsRefresh,
+      })
+
+      if (needsRefresh) {
+        console.log('[StockX Auth] Token expired or expiring soon, refreshing...')
         const refreshedTokens = await this.refreshUserToken()
         if (refreshedTokens) {
           this.accessToken = refreshedTokens.access_token
           this.refreshToken = refreshedTokens.refresh_token
           this.tokenExpiresAt = new Date(refreshedTokens.expires_at).getTime()
+          console.log('[StockX Auth] Token refreshed successfully', {
+            token: maskStockxToken(this.accessToken),
+            expiresAt: refreshedTokens.expires_at,
+          })
         } else {
+          console.error('[StockX Auth] Token refresh failed')
           throw new Error('Failed to refresh StockX token. Please reconnect your account.')
         }
+      } else {
+        console.log('[StockX Auth] Using cached user token', {
+          token: maskStockxToken(this.accessToken!),
+        })
       }
 
       return this.accessToken!
