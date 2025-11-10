@@ -360,7 +360,10 @@
 
   /* Table wrapper */
   .table-wrap {
-    @apply panel;
+    background: var(--panel);
+    border: 1px solid var(--keyline);
+    border-radius: var(--r-card);
+    box-shadow: var(--elev-1);
     overflow: hidden;
   }
 
