@@ -43,79 +43,75 @@ export async function GET(request: NextRequest) {
       tests: {},
     };
 
-    // Test 1: Try to get user profile
+    // Test 1: Get all listings (CORRECT v2 API)
     try {
-      const profile = await client.request('/api/v1/users/me');
-      results.tests.user_profile = {
-        success: true,
-        endpoint: '/api/v1/users/me',
-        data: profile,
-      };
-    } catch (error: any) {
-      results.tests.user_profile = {
-        success: false,
-        endpoint: '/api/v1/users/me',
-        error: error.message,
-      };
-    }
-
-    // Test 2: Try to list inventory/listings
-    try {
-      const listings = await client.request('/api/v1/users/me/listings');
+      const listings = await client.request('/v2/selling/listings?pageSize=10');
       results.tests.listings = {
         success: true,
-        endpoint: '/api/v1/users/me/listings',
-        count: Array.isArray(listings?.data) ? listings.data.length : 0,
-        sample: Array.isArray(listings?.data) ? listings.data[0] : listings,
+        endpoint: '/v2/selling/listings',
+        count: listings?.count || 0,
+        pageSize: listings?.pageSize || 0,
+        sample: listings?.listings?.[0] || null,
       };
     } catch (error: any) {
       results.tests.listings = {
         success: false,
-        endpoint: '/api/v1/users/me/listings',
+        endpoint: '/v2/selling/listings',
         error: error.message,
       };
     }
 
-    // Test 3: Try to list orders/sales
+    // Test 2: Get active orders (CORRECT v2 API)
     try {
-      const orders = await client.request('/api/v1/users/me/orders');
-      results.tests.orders = {
+      const orders = await client.request('/v2/selling/orders/active?pageSize=10');
+      results.tests.active_orders = {
         success: true,
-        endpoint: '/api/v1/users/me/orders',
-        count: Array.isArray(orders?.data) ? orders.data.length : 0,
-        sample: Array.isArray(orders?.data) ? orders.data[0] : orders,
+        endpoint: '/v2/selling/orders/active',
+        count: orders?.count || 0,
+        pageSize: orders?.pageSize || 0,
+        sample: orders?.orders?.[0] || null,
       };
     } catch (error: any) {
-      results.tests.orders = {
+      results.tests.active_orders = {
         success: false,
-        endpoint: '/api/v1/users/me/orders',
+        endpoint: '/v2/selling/orders/active',
         error: error.message,
       };
     }
 
-    // Test 4: Try alternate endpoints
-    const alternateEndpoints = [
-      '/api/v1/inventory',
-      '/api/v1/sales',
-      '/api/v1/portfolio',
-      '/v2/users/me',
-      '/v2/inventory',
-    ];
+    // Test 3: Get historical orders (CORRECT v2 API)
+    try {
+      const history = await client.request('/v2/selling/orders/history?pageSize=10');
+      results.tests.order_history = {
+        success: true,
+        endpoint: '/v2/selling/orders/history',
+        count: history?.count || 0,
+        pageSize: history?.pageSize || 0,
+        sample: history?.orders?.[0] || null,
+      };
+    } catch (error: any) {
+      results.tests.order_history = {
+        success: false,
+        endpoint: '/v2/selling/orders/history',
+        error: error.message,
+      };
+    }
 
-    results.tests.alternates = {};
-    for (const endpoint of alternateEndpoints) {
-      try {
-        const response = await client.request(endpoint);
-        results.tests.alternates[endpoint] = {
-          success: true,
-          response: response,
-        };
-      } catch (error: any) {
-        results.tests.alternates[endpoint] = {
-          success: false,
-          error: error.message,
-        };
-      }
+    // Test 4: Search catalog (CORRECT v2 API)
+    try {
+      const search = await client.request('/v2/catalog/search?query=jordan&pageSize=5');
+      results.tests.catalog_search = {
+        success: true,
+        endpoint: '/v2/catalog/search',
+        count: search?.count || 0,
+        sample: search?.products?.[0] || null,
+      };
+    } catch (error: any) {
+      results.tests.catalog_search = {
+        success: false,
+        endpoint: '/v2/catalog/search',
+        error: error.message,
+      };
     }
 
     return NextResponse.json(results, { status: 200 });
