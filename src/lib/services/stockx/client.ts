@@ -287,7 +287,15 @@ export class StockxClient {
     console.log('[StockX] API Request', {
       endpoint,
       method,
+      url,
+      hasApiKey: !!this.apiKey,
+      apiKeyMasked: this.apiKey ? `${this.apiKey.slice(0, 8)}...${this.apiKey.slice(-4)}` : '(not set)',
       token: maskStockxToken(token),
+      headers: {
+        hasAuth: !!requestHeaders['Authorization'],
+        hasApiKey: !!requestHeaders['x-api-key'],
+        hasContentType: !!requestHeaders['Content-Type'],
+      }
     })
 
     // Retry logic with exponential backoff
