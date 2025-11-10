@@ -1,76 +1,156 @@
-/* archvd Matrix Design System */
+/* archvd Boutique Design System */
 @import "tailwindcss";
 
-/* Matrix Theme Tokens */
-:root[data-theme="matrix"] {
-  /* Backgrounds - Elevation Scale (0-3) */
-  --archvd-bg: #050807;
-  --archvd-bg-elev-0: #050807; /* Page shell/header (base) */
-  --archvd-bg-elev-1: #08100C; /* Standard cards/tables */
-  --archvd-bg-elev-2: #0B1510; /* Raised cards/KPIs */
-  --archvd-bg-elev-3: #0E1A15; /* Modals/dialogs/highest */
-  --archvd-overlay: #0D1B14CC;
+/* Font imports */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Neue Haas Display alternative - using DM Sans which has similar geometric properties */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+/* Boutique Theme Tokens - Light Mode (Default) */
+:root {
+  /* Backgrounds */
+  --archvd-bg: #F7F7F5;
+  --archvd-surface: #FFFFFF;
+  --archvd-soft: #F1EFEA;
+
+  /* Elevation scale (for cards/overlays) */
+  --archvd-bg-elev-0: #F7F7F5; /* Page shell */
+  --archvd-bg-elev-1: #FFFFFF; /* Standard cards */
+  --archvd-bg-elev-2: #FFFFFF; /* Raised cards */
+  --archvd-bg-elev-3: #FFFFFF; /* Modals/dialogs */
+  --archvd-overlay: rgba(247, 247, 245, 0.95);
 
   /* Borders & dividers */
-  --archvd-border: #15251B;
-  --archvd-border-strong: #233A2B;
+  --archvd-border: rgba(0, 0, 0, 0.06);
+  --archvd-border-strong: rgba(0, 0, 0, 0.12);
 
   /* Text */
-  --archvd-fg: #E8F6EE;
-  --archvd-fg-muted: #B7D0C2;
-  --archvd-fg-dim: #7FA08F;
+  --archvd-fg: #111111;
+  --archvd-fg-muted: #6A6A6A;
+  --archvd-fg-dim: #999999;
 
-  /* Accent (Matrix green) */
-  --archvd-accent: #00FF94;
-  --archvd-accent-600: #18D38B;
-  --archvd-accent-500: #12B07A;
-  --archvd-accent-400: #0F8D65;
-  --archvd-accent-300: #0C6C51;
-  --archvd-accent-200: #0A5240;
+  /* Accent (Beige) */
+  --archvd-accent: #C4A484;
+  --archvd-accent-600: #B8976F;
+  --archvd-accent-500: #C4A484;
+  --archvd-accent-400: #D0B79A;
+  --archvd-accent-300: #DCC9B0;
+  --archvd-accent-200: #E8DBC6;
 
   /* RGB variants for rgba() usage */
-  --archvd-accent-rgb: 0, 255, 148;
-  --archvd-accent-400-rgb: 15, 141, 101;
+  --archvd-accent-rgb: 196, 164, 132;
+  --archvd-accent-400-rgb: 208, 183, 154;
 
-  /* Success / Warning / Danger */
-  --archvd-success: #22DA6E;
+  /* Profit / Loss */
+  --archvd-profit: #3E8E60;
+  --archvd-profit-bg: rgba(62, 142, 96, 0.08);
+  --archvd-loss: #B24444;
+  --archvd-loss-bg: rgba(178, 68, 68, 0.08);
+
+  /* Legacy success/warning/danger for compatibility */
+  --archvd-success: #3E8E60;
   --archvd-warning: #D9B949;
-  --archvd-danger: #FF4D5E;
-  --archvd-danger-200: #3A1519;
+  --archvd-danger: #B24444;
+  --archvd-danger-200: rgba(178, 68, 68, 0.12);
 
-  /* Data Series (Charts) */
-  --archvd-series-1: var(--archvd-accent);
-  --archvd-series-2: #7AA97A;
-  --archvd-series-3: #8AA39E;
-  --archvd-series-4: #6E7F78;
+  /* Data Series (Charts) - Boutique neutrals */
+  --archvd-series-1: #C4A484;
+  --archvd-series-2: #8E8E8E;
+  --archvd-series-3: #B8976F;
+  --archvd-series-4: #6A6A6A;
 
   /* Focus ring */
-  --archvd-focus: #1FEBA1;
-  --archvd-ring: #1FEBA11F;
+  --archvd-focus: #C4A484;
+  --archvd-ring: rgba(196, 164, 132, 0.20);
 
-  /* Shadows / glows */
-  --archvd-shadow-soft: 0 6px 24px rgba(0,0,0,.5);
-  --archvd-glow-accent: 0 0 0 1px #0C6C51, 0 0 24px #00FF9440;
+  /* Shadows - Soft boutique shadows, no glow */
+  --archvd-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --archvd-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --archvd-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
 
   /* Font families */
+  --font-display: 'DM Sans', system-ui, sans-serif;
   --font-inter: 'Inter', system-ui, sans-serif;
-  --font-jetmono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-cinzel: 'Cinzel', serif;
+  --font-mono: 'SF Mono', ui-monospace, monospace;
+}
+
+/* Boutique Theme Tokens - Dark Mode */
+:root[data-theme="dark"],
+.dark {
+  /* Backgrounds */
+  --archvd-bg: #121212;
+  --archvd-surface: #1C1C1C;
+  --archvd-soft: #161616;
+
+  /* Elevation scale */
+  --archvd-bg-elev-0: #121212; /* Page shell */
+  --archvd-bg-elev-1: #1C1C1C; /* Standard cards */
+  --archvd-bg-elev-2: #242424; /* Raised cards */
+  --archvd-bg-elev-3: #2A2A2A; /* Modals/dialogs */
+  --archvd-overlay: rgba(18, 18, 18, 0.95);
+
+  /* Borders & dividers */
+  --archvd-border: rgba(255, 255, 255, 0.07);
+  --archvd-border-strong: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --archvd-fg: #F2F2F2;
+  --archvd-fg-muted: #A0A0A0;
+  --archvd-fg-dim: #6A6A6A;
+
+  /* Accent (Beige - same in dark) */
+  --archvd-accent: #C4A484;
+  --archvd-accent-600: #B8976F;
+  --archvd-accent-500: #C4A484;
+  --archvd-accent-400: #D0B79A;
+  --archvd-accent-300: #DCC9B0;
+  --archvd-accent-200: #E8DBC6;
+
+  /* Profit / Loss (adjusted for dark) */
+  --archvd-profit: #74C39A;
+  --archvd-profit-bg: rgba(116, 195, 154, 0.12);
+  --archvd-loss: #E07A7A;
+  --archvd-loss-bg: rgba(224, 122, 122, 0.12);
+
+  /* Legacy compatibility */
+  --archvd-success: #74C39A;
+  --archvd-warning: #E8C16A;
+  --archvd-danger: #E07A7A;
+  --archvd-danger-200: rgba(224, 122, 122, 0.15);
+
+  /* Data Series */
+  --archvd-series-1: #C4A484;
+  --archvd-series-2: #A0A0A0;
+  --archvd-series-3: #B8976F;
+  --archvd-series-4: #808080;
+
+  /* Focus ring */
+  --archvd-focus: #C4A484;
+  --archvd-ring: rgba(196, 164, 132, 0.25);
+
+  /* Shadows - Deeper in dark mode */
+  --archvd-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --archvd-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.5);
+  --archvd-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 /* High contrast mode */
 :root[data-contrast="high"] {
-  --archvd-series-1: #FFFFFF;
+  --archvd-border-strong: rgba(0, 0, 0, 0.24);
+}
+
+:root[data-contrast="high"][data-theme="dark"] {
+  --archvd-border-strong: rgba(255, 255, 255, 0.24);
 }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
-  }
-  :root[data-theme="matrix"] {
-    --archvd-glow-accent: 0 0 0 1px #0C6C51;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -83,111 +163,129 @@
   body {
     background-color: var(--archvd-bg);
     color: var(--archvd-fg);
+    font-family: var(--font-inter);
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Matrix heading typography */
-  h1, h2, h3 {
-    font-family: var(--font-cinzel);
-    letter-spacing: 0.01em;
-    line-height: 1.2;
-    font-weight: 700;
+  /* Boutique heading typography */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    font-weight: 600;
   }
 
   h1 {
-    font-size: 2rem;
+    font-size: 2.25rem;
+    font-weight: 600;
   }
 
   h2 {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+    font-weight: 600;
   }
 
   h3 {
-    font-size: 1.25rem;
+    font-size: 1.375rem;
     font-weight: 600;
+  }
+
+  h4 {
+    font-size: 1.125rem;
+    font-weight: 500;
   }
 }
 
 /* Custom utilities */
 @layer utilities {
+  /* Numeric/tabular data */
   .num {
-    font-family: var(--font-jetmono);
+    font-family: var(--font-mono);
     font-weight: 500;
-    font-variant-numeric: tabular-nums slashed-zero ordinal;
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: -0.01em;
   }
 
-  .transition-terminal {
-    transition-timing-function: cubic-bezier(.22,.61,.36,1);
+  /* Boutique transitions */
+  .transition-boutique {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 120ms;
   }
 
-  /* Elevation gradient for KPI/feature cards */
-  .gradient-elev {
-    background: linear-gradient(
-      180deg,
-      var(--archvd-bg-elev-1) 0%,
-      var(--archvd-bg-elev-2) 100%
-    );
+  .transition-boutique-slow {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
   }
 
-  /* Accent glow for hover/focus states */
-  .glow-accent-hover {
-    transition: box-shadow 120ms cubic-bezier(.22,.61,.36,1);
+  /* Soft elevation for cards */
+  .elevation-soft {
+    background: var(--archvd-surface);
+    box-shadow: var(--archvd-shadow-soft);
   }
 
-  .glow-accent-hover:hover,
-  .glow-accent-hover:focus-visible {
-    box-shadow: var(--archvd-glow-accent);
+  .elevation-medium {
+    background: var(--archvd-surface);
+    box-shadow: var(--archvd-shadow-medium);
   }
 
-  /* Matrix skeleton pattern */
+  .elevation-large {
+    background: var(--archvd-surface);
+    box-shadow: var(--archvd-shadow-large);
+  }
+
+  /* Boutique hover states - subtle elevation increase */
+  .hover-elevate {
+    transition: box-shadow 120ms ease-out, transform 120ms ease-out;
+  }
+
+  .hover-elevate:hover {
+    box-shadow: var(--archvd-shadow-medium);
+    transform: translateY(-1px);
+  }
+
+  /* Skeleton loading - minimal, no glow */
   .skeleton {
     position: relative;
-    background-color: var(--archvd-bg-elev-1);
-    overflow: hidden;
-    border-radius: 0.5rem;
-  }
-
-  .skeleton::before {
-    content: '';
-    position: absolute;
-    inset: 0;
     background: linear-gradient(
       90deg,
-      transparent 0%,
-      rgba(0, 255, 148, 0.03) 50%,
-      transparent 100%
+      var(--archvd-soft) 0%,
+      var(--archvd-surface) 50%,
+      var(--archvd-soft) 100%
     );
-    animation: skeleton-shimmer 2s ease-in-out infinite;
-  }
-
-  .skeleton::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 255, 148, 0.02) 2px,
-        rgba(0, 255, 148, 0.02) 4px
-      );
-    opacity: 0.5;
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 0.5rem;
+    overflow: hidden;
   }
 
   @keyframes skeleton-shimmer {
     0% {
-      transform: translateX(-100%);
+      background-position: 200% 0;
     }
     100% {
-      transform: translateX(100%);
+      background-position: -200% 0;
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .skeleton::before {
-      animation: none;
-    }
+  /* Profit/Loss indicators */
+  .profit-text {
+    color: var(--archvd-profit);
+  }
+
+  .loss-text {
+    color: var(--archvd-loss);
+  }
+
+  .profit-bg {
+    background-color: var(--archvd-profit-bg);
+    color: var(--archvd-profit);
+  }
+
+  .loss-bg {
+    background-color: var(--archvd-loss-bg);
+    color: var(--archvd-loss);
   }
 
   /* Hide scrollbar while maintaining scroll functionality */
@@ -199,6 +297,15 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Uppercase labels (for table headers, etc.) */
+  .label-uppercase {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--archvd-fg-muted);
+  }
 }
 
 /* Skip link */
@@ -207,26 +314,29 @@
   top: 0.5rem;
   left: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--archvd-bg-elev-1);
+  background: var(--archvd-surface);
   color: var(--archvd-fg);
-  border-radius: 0.875rem;
+  border-radius: 0.75rem;
+  box-shadow: var(--archvd-shadow-medium);
   z-index: 9999;
   transform: translateY(-200%);
-  transition: transform 200ms cubic-bezier(.22,.61,.36,1);
+  transition: transform 150ms ease-out;
 }
 
 .skip-link:focus {
   transform: translateY(0);
+  outline: 2px solid var(--archvd-accent);
+  outline-offset: 2px;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Boutique style */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--archvd-bg-elev-1);
+  background: var(--archvd-soft);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -235,5 +345,11 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--archvd-accent-400);
+  background: var(--archvd-accent);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--archvd-accent);
+  color: var(--archvd-bg);
 }

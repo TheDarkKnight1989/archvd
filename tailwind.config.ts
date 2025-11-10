@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  darkMode: ['class', '[data-theme="matrix"]'],
+  darkMode: ['class'],
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -11,13 +11,14 @@ const config: Config = {
     extend: {
       colors: {
         bg: 'var(--archvd-bg)',
+        surface: 'var(--archvd-surface)',
+        soft: 'var(--archvd-soft)',
         elev: {
           0: 'var(--archvd-bg-elev-0)',
           1: 'var(--archvd-bg-elev-1)',
           2: 'var(--archvd-bg-elev-2)',
           3: 'var(--archvd-bg-elev-3)',
         },
-        surface: 'var(--archvd-bg-elev-1)',
         surface2: 'var(--archvd-bg-elev-2)',
         border: 'var(--archvd-border)',
         borderStrong: 'var(--archvd-border-strong)',
@@ -32,6 +33,15 @@ const config: Config = {
           300: 'var(--archvd-accent-300)',
           200: 'var(--archvd-accent-200)',
         },
+        profit: {
+          DEFAULT: 'var(--archvd-profit)',
+          bg: 'var(--archvd-profit-bg)',
+        },
+        loss: {
+          DEFAULT: 'var(--archvd-loss)',
+          bg: 'var(--archvd-loss-bg)',
+        },
+        // Legacy compatibility
         success: 'var(--archvd-success)',
         warning: 'var(--archvd-warning)',
         danger: {
@@ -48,27 +58,39 @@ const config: Config = {
       },
       boxShadow: {
         soft: 'var(--archvd-shadow-soft)',
-        glow: 'var(--archvd-glow-accent)'
+        medium: 'var(--archvd-shadow-medium)',
+        large: 'var(--archvd-shadow-large)',
       },
       borderRadius: {
-        xl: '14px',
-        '2xl': '18px',
+        lg: '12px',
+        xl: '16px',
+        '2xl': '20px',
+        '3xl': '24px',
         pill: '999px'
       },
       spacing: {
         3.5: '0.875rem'
       },
       transitionTimingFunction: {
-        terminal: 'cubic-bezier(.22,.61,.36,1)',
+        boutique: 'cubic-bezier(0.4, 0, 0.2, 1)',
       },
       transitionDuration: {
         fast: '120ms',
-        base: '200ms',
-        slow: '320ms'
+        base: '150ms',
+        slow: '200ms'
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-jetmono)', 'ui-monospace', 'SFMono-Regular', 'monospace']
+        display: ['var(--font-display)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace']
+      },
+      fontSize: {
+        '2xs': ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.01em' }],
+      },
+      letterSpacing: {
+        tighter: '-0.02em',
+        tight: '-0.01em',
+        wide: '0.08em',
       },
     },
   },
