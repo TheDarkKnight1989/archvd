@@ -16,6 +16,7 @@ import { DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
 import { ProductLineItem } from '@/components/product/ProductLineItem'
+import { TableWrapper, TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
 import type { SalesItem } from '@/hooks/useSalesTable'
 
 const columnHelper = createColumnHelper<SalesItem>()
@@ -219,32 +220,28 @@ export function SalesTable({
 
   if (loading) {
     return (
-      <div className="table-wrap">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
-              <tr>
-                {columns.map((col, i) => (
-                  <th key={i} className="px-4 py-3 text-left label-up">
-                    <Skeleton className="h-4 w-20" />
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-panel">
-              {[...Array(5)].map((_, i) => (
-                <tr key={i} className="border-b border-border/40">
-                  {columns.map((_, j) => (
-                    <td key={j} className="px-4 py-4">
-                      <Skeleton className="h-4 w-full" />
-                    </td>
-                  ))}
-                </tr>
+      <TableBase>
+        <TableHeader>
+          <TableRow>
+            {columns.map((col, i) => (
+              <TableHead key={i}>
+                <Skeleton className="h-4 w-20" />
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(5)].map((_, i) => (
+            <TableRow key={i} index={i}>
+              {columns.map((_, j) => (
+                <TableCell key={j}>
+                  <Skeleton className="h-4 w-full" />
+                </TableCell>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </TableRow>
+          ))}
+        </TableBody>
+      </TableBase>
     )
   }
 
@@ -273,60 +270,52 @@ export function SalesTable({
   }
 
   return (
-    <div className="table-wrap">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="px-4 py-3 text-left label-up"
-                  >
-                    {header.isPlaceholder ? null : (
-                      <div
-                        className={cn(
-                          header.column.getCanSort() && 'cursor-pointer select-none flex items-center gap-1 hover:text-fg transition-boutique',
-                          !header.column.getCanSort() && 'flex items-center'
-                        )}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                        {header.column.getIsSorted() && (
-                          <span className="text-accent">
-                            {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="divide-y divide-border">
-            {table.getRowModel().rows.map((row, idx) => (
-              <tr
-                key={row.id}
+    <TableBase>
+      <TableHeader>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <TableHead
+                key={header.id}
                 className={cn(
-                  "min-h-12 hover:bg-table-hover transition-boutique",
-                  idx % 2 === 0 ? "bg-table-zebra" : "bg-panel"
+                  header.column.getCanSort() && 'cursor-pointer select-none'
                 )}
               >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-4">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
+                {header.isPlaceholder ? null : (
+                  <div
+                    className={cn(
+                      'flex items-center gap-1',
+                      header.column.getCanSort() && 'hover:text-fg transition-boutique'
+                    )}
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                    {header.column.getIsSorted() && (
+                      <span className="text-accent">
+                        {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </TableHead>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {table.getRowModel().rows.map((row, idx) => (
+          <TableRow key={row.id} index={idx}>
+            {row.getVisibleCells().map((cell) => (
+              <TableCell key={cell.id}>
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </TableBase>
   )
 }

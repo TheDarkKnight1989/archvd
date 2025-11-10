@@ -1,7 +1,6 @@
 'use client'
 
-import { useMemo, useRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { useMemo } from 'react'
 import {
   createColumnHelper,
   flexRender,
@@ -18,6 +17,7 @@ import { Package, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { MoneyCell, PercentCell, PlainMoneyCell } from '@/lib/format/money'
 import { ProductLineItem } from '@/components/product/ProductLineItem'
+import { TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
 import { RowActions } from './RowActions'
 import { InventoryCard, InventoryCardSkeleton } from './InventoryCard'
 import type { EnrichedInventoryItem } from '@/hooks/usePortfolioInventory'
@@ -56,7 +56,6 @@ export function PortfolioTable({
   onAddToWatchlist,
   onAddItem,
 }: PortfolioTableProps) {
-  const parentRef = useRef<HTMLDivElement>(null)
   const { convert, format } = useCurrency()
 
   // Define columns matching spec: Item | SKU | Category | Purchase Date | Buy £ | Tax £ | Ship £ | Total £ | Market £ | % Gain/Loss | Status | Actions
@@ -267,13 +266,6 @@ export function PortfolioTable({
 
   const { rows } = table.getRowModel()
 
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 56,
-    overscan: 10,
-  })
-
   if (loading) {
     return <PortfolioTableSkeleton />
   }
@@ -326,91 +318,55 @@ export function PortfolioTable({
       </div>
 
       {/* Desktop Table View */}
-      <div
-        ref={parentRef}
-        className="hidden lg:block h-[calc(100vh-280px)] overflow-auto rounded-2xl border border-[#15251B] bg-[#08100C]"
-      >
-        <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-          {/* Sticky Header */}
-          <div className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
+      <div className="hidden lg:block">
+        <TableBase>
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <div key={headerGroup.id} className="flex">
+              <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <div
+                  <TableHead
                     key={header.id}
                     className={cn(
-                      'px-4 py-3 label-up flex-shrink-0',
-                      header.column.getCanSort() && 'cursor-pointer select-none hover:text-fg transition-colors duration-120',
-                      header.id === 'item' && 'flex-1 min-w-[300px]',
-                      header.id === 'category' && 'w-[100px]',
-                      header.id === 'purchase_date' && 'w-[130px]',
-                      header.id === 'buy' && 'w-[100px]',
-                      header.id === 'tax' && 'w-[90px]',
-                      header.id === 'shipping' && 'w-[90px]',
-                      header.id === 'total' && 'w-[110px]',
-                      header.id === 'market' && 'w-[120px]',
-                      header.id === 'gain_loss_pct' && 'w-[120px]',
-                      header.id === 'status' && 'w-[100px]',
-                      header.id === 'actions' && 'w-[80px]'
+                      header.column.getCanSort() && 'cursor-pointer select-none'
                     )}
-                    onClick={header.column.getToggleSortingHandler()}
                   >
-                    <div className="flex items-center gap-1">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getIsSorted() && (
-                        <span className="text-[#00FF94]">
-                          {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                    {header.isPlaceholder ? null : (
+                      <div
+                        className={cn(
+                          'flex items-center gap-1',
+                          header.column.getCanSort() && 'hover:text-fg transition-boutique'
+                        )}
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.getIsSorted() && (
+                          <span className="text-accent">
+                            {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </TableHead>
                 ))}
-              </div>
+              </TableRow>
             ))}
-          </div>
-
-          {/* Virtualized Rows */}
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            const row = rows[virtualRow.index]
-
-            return (
-              <div
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, idx) => (
+              <TableRow
                 key={row.id}
-                className={cn(
-                  'absolute left-0 right-0 flex items-center border-b border-[#15251B]/40 min-h-12 hover:bg-table-hover transition-boutique cursor-pointer',
-                  virtualRow.index % 2 === 0 ? 'bg-table-zebra' : 'bg-panel'
-                )}
-                style={{
-                  height: `${virtualRow.size}px`,
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
+                index={idx}
                 onClick={() => onRowClick?.(row.original)}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <div
-                    key={cell.id}
-                    className={cn(
-                      'px-4 py-2 flex-shrink-0',
-                      cell.column.id === 'item' && 'flex-1 min-w-[300px]',
-                      cell.column.id === 'category' && 'w-[100px]',
-                      cell.column.id === 'purchase_date' && 'w-[130px]',
-                      cell.column.id === 'buy' && 'w-[100px]',
-                      cell.column.id === 'tax' && 'w-[90px]',
-                      cell.column.id === 'shipping' && 'w-[90px]',
-                      cell.column.id === 'total' && 'w-[110px]',
-                      cell.column.id === 'market' && 'w-[120px]',
-                      cell.column.id === 'gain_loss_pct' && 'w-[120px]',
-                      cell.column.id === 'status' && 'w-[100px]',
-                      cell.column.id === 'actions' && 'w-[80px]'
-                    )}
-                  >
+                  <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </div>
+                  </TableCell>
                 ))}
-              </div>
-            )
-          })}
-        </div>
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableBase>
       </div>
     </>
   )

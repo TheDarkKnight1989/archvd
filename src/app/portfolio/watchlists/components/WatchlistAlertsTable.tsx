@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { TrendingDown, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase';
+import { ProductLineItem } from '@/components/product/ProductLineItem';
 
 interface WatchlistAlert {
   id: string;
@@ -111,95 +112,81 @@ export function WatchlistAlertsTable({ currency = 'GBP' }: WatchlistAlertsTableP
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
-          <tr>
-            <th className="px-4 py-3 label-up text-left">Item</th>
-            <th className="px-4 py-3 label-up text-left">SKU</th>
-            <th className="px-4 py-3 label-up text-right">Target {currency}</th>
-            <th className="px-4 py-3 label-up text-right">Current {currency}</th>
-            <th className="px-4 py-3 label-up text-right">Δ %</th>
-            <th className="px-4 py-3 label-up text-left">Triggered</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5">
-          {alerts.map((alert, index) => {
-            const isBelow = alert.currentPrice !== null && alert.currentPrice <= alert.targetPrice;
-            const deltaColor = alert.deltaPct && alert.deltaPct < 0 ? 'money-pos' : 'text-white/60';
+    <TableBase>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Item</TableHead>
+          <TableHead align="right">Target {currency}</TableHead>
+          <TableHead align="right">Current {currency}</TableHead>
+          <TableHead align="right">Δ %</TableHead>
+          <TableHead>Triggered</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {alerts.map((alert, index) => {
+          const isBelow = alert.currentPrice !== null && alert.currentPrice <= alert.targetPrice;
+          const deltaColor = alert.deltaPct && alert.deltaPct < 0 ? 'money-pos' : 'text-muted';
 
-            return (
-              <tr
-                key={alert.id}
-                className={cn(
-                  "min-h-12 hover:bg-table-hover transition-boutique",
-                  index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
-                )}
-              >
-                {/* Item */}
-                <td className="py-3 pr-4">
-                  <div className="flex items-center gap-3">
-                    {alert.imageUrl ? (
-                      <div className="relative w-10 h-10 rounded overflow-hidden bg-black/40 flex-shrink-0">
-                        <Image
-                          src={alert.imageUrl}
-                          alt={alert.name}
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded bg-white/10 flex-shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
-                        {alert.name}
-                      </p>
-                      {alert.size && (
-                        <p className="text-xs text-white/50">{alert.size}</p>
-                      )}
-                    </div>
-                  </div>
-                </td>
+          // Parse brand and model from name (assuming format: "Brand Model")
+          const nameParts = alert.name.split(' ');
+          const brand = nameParts[0] || '';
+          const model = nameParts.slice(1).join(' ') || alert.name;
 
-                {/* SKU */}
-                <td className="py-3 px-4 mono">
-                  <code className="text-xs text-white/70">
-                    {alert.sku}
-                  </code>
-                </td>
+          return (
+            <TableRow key={alert.id} index={index}>
+              {/* Item - Using ProductLineItem */}
+              <TableCell>
+                <ProductLineItem
+                  imageUrl={alert.imageUrl || null}
+                  imageAlt={alert.name}
+                  brand={brand}
+                  model={model}
+                  variant={null}
+                  sku={alert.sku}
+                  href={`/product/${alert.sku}`}
+                  sizeUk={alert.size}
+                  sizeSystem="UK"
+                  category={alert.category}
+                  compact
+                />
+              </TableCell>
 
-                {/* Target Price */}
-                <td className="py-3 px-4 text-right mono text-sm text-white/70">
+              {/* Target Price */}
+              <TableCell align="right" mono>
+                <div className="text-sm text-muted">
                   {formatPrice(alert.targetPrice, alert.currency)}
-                </td>
+                </div>
+              </TableCell>
 
-                {/* Current Price */}
-                <td className="py-3 px-4 text-right mono">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {isBelow && (
-                      <TrendingDown className="w-3.5 h-3.5 money-pos" />
-                    )}
-                    <span className={`text-sm ${isBelow ? 'money-pos' : 'text-white/70'}`}>
-                      {formatPrice(alert.currentPrice, alert.currency)}
-                    </span>
-                  </div>
-                </td>
+              {/* Current Price */}
+              <TableCell align="right" mono>
+                <div className="flex items-center justify-end gap-1.5">
+                  {isBelow && (
+                    <TrendingDown className="w-3.5 h-3.5 money-pos" />
+                  )}
+                  <span className={`text-sm ${isBelow ? 'money-pos' : 'text-muted'}`}>
+                    {formatPrice(alert.currentPrice, alert.currency)}
+                  </span>
+                </div>
+              </TableCell>
 
-                {/* Delta % */}
-                <td className={`py-3 px-4 text-right mono text-sm ${deltaColor}`}>
+              {/* Delta % */}
+              <TableCell align="right" mono>
+                <span className={`text-sm ${deltaColor}`}>
                   {formatDelta(alert.deltaPct)}
-                </td>
+                </span>
+              </TableCell>
 
-                {/* Triggered At */}
-                <td className="py-3 pl-4 text-xs text-white/50">
+              {/* Triggered At */}
+              <TableCell>
+                <div className="text-xs text-muted">
                   {alert.triggeredAtFormatted}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </TableBase>
   );
 }

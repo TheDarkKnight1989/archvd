@@ -14,14 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableWrapper, TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
 import { ProductLineItem } from '@/components/product/ProductLineItem'
 import { useCurrency } from '@/hooks/useCurrency'
 import { cn } from '@/lib/utils/cn'
@@ -183,14 +176,11 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
 
   return (
     <>
-      <Card elevation={1} className="overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-fg">{watchlistName}</h2>
-            <p className="text-xs text-muted mt-0.5">
-              {items.length} item{items.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+      <TableWrapper
+        title={watchlistName}
+        description={`${items.length} item${items.length !== 1 ? 's' : ''}`}
+      >
+        <div className="p-4 border-b border-border flex items-center justify-end">
           <Button
             onClick={() => setAddDialogOpen(true)}
             variant="outline"
@@ -202,147 +192,139 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
           </Button>
         </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
-              <TableRow>
-                <TableHead className="label-up" colSpan={2}>Product</TableHead>
-                <TableHead className="label-up">Latest Price</TableHead>
-                <TableHead className="label-up">Target</TableHead>
-                <TableHead className="label-up">Diff %</TableHead>
-                <TableHead className="label-up">Source</TableHead>
-                <TableHead className="text-right label-up">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item, index) => {
-                const diff = calculateDiff(item.latest_price, item.target_price)
-                const latestPriceGBP = item.latest_price
-                  ? parseFloat(item.latest_price.toString())
-                  : null
-                const targetPriceGBP = item.target_price
-                  ? parseFloat(item.target_price.toString())
-                  : null
+        <TableBase>
+          <TableHeader>
+            <TableRow>
+              <TableHead colSpan={2}>Product</TableHead>
+              <TableHead>Latest Price</TableHead>
+              <TableHead>Target</TableHead>
+              <TableHead>Diff %</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead align="right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item, index) => {
+              const diff = calculateDiff(item.latest_price, item.target_price)
+              const latestPriceGBP = item.latest_price
+                ? parseFloat(item.latest_price.toString())
+                : null
+              const targetPriceGBP = item.target_price
+                ? parseFloat(item.target_price.toString())
+                : null
 
-                return (
-                  <TableRow
-                    key={item.id}
-                    className={cn(
-                      "group min-h-12 hover:bg-table-hover transition-boutique",
-                      index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
-                    )}
-                  >
-                    {/* Product - Standardized ProductLineItem in compact mode */}
-                    <TableCell colSpan={2}>
-                      <ProductLineItem
-                        imageUrl={item.product_catalog?.image_url || null}
-                        imageAlt={item.sku}
-                        brand={item.product_catalog?.brand || ''}
-                        model={item.product_catalog?.model || ''}
-                        variant={item.product_catalog?.colorway}
-                        sku={item.sku}
-                        href={`/product/${item.sku}`}
-                        sizeUk={item.size}
-                        sizeSystem="UK"
-                        category="sneakers"
-                        compact
-                      />
-                    </TableCell>
+              return (
+                <TableRow key={item.id} index={index} className="group">
+                  {/* Product - Standardized ProductLineItem in compact mode */}
+                  <TableCell colSpan={2}>
+                    <ProductLineItem
+                      imageUrl={item.product_catalog?.image_url || null}
+                      imageAlt={item.sku}
+                      brand={item.product_catalog?.brand || ''}
+                      model={item.product_catalog?.model || ''}
+                      variant={item.product_catalog?.colorway}
+                      sku={item.sku}
+                      href={`/product/${item.sku}`}
+                      sizeUk={item.size}
+                      sizeSystem="UK"
+                      category="sneakers"
+                      compact
+                    />
+                  </TableCell>
 
-                    {/* Latest Price */}
-                    <TableCell className="mono">
-                      {latestPriceGBP ? (
-                        <div className="space-y-1">
-                          <span className="text-sm font-medium text-fg">
-                            {format(convert(latestPriceGBP, 'GBP'))}
-                          </span>
-                          {item.alert && (
-                            <Badge className="ml-2 money-pos-tint text-xs">
-                              Target met
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted">No data</span>
-                      )}
-                    </TableCell>
-
-                    {/* Target Price */}
-                    <TableCell className="mono">
-                      {targetPriceGBP ? (
-                        <span className="text-sm text-fg">
-                          {format(convert(targetPriceGBP, 'GBP'))}
+                  {/* Latest Price */}
+                  <TableCell mono>
+                    {latestPriceGBP ? (
+                      <div className="space-y-1">
+                        <span className="text-sm font-medium text-fg">
+                          {format(convert(latestPriceGBP, 'GBP'))}
                         </span>
-                      ) : (
-                        <span className="text-sm text-muted">—</span>
-                      )}
-                    </TableCell>
-
-                    {/* Diff % */}
-                    <TableCell className="mono">
-                      {diff !== null ? (
-                        <div className="flex items-center gap-1">
-                          {diff > 0 ? (
-                            <>
-                              <TrendingUp className="h-3 w-3 money-neg" />
-                              <span className="text-sm money-neg font-medium">
-                                +{diff.toFixed(1)}%
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <TrendingDown className="h-3 w-3 money-pos" />
-                              <span className="text-sm money-pos font-medium">
-                                {diff.toFixed(1)}%
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted">—</span>
-                      )}
-                    </TableCell>
-
-                    {/* Source & As Of */}
-                    <TableCell>
-                      {item.latest_source && item.latest_as_of ? (
-                        <div className="space-y-0.5">
-                          <Badge variant="outline" className="text-xs">
-                            {item.latest_source}
+                        {item.alert && (
+                          <Badge className="ml-2 money-pos-tint text-xs">
+                            Target met
                           </Badge>
-                          <p className="text-xs text-muted">
-                            {formatRelativeDate(item.latest_as_of)}
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted">—</span>
-                      )}
-                    </TableCell>
-
-                    {/* Actions */}
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger/10 hover:text-danger"
-                        onClick={() => handleDeleteItem(item.id)}
-                        disabled={deletingItemId === item.id}
-                        aria-label="Remove item"
-                      >
-                        {deletingItemId === item.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
                         )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted">No data</span>
+                    )}
+                  </TableCell>
+
+                  {/* Target Price */}
+                  <TableCell mono>
+                    {targetPriceGBP ? (
+                      <span className="text-sm text-fg">
+                        {format(convert(targetPriceGBP, 'GBP'))}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted">—</span>
+                    )}
+                  </TableCell>
+
+                  {/* Diff % */}
+                  <TableCell mono>
+                    {diff !== null ? (
+                      <div className="flex items-center gap-1">
+                        {diff > 0 ? (
+                          <>
+                            <TrendingUp className="h-3 w-3 money-neg" />
+                            <span className="text-sm money-neg font-medium">
+                              +{diff.toFixed(1)}%
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <TrendingDown className="h-3 w-3 money-pos" />
+                            <span className="text-sm money-pos font-medium">
+                              {diff.toFixed(1)}%
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted">—</span>
+                    )}
+                  </TableCell>
+
+                  {/* Source & As Of */}
+                  <TableCell>
+                    {item.latest_source && item.latest_as_of ? (
+                      <div className="space-y-0.5">
+                        <Badge variant="outline" className="text-xs">
+                          {item.latest_source}
+                        </Badge>
+                        <p className="text-xs text-muted">
+                          {formatRelativeDate(item.latest_as_of)}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted">—</span>
+                    )}
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell align="right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger/10 hover:text-danger"
+                      onClick={() => handleDeleteItem(item.id)}
+                      disabled={deletingItemId === item.id}
+                      aria-label="Remove item"
+                    >
+                      {deletingItemId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </TableBase>
+      </TableWrapper>
 
       <AddToWatchlistDialog
         open={addDialogOpen}

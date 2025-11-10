@@ -151,9 +151,14 @@
   --loss: #EF4444;            /* Red-500 - bright loss red */
   --loss-tint: rgba(239, 68, 68, 0.10);
 
-  /* Table colors - Subtle zebra with blue hover */
-  --table-zebra: rgba(255, 255, 255, 0.02);
-  --table-hover: rgba(37, 99, 235, 0.10); /* Blue hover tint - deeper blue */
+  /* Table colors - Unified system matching P&L */
+  --table-bg: #0E0E0E;             /* Table wrapper background */
+  --table-row-hover: #141414;      /* Row hover state */
+  --table-border: #1E1E1E;         /* Table borders */
+  --table-text: #F5F5F5;           /* Table body text */
+  --table-muted: #A3A3A3;          /* Table secondary text */
+  --table-zebra: rgba(255, 255, 255, 0.02);  /* Even row background (legacy) */
+  --table-hover: rgba(37, 99, 235, 0.10);     /* Blue hover tint (legacy) */
 
   /* Elevation shadows - Deep blacks with subtle blue glow */
   --elev-1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 1px rgba(37,99,235,.05);

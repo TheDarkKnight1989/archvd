@@ -10,6 +10,8 @@ import { supabase } from '@/lib/supabase/client'
 import { toCsv, downloadCsv, formatGbpForCsv, formatDateForCsv } from '@/lib/export/csv'
 import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
 import { formatSize } from '@/lib/format/size'
+import { TableWrapper, TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
+import { ProductLineItem } from '@/components/product/ProductLineItem'
 import {
   type DateRangePreset,
   type DateRange,
@@ -361,80 +363,85 @@ export default function PnLPage() {
       </div>
 
       {/* Sold Items Table */}
-      <div className="rounded-2xl border border-border bg-elev-1 overflow-hidden shadow-soft">
-        <div className="px-4 py-3 border-b border-border">
-          <h2 className="font-display text-lg font-semibold text-fg tracking-tight">Sold Items</h2>
-          <p className="text-xs text-dim mt-0.5">Items sold in {formatRangeDisplay(dateRange)}</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
-              <tr>
-                <th className="px-4 py-3 text-left label-up">Sold Date</th>
-                <th className="px-4 py-3 text-left label-up">SKU</th>
-                <th className="px-4 py-3 text-left label-up">Item</th>
-                <th className="px-4 py-3 text-left label-up">Size</th>
-                <th className="px-4 py-3 text-right label-up">Purchase £</th>
-                <th className="px-4 py-3 text-right label-up">Sold £</th>
-                <th className="px-4 py-3 text-right label-up">Margin £</th>
-                <th className="px-4 py-3 text-right label-up">Margin %</th>
-                <th className="px-4 py-3 text-right label-up">VAT Due £</th>
-                <th className="px-4 py-3 text-left label-up">Platform</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {pnlItemsRaw.loading ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-dim">
-                    Loading...
-                  </td>
-                </tr>
-              ) : filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-dim">
-                    No sales in this period
-                  </td>
-                </tr>
-              ) : (
-                filteredItems.map((item, index) => {
-                  const marginPct = item.buyPrice > 0 ? (item.margin / item.buyPrice) * 100 : null
+      <TableWrapper
+        title="Sold Items"
+        description={`Items sold in ${formatRangeDisplay(dateRange)}`}
+      >
+        <TableBase>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Sold Date</TableHead>
+              <TableHead>Item</TableHead>
+              <TableHead align="right">Purchase £</TableHead>
+              <TableHead align="right">Sold £</TableHead>
+              <TableHead align="right">Margin £</TableHead>
+              <TableHead align="right">Margin %</TableHead>
+              <TableHead align="right">VAT Due £</TableHead>
+              <TableHead>Platform</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pnlItemsRaw.loading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-dim py-8">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : filteredItems.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-dim py-8">
+                  No sales in this period
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredItems.map((item, index) => {
+                const marginPct = item.buyPrice > 0 ? (item.margin / item.buyPrice) * 100 : null
 
-                  return (
-                    <tr
-                      key={item.id}
-                      className={cn(
-                        "min-h-12 hover:bg-table-hover transition-boutique",
-                        index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
-                      )}
-                    >
-                      <td className="px-4 py-4 text-sm text-fg">{formatDate(item.date)}</td>
-                      <td className="px-4 py-4 text-sm text-fg font-mono">{item.sku}</td>
-                      <td className="px-4 py-4 text-sm text-fg">
-                        <div className="font-medium">{item.brand} {item.model}</div>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-fg">{formatSize(item.size, 'UK')}</td>
-                      <td className="px-4 py-4 text-right">
-                        <PlainMoneyCell value={item.buyPrice} />
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <PlainMoneyCell value={item.salePrice} />
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <MoneyCell value={item.margin} showArrow />
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <PercentCell value={marginPct} />
-                      </td>
-                      <td className="px-4 py-4 text-sm text-accent text-right font-mono font-medium">{formatCurrency(item.vatDue)}</td>
-                      <td className="px-4 py-4 text-sm text-muted">{item.platform || '—'}</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                return (
+                  <TableRow key={item.id} index={index}>
+                    <TableCell>
+                      <div className="text-sm text-fg">{formatDate(item.date)}</div>
+                    </TableCell>
+                    <TableCell>
+                      <ProductLineItem
+                        imageUrl={item.imageUrl || null}
+                        imageAlt={`${item.brand} ${item.model}`}
+                        brand={item.brand || ''}
+                        model={item.model || ''}
+                        variant={item.colorway}
+                        sku={item.sku}
+                        href={`/product/${item.sku}`}
+                        sizeUk={item.size}
+                        sizeSystem="UK"
+                        category={(item.category?.toLowerCase() as any) || 'sneakers'}
+                        compact
+                      />
+                    </TableCell>
+                    <TableCell align="right" mono>
+                      <PlainMoneyCell value={item.buyPrice} />
+                    </TableCell>
+                    <TableCell align="right" mono>
+                      <PlainMoneyCell value={item.salePrice} />
+                    </TableCell>
+                    <TableCell align="right" mono>
+                      <MoneyCell value={item.margin} showArrow />
+                    </TableCell>
+                    <TableCell align="right" mono>
+                      <PercentCell value={marginPct} />
+                    </TableCell>
+                    <TableCell align="right" mono>
+                      <div className="text-sm text-accent font-medium">{formatCurrency(item.vatDue)}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-muted">{item.platform || '—'}</div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </TableBase>
+      </TableWrapper>
 
       {/* VAT Summary */}
       <div className="bg-elev-1 border border-border rounded-xl p-4">
@@ -468,54 +475,53 @@ export default function PnLPage() {
       </div>
 
       {/* Expenses Table */}
-      <div className="rounded-2xl border border-border bg-elev-1 overflow-hidden shadow-soft">
-        <div className="px-4 py-3 border-b border-border">
-          <h2 className="font-display text-lg font-semibold text-fg tracking-tight">Expenses</h2>
-          <p className="text-xs text-dim mt-0.5">Expenses recorded in {formatRangeDisplay(dateRange)}</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
-              <tr>
-                <th className="px-4 py-3 text-left label-up">Date</th>
-                <th className="px-4 py-3 text-left label-up">Description</th>
-                <th className="px-4 py-3 text-left label-up">Category</th>
-                <th className="px-4 py-3 text-right label-up">Amount £</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {pnlExpensesRaw.loading ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-dim">
-                    Loading...
-                  </td>
-                </tr>
-              ) : filteredExpenses.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-dim">
-                    No expenses in this period
-                  </td>
-                </tr>
-              ) : (
-                filteredExpenses.map((expense, index) => (
-                  <tr
-                    key={expense.id}
-                    className={cn(
-                      "min-h-12 hover:bg-table-hover transition-boutique",
-                      index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
-                    )}
-                  >
-                    <td className="px-4 py-4 text-sm text-fg">{formatDate(expense.date)}</td>
-                    <td className="px-4 py-4 text-sm text-fg">{expense.description}</td>
-                    <td className="px-4 py-4 text-sm text-muted">{expense.category}</td>
-                    <td className="px-4 py-4 text-sm text-fg font-mono text-right">{formatCurrency(expense.amount)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TableWrapper
+        title="Expenses"
+        description={`Expenses recorded in ${formatRangeDisplay(dateRange)}`}
+      >
+        <TableBase>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead align="right">Amount £</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pnlExpensesRaw.loading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-dim py-8">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : filteredExpenses.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-dim py-8">
+                  No expenses in this period
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredExpenses.map((expense, index) => (
+                <TableRow key={expense.id} index={index}>
+                  <TableCell>
+                    <div className="text-sm text-fg">{formatDate(expense.date)}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-fg">{expense.description}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-muted">{expense.category}</div>
+                  </TableCell>
+                  <TableCell align="right" mono>
+                    <div className="text-sm text-fg font-medium">{formatCurrency(expense.amount)}</div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </TableBase>
+      </TableWrapper>
     </div>
   )
 }
