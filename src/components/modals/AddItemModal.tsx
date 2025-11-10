@@ -96,11 +96,11 @@ function formatRelativeTime(timestamp: string): string {
 // Common input styles
 const inputClassName = cn(
   "h-10 text-sm bg-elev-1 border border-border/40 text-fg rounded-lg px-3 placeholder:opacity-60",
-  "focus:ring-1 focus:ring-accent focus:shadow-[0_0_12px_rgba(0,255,148,0.2)] focus:border-accent/50",
-  "transition-all duration-[120ms] ease-out"
+  "focus:ring-2 focus:ring-focus focus:border-accent/50",
+  "transition-boutique"
 )
 
-const labelClassName = "font-cinzel text-accent uppercase tracking-wider text-xs mb-2 block"
+const labelClassName = "font-display text-muted uppercase tracking-wide text-xs mb-2 block font-medium"
 
 export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProps) {
   const [formData, setFormData] = useState<FormData>({
@@ -341,9 +341,9 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[720px] w-[90vw] rounded-2xl border border-border bg-elev-3/95 backdrop-blur-md shadow-[0_0_32px_rgba(0,255,148,0.15)] p-0 max-h-[calc(100vh-60px)] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
+        <DialogContent className="max-w-[720px] w-[90vw] rounded-2xl border border-border bg-elev-3/98 backdrop-blur-md shadow-large p-0 max-h-[calc(100vh-60px)] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
-            <DialogTitle className="text-2xl font-cinzel font-bold text-fg">
+            <DialogTitle className="text-2xl font-display font-semibold text-fg tracking-tight">
               Add Item
             </DialogTitle>
           </DialogHeader>
@@ -358,10 +358,10 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                 <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
                   {/* Section Header */}
                   <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-cinzel text-accent uppercase tracking-wider text-xs">
+                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
                       Basic Information
                     </h3>
-                    <div className="h-[2px] w-12 bg-accent/40 rounded-full" />
+                    <div className="h-px w-12 bg-border rounded-full" />
                   </div>
 
                   <div className="space-y-3">
@@ -467,10 +467,10 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                 <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
                   {/* Section Header */}
                   <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-cinzel text-accent uppercase tracking-wider text-xs">
+                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
                       Category & Size
                     </h3>
-                    <div className="h-[2px] w-12 bg-accent/40 rounded-full" />
+                    <div className="h-px w-12 bg-border rounded-full" />
                   </div>
 
                   <div className="space-y-3">
@@ -489,11 +489,10 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                               updateField('size', '') // Reset size when category changes
                             }}
                             className={cn(
-                              "flex-1 h-8 px-3 rounded-full text-sm font-medium transition-all duration-[200ms]",
-                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
-                              "hover:scale-105",
+                              "flex-1 h-8 px-3 rounded-full text-sm font-medium transition-boutique",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                               formData.category === cat
-                                ? "bg-accent text-black shadow-[0_0_16px_rgba(0,255,148,0.4)]"
+                                ? "bg-accent text-fg shadow-soft"
                                 : "bg-elev-1 border border-border/30 text-muted hover:bg-elev-1 hover:border-accent/30"
                             )}
                           >
@@ -533,10 +532,10 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                 <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
                   {/* Section Header */}
                   <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-cinzel text-accent uppercase tracking-wider text-xs">
+                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
                       Purchase Information
                     </h3>
-                    <div className="h-[2px] w-12 bg-accent/40 rounded-full" />
+                    <div className="h-px w-12 bg-border rounded-full" />
                   </div>
 
                   <div className="space-y-3">
@@ -616,10 +615,10 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                     </div>
 
                     {/* Purchase Total */}
-                    <div className="bg-elev-1 border border-border/40 rounded-lg p-3">
+                    <div className="bg-soft border border-border/40 rounded-lg p-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-cinzel text-xs text-accent uppercase tracking-wider">Total</span>
-                        <span className="text-base font-mono text-accent font-semibold tabular-nums">
+                        <span className="font-display text-xs text-muted uppercase tracking-wide font-medium">Total</span>
+                        <span className="text-base num text-fg font-semibold tabular-nums">
                           £{purchaseTotal}
                         </span>
                       </div>
@@ -664,10 +663,10 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                 <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
                   {/* Section Header */}
                   <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-cinzel text-accent uppercase tracking-wider text-xs">
+                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
                       Additional Information
                     </h3>
-                    <div className="h-[2px] w-12 bg-accent/40 rounded-full" />
+                    <div className="h-px w-12 bg-border rounded-full" />
                   </div>
 
                   <div className="space-y-3">
@@ -735,8 +734,8 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                         maxLength={250}
                         className={cn(
                           "bg-elev-1 border border-border/40 text-fg text-sm resize-none p-3 rounded-lg placeholder:opacity-60",
-                          "focus:ring-1 focus:ring-accent focus:shadow-[0_0_12px_rgba(0,255,148,0.2)] focus:border-accent/50",
-                          "transition-all duration-[120ms] ease-out",
+                          "focus:ring-2 focus:ring-focus focus:border-accent/50",
+                          "transition-boutique",
                           errors.notes && "border-danger"
                         )}
                       />
@@ -751,13 +750,13 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
           </div>
 
           {/* Footer Bar */}
-          <div className="flex justify-end gap-3 border-t border-border/20 p-4 bg-elev-2/70 backdrop-blur">
+          <div className="flex justify-end gap-3 border-t border-border/20 p-5 md:p-6 bg-elev-2/70 backdrop-blur">
             <Button
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
-              className="border border-border/30 hover:bg-elev-1 transition-all duration-[200ms]"
+              className="border border-border/30 hover:bg-elev-1 transition-boutique"
             >
               Cancel
             </Button>
@@ -766,7 +765,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
               variant="outline"
               onClick={() => handleSubmit(true)}
               disabled={isSubmitting}
-              className="border border-accent/40 text-accent hover:bg-accent/10 hover:shadow-[0_0_16px_rgba(0,255,148,0.3)] transition-all duration-[200ms]"
+              className="border border-accent/40 text-accent hover:bg-accent/10 transition-boutique"
             >
               {isSubmitting ? (
                 <>
@@ -781,7 +780,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
               type="submit"
               onClick={() => handleSubmit(false)}
               disabled={isSubmitting}
-              className="bg-accent text-black hover:bg-accent/90 hover:shadow-[0_0_16px_rgba(0,255,148,0.4)] transition-all duration-[200ms]"
+              className="bg-accent text-fg hover:bg-accent-600 transition-boutique"
             >
               {isSubmitting ? (
                 <>

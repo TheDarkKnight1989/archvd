@@ -26,7 +26,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/70 backdrop-blur-md"
         onClick={() => onOpenChange(false)}
       />
       <div className="relative z-50 w-full max-w-md mx-4">
@@ -44,7 +44,7 @@ export function DialogContent({
   return (
     <div
       className={cn(
-        'bg-surface border border-border rounded-2xl shadow-soft overflow-hidden',
+        'bg-surface border border-border rounded-2xl shadow-large overflow-hidden',
         className
       )}
       {...props}
@@ -60,7 +60,7 @@ export function DialogHeader({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('p-4 border-b border-border', className)}
+      className={cn('p-5 md:p-6 border-b border-border', className)}
       {...props}
     />
   )
@@ -72,7 +72,7 @@ export function DialogTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn('text-lg font-semibold text-fg', className)}
+      className={cn('font-display text-lg font-semibold text-fg tracking-tight', className)}
       {...props}
     />
   )
@@ -96,7 +96,7 @@ export function DialogFooter({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('p-4 border-t border-border flex gap-2', className)}
+      className={cn('p-5 md:p-6 border-t border-border flex gap-3', className)}
       {...props}
     />
   )

@@ -132,14 +132,14 @@ export function QuickAddModal({ open, onOpenChange, onSuccess, userId }: QuickAd
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        <form onSubmit={handleSubmit} className="p-5 md:p-6 space-y-4">
           {/* Tabs */}
           <div className="flex gap-1 p-1 bg-bg border border-border rounded-lg">
             <button
               type="button"
               onClick={() => setTab('sku')}
-              className={`flex-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                tab === 'sku' ? 'bg-surface2 text-fg' : 'text-muted hover:text-fg'
+              className={`flex-1 px-3 py-2 text-sm rounded-lg transition-boutique ${
+                tab === 'sku' ? 'bg-surface2 text-fg font-medium' : 'text-muted hover:text-fg'
               }`}
             >
               SKU
@@ -147,8 +147,8 @@ export function QuickAddModal({ open, onOpenChange, onSuccess, userId }: QuickAd
             <button
               type="button"
               onClick={() => setTab('scan')}
-              className={`flex-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                tab === 'scan' ? 'bg-surface2 text-fg' : 'text-muted hover:text-fg'
+              className={`flex-1 px-3 py-2 text-sm rounded-lg transition-boutique ${
+                tab === 'scan' ? 'bg-surface2 text-fg font-medium' : 'text-muted hover:text-fg'
               }`}
             >
               Scan
