@@ -8,17 +8,17 @@
 
 /* Boutique Theme Tokens - Light Mode (Default) */
 :root {
-  /* Backgrounds */
-  --archvd-bg: #F7F7F5;
+  /* Backgrounds - Warm beige canvas */
+  --archvd-bg: #F6F2EA;
   --archvd-surface: #FFFFFF;
-  --archvd-soft: #F1EFEA;
+  --archvd-soft: #FAF6EE;
 
   /* Elevation scale (for cards/overlays) */
-  --archvd-bg-elev-0: #F7F7F5; /* Page shell */
-  --archvd-bg-elev-1: #FFFFFF; /* Standard cards */
-  --archvd-bg-elev-2: #FFFFFF; /* Raised cards */
-  --archvd-bg-elev-3: #FFFFFF; /* Modals/dialogs */
-  --archvd-overlay: rgba(247, 247, 245, 0.95);
+  --archvd-bg-elev-0: #F6F2EA; /* Page shell - warm beige canvas */
+  --archvd-bg-elev-1: #FFFFFF; /* Standard cards - clean white */
+  --archvd-bg-elev-2: #FAF6EE; /* Raised cards - light beige tint */
+  --archvd-bg-elev-3: #F2EDE6; /* Modals/dialogs - slightly darker beige */
+  --archvd-overlay: rgba(246, 242, 234, 0.95);
 
   /* Borders & dividers */
   --archvd-border: rgba(0, 0, 0, 0.06);
@@ -74,35 +74,35 @@
   --font-mono: 'SF Mono', ui-monospace, monospace;
 }
 
-/* Boutique Theme Tokens - Dark Mode */
+/* Boutique Theme Tokens - Dark Mode (Charcoal + Beige like Kith) */
 :root[data-theme="dark"],
 .dark {
-  /* Backgrounds */
-  --archvd-bg: #121212;
-  --archvd-surface: #1C1C1C;
-  --archvd-soft: #161616;
+  /* Backgrounds - Warm charcoal */
+  --archvd-bg: #171513;
+  --archvd-surface: #23201D;
+  --archvd-soft: #1E1B18;
 
   /* Elevation scale */
-  --archvd-bg-elev-0: #121212; /* Page shell */
-  --archvd-bg-elev-1: #1C1C1C; /* Standard cards */
-  --archvd-bg-elev-2: #242424; /* Raised cards */
-  --archvd-bg-elev-3: #2A2A2A; /* Modals/dialogs */
-  --archvd-overlay: rgba(18, 18, 18, 0.95);
+  --archvd-bg-elev-0: #171513; /* Page shell - deep charcoal */
+  --archvd-bg-elev-1: #1E1B18; /* Standard cards - warm dark panel */
+  --archvd-bg-elev-2: #23201D; /* Raised cards */
+  --archvd-bg-elev-3: #2A2722; /* Modals/dialogs */
+  --archvd-overlay: rgba(23, 21, 19, 0.95);
 
   /* Borders & dividers */
   --archvd-border: rgba(255, 255, 255, 0.07);
   --archvd-border-strong: rgba(255, 255, 255, 0.12);
 
-  /* Text */
-  --archvd-fg: #F2F2F2;
-  --archvd-fg-muted: #A0A0A0;
-  --archvd-fg-dim: #6A6A6A;
+  /* Text - Warmer tones for dark boutique */
+  --archvd-fg: #E8E4DD;
+  --archvd-fg-muted: #9A9388;
+  --archvd-fg-dim: #6B6560;
 
-  /* Accent (Beige - same in dark) */
-  --archvd-accent: #C4A484;
+  /* Accent (Lighter beige for dark mode) */
+  --archvd-accent: #CDBBA7;
   --archvd-accent-600: #B8976F;
   --archvd-accent-500: #C4A484;
-  --archvd-accent-400: #D0B79A;
+  --archvd-accent-400: #CDBBA7;
   --archvd-accent-300: #DCC9B0;
   --archvd-accent-200: #E8DBC6;
 
@@ -158,6 +158,11 @@
 @layer base {
   * {
     border-color: var(--archvd-border);
+  }
+
+  /* Ensure clean beige canvas everywhere */
+  html {
+    background-color: var(--archvd-bg);
   }
 
   body {

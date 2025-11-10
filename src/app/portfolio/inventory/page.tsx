@@ -296,9 +296,9 @@ export default function InventoryPage() {
     <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-fg">
       {/* Page Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-fg relative inline-block">
+        <h1 className="font-display text-2xl font-semibold text-fg tracking-tight relative inline-block">
           Portfolio
-          <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent opacity-40"></span>
+          <span className="absolute bottom-0 left-0 w-16 h-px bg-accent/30"></span>
         </h1>
 
         {/* Saved Views */}
