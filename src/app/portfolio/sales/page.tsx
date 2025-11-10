@@ -120,7 +120,7 @@ export default function SalesPage() {
             <div className="text-xs text-dim uppercase tracking-wider mb-1.5">Gross Profit</div>
             <div className={cn(
               "text-2xl font-bold font-mono",
-              kpis.totalMargin >= 0 ? "text-success" : "text-danger"
+              kpis.totalMargin >= 0 ? "money-pos" : "money-neg"
             )}>
               {kpis.totalMargin >= 0 ? '+' : ''}{format(convert(kpis.totalMargin, 'GBP'))}
             </div>
@@ -131,7 +131,7 @@ export default function SalesPage() {
             <div className="text-xs text-dim uppercase tracking-wider mb-1.5">Avg Margin</div>
             <div className={cn(
               "text-2xl font-bold font-mono",
-              kpis.avgMargin >= 0 ? "text-success" : "text-danger"
+              kpis.avgMargin >= 0 ? "money-pos" : "money-neg"
             )}>
               {kpis.avgMargin >= 0 ? '+' : ''}{kpis.avgMargin.toFixed(1)}%
             </div>
