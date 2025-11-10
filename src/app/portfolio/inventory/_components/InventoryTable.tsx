@@ -68,13 +68,13 @@ export function InventoryTable({
           return (
             <div className="flex items-center gap-3 min-w-[200px]">
               {/* Thumb */}
-              <div className="h-10 w-10 rounded-lg bg-[#0E1A15] flex items-center justify-center shrink-0 text-xs font-medium text-[#7FA08F]">
+              <div className="h-12 w-12 rounded-lg bg-soft border border-border flex items-center justify-center shrink-0 text-xs font-medium text-muted">
                 {initials}
               </div>
 
               {/* Title only (no SKU) */}
-              <div className={cn('flex-1 min-w-0', item.status === 'sold' && 'opacity-80')}>
-                <div className="text-sm font-medium text-[#E8F6EE] truncate">{info.getValue()}</div>
+              <div className={cn('flex-1 min-w-0', item.status === 'sold' && 'opacity-70')}>
+                <div className="text-sm font-medium text-fg truncate">{info.getValue()}</div>
               </div>
             </div>
           )
@@ -86,7 +86,7 @@ export function InventoryTable({
         id: 'sku',
         header: 'SKU',
         cell: (info) => (
-          <div className="text-sm text-[#7FA08F] font-mono">{info.getValue()}</div>
+          <div className="text-sm text-muted num">{info.getValue()}</div>
         ),
         enableSorting: true,
       }),
@@ -116,7 +116,7 @@ export function InventoryTable({
         header: () => (
           <div className="flex justify-center">
             <span
-              className="inline-flex items-center justify-center w-4 h-4 rounded bg-[#00B359]/20 text-[#00B359] text-[9px] font-bold border border-[#00B359]/30"
+              className="inline-flex items-center justify-center w-4 h-4 rounded bg-profit-bg profit-text text-[9px] font-bold border border-profit/30"
               title="StockX"
             >
               Sx
@@ -130,7 +130,7 @@ export function InventoryTable({
           return (
             <div className="flex justify-center group relative">
               {status === 'mapped' && (
-                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#00B359]/20 text-[#00B359] border border-[#00B359]/30">
+                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-profit-bg profit-text border border-profit/30">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 20 20"
@@ -147,18 +147,18 @@ export function InventoryTable({
               )}
 
               {status === 'unmapped' && (
-                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white/5 text-white/30 border border-white/10">
-                  <span className="text-[10px]">—</span>
+                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-soft text-dim border border-border">
+                  <span className="text-xs">—</span>
                 </div>
               )}
 
               {/* Tooltip */}
               {status === 'mapped' && item.stockx_product_sku && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
-                  <div className="bg-[#1A2E23] border border-[#2A4A37] rounded-lg px-2 py-1 shadow-xl whitespace-nowrap">
-                    <div className="text-[10px] text-[#E8F6EE]">
+                  <div className="bg-surface border border-border rounded-lg px-2.5 py-1.5 shadow-medium whitespace-nowrap">
+                    <div className="text-2xs text-fg">
                       Mapped to StockX
-                      <div className="text-[#7FA08F] font-mono mt-0.5">{item.stockx_product_sku}</div>
+                      <div className="text-dim num mt-0.5">{item.stockx_product_sku}</div>
                     </div>
                   </div>
                 </div>
@@ -179,7 +179,7 @@ export function InventoryTable({
               {category}
             </Badge>
           ) : (
-            <span className="text-[#7FA08F]">—</span>
+            <span className="text-dim">—</span>
           )
         },
         enableSorting: true,
@@ -191,7 +191,7 @@ export function InventoryTable({
         cell: (info) => {
           const date = info.getValue()
           return date ? (
-            <div className="text-sm text-[#E8F6EE]">
+            <div className="text-sm text-fg num">
               {new Date(date).toLocaleDateString('en-GB', {
                 day: 'numeric',
                 month: 'short',
@@ -199,7 +199,7 @@ export function InventoryTable({
               })}
             </div>
           ) : (
-            <span className="text-[#7FA08F]">—</span>
+            <span className="text-dim">—</span>
           )
         },
         enableSorting: true,
@@ -279,19 +279,19 @@ export function InventoryTable({
               {source !== '-' && value && (
                 <div className="flex items-center justify-end gap-1 mt-0.5">
                   {isStockX && (
-                    <div className="inline-flex items-center justify-center w-4 h-4 rounded bg-[#00B359]/20 text-[#00B359] text-[9px] font-bold border border-[#00B359]/30">
+                    <div className="inline-flex items-center justify-center w-4 h-4 rounded bg-profit-bg profit-text text-[9px] font-bold border border-profit/30">
                       Sx
                     </div>
                   )}
-                  <div className="text-[10px] text-[#7FA08F] font-mono">{source}</div>
+                  <div className="text-2xs text-dim num">{source}</div>
                 </div>
               )}
 
               {/* Provenance tooltip */}
               {provenanceText && (
                 <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-50">
-                  <div className="bg-[#1A2E23] border border-[#2A4A37] rounded-lg px-2 py-1 shadow-xl whitespace-nowrap">
-                    <div className="text-[10px] text-[#E8F6EE]">{provenanceText}</div>
+                  <div className="bg-surface border border-border rounded-lg px-2.5 py-1.5 shadow-medium whitespace-nowrap">
+                    <div className="text-2xs text-fg">{provenanceText}</div>
                   </div>
                 </div>
               )}
@@ -383,21 +383,20 @@ export function InventoryTable({
 
   if (items.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[500px] rounded-2xl border border-[#15251B] bg-gradient-to-br from-[#08100C] to-[#0B1510]">
-        <div className="text-center px-6 py-12">
-          {/* Icon with accent glow */}
-          <div className="relative inline-block mb-6">
-            <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full" />
-            <Package className="h-16 w-16 mx-auto text-accent relative" strokeWidth={1.5} />
+      <div className="flex items-center justify-center min-h-[500px] rounded-2xl border border-border bg-surface shadow-soft">
+        <div className="text-center px-6 py-16">
+          {/* Icon */}
+          <div className="inline-block mb-6">
+            <Package className="h-16 w-16 mx-auto text-muted" strokeWidth={1.5} />
           </div>
 
           {/* Heading */}
-          <h3 className="text-xl font-semibold text-[#E8F6EE] mb-2">
+          <h3 className="text-xl font-semibold text-fg mb-3">
             Your inventory is empty
           </h3>
 
           {/* Description */}
-          <p className="text-sm text-[#7FA08F] mb-8 max-w-sm mx-auto leading-relaxed">
+          <p className="text-sm text-muted mb-8 max-w-sm mx-auto leading-relaxed">
             Start building your portfolio by adding your first item. Track market values, monitor performance, and manage your collection.
           </p>
 
@@ -405,7 +404,7 @@ export function InventoryTable({
           {onAddItem && (
             <button
               onClick={onAddItem}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-black font-medium rounded-lg hover:bg-accent-600 transition-all duration-120 motion-reduce:transition-none hover:shadow-[0_0_24px_rgba(0,255,148,0.5)] active:scale-95 motion-reduce:active:scale-100"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-fg font-medium rounded-xl hover:bg-accent-600 transition-boutique active:scale-95 motion-reduce:active:scale-100"
             >
               <Plus className="h-5 w-5" />
               Add Your First Item
@@ -435,19 +434,19 @@ export function InventoryTable({
       {/* Desktop Table View (>= 1024px) */}
       <div
         ref={parentRef}
-        className="hidden lg:block h-[calc(100vh-280px)] overflow-auto rounded-2xl border border-[#15251B] bg-[#08100C]"
+        className="hidden lg:block h-[calc(100vh-280px)] overflow-auto rounded-2xl border border-border bg-surface shadow-soft"
       >
         <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
           {/* Sticky Header */}
-          <div className="sticky top-0 z-10 bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
+          <div className="sticky top-0 z-10 bg-soft border-b border-border">
             {table.getHeaderGroups().map((headerGroup) => (
               <div key={headerGroup.id} className="flex">
                 {headerGroup.headers.map((header, idx) => (
                 <div
                   key={header.id}
                   className={cn(
-                    'px-4 py-3 text-xs font-medium text-[#B7D0C2] flex-shrink-0 border-r border-border/20 last:border-r-0',
-                    header.column.getCanSort() && 'cursor-pointer select-none hover:text-[#E8F6EE] transition-colors duration-120 motion-reduce:transition-none',
+                    'px-4 py-3.5 label-uppercase flex-shrink-0 border-r border-border/20 last:border-r-0',
+                    header.column.getCanSort() && 'cursor-pointer select-none hover:text-fg transition-boutique',
                     header.id === 'item' && 'flex-1 min-w-[240px]',
                     header.id === 'sku' && 'w-[140px]',
                     header.id === 'alias' && 'w-[60px]',
@@ -467,7 +466,7 @@ export function InventoryTable({
                   <div className="flex items-center gap-1">
                     {flexRender(header.column.columnDef.header, header.getContext())}
                     {header.column.getIsSorted() && (
-                      <span className="text-[#00FF94]">
+                      <span className="text-accent">
                         {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
                       </span>
                     )}
@@ -486,9 +485,8 @@ export function InventoryTable({
             <div
               key={row.id}
               className={cn(
-                'absolute left-0 right-0 flex items-center border-b border-[#15251B]/40 transition-all duration-120 motion-reduce:transition-none',
-                'hover:bg-[#0B1510] cursor-pointer',
-                virtualRow.index % 2 === 0 && 'bg-[#08100C]/30'
+                'absolute left-0 right-0 flex items-center border-b border-border transition-boutique',
+                'hover:bg-soft/50 cursor-pointer'
               )}
               style={{
                 height: `${virtualRow.size}px`,
@@ -540,10 +538,10 @@ export function InventoryTableSkeleton() {
       </div>
 
       {/* Desktop Skeleton */}
-      <div className="hidden lg:block rounded-2xl border border-[#15251B] bg-[#08100C] p-4 space-y-2">
+      <div className="hidden lg:block rounded-2xl border border-border bg-surface shadow-soft p-5 space-y-3">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10 rounded-lg" />
+            <Skeleton className="h-12 w-12 rounded-lg" />
             <Skeleton className="h-4 flex-1" />
             <Skeleton className="h-4 w-24" />
             <SparklineSkeleton />

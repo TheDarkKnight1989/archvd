@@ -43,11 +43,11 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
-        <div className="p-4">
-          <div className="space-y-2">
+      <div className="rounded-2xl border border-border bg-surface shadow-soft overflow-hidden">
+        <div className="p-5 md:p-6">
+          <div className="space-y-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <Skeleton key={i} className="h-14 w-full" />
             ))}
           </div>
         </div>
@@ -57,10 +57,10 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-[#15251B] bg-[#08100C] p-6">
-        <div className="text-center py-8">
+      <div className="rounded-2xl border border-border bg-surface shadow-soft p-6">
+        <div className="text-center py-12">
           <p className="text-danger font-medium">Error loading items</p>
-          <p className="text-sm text-[#7FA08F] mt-1">{error}</p>
+          <p className="text-sm text-muted mt-2">{error}</p>
         </div>
       </div>
     )
@@ -68,10 +68,10 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-[#15251B] bg-[#08100C] p-6">
-        <div className="text-center py-12">
-          <p className="text-[#7FA08F] font-mono">No items</p>
-          <p className="text-sm text-[#7FA08F] mt-1">Add your first pair to get started</p>
+      <div className="rounded-2xl border border-border bg-surface shadow-soft p-6">
+        <div className="text-center py-16">
+          <p className="text-sm font-medium text-fg">No items</p>
+          <p className="text-xs text-muted mt-2">Add your first item to get started</p>
         </div>
       </div>
     )
@@ -91,26 +91,26 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
   const visibleRows = shouldVirtualize ? rowVirtualizer.getVirtualItems() : rows.map((_, index) => ({ index, size: 48, start: index * 48 }))
 
   return (
-    <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
+    <div className="rounded-2xl border border-border bg-surface shadow-soft overflow-hidden">
       <div
         ref={parentRef}
         className="overflow-x-auto"
         style={{ maxHeight: shouldVirtualize ? '600px' : 'auto' }}
       >
         <table className="min-w-full">
-          <thead className="sticky top-0 bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B] z-10">
+          <thead className="sticky top-0 bg-soft border-b border-border z-10">
             <tr>
-              <th className="px-3 md:px-4 py-3 text-left text-xs text-[#B7D0C2] uppercase tracking-wider font-medium min-w-[220px]">Item</th>
-              <th className="px-3 md:px-4 py-3 text-left text-xs text-[#B7D0C2] uppercase tracking-wider font-medium w-[72px]">Size</th>
-              <th className="px-3 md:px-4 py-3 text-left text-xs text-[#B7D0C2] uppercase tracking-wider font-medium w-[100px]">Status</th>
-              <th className="px-3 md:px-4 py-3 text-right text-xs text-[#B7D0C2] uppercase tracking-wider font-medium w-[110px]">Purchase £</th>
-              <th className="px-3 md:px-4 py-3 text-right text-xs text-[#B7D0C2] uppercase tracking-wider font-medium w-[110px]">Market £</th>
-              <th className="px-3 md:px-4 py-3 text-right text-xs text-[#B7D0C2] uppercase tracking-wider font-medium w-[120px]">Unrealized</th>
-              <th className="px-3 md:px-4 py-3 text-right text-xs text-[#B7D0C2] uppercase tracking-wider font-medium w-[100px]">Gain %</th>
+              <th className="px-4 md:px-5 py-3.5 text-left label-uppercase min-w-[220px]">Item</th>
+              <th className="px-4 md:px-5 py-3.5 text-left label-uppercase w-[72px]">Size</th>
+              <th className="px-4 md:px-5 py-3.5 text-left label-uppercase w-[100px]">Status</th>
+              <th className="px-4 md:px-5 py-3.5 text-right label-uppercase w-[110px]">Purchase</th>
+              <th className="px-4 md:px-5 py-3.5 text-right label-uppercase w-[110px]">Market</th>
+              <th className="px-4 md:px-5 py-3.5 text-right label-uppercase w-[120px]">Unrealized</th>
+              <th className="px-4 md:px-5 py-3.5 text-right label-uppercase w-[100px]">Gain %</th>
             </tr>
           </thead>
           <tbody
-            className="divide-y divide-[#15251B]/40"
+            className="divide-y divide-border"
             style={shouldVirtualize ? { height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' } : undefined}
           >
             {visibleRows.map((virtualRow) => {
@@ -121,7 +121,7 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
               return (
                 <tr
                   key={row.id}
-                  className="hover:bg-[#0B1510]/60 transition-colors"
+                  className="hover:bg-soft/50 transition-boutique"
                   style={
                     shouldVirtualize
                       ? {
@@ -134,91 +134,91 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
                       : undefined
                   }
                 >
-                  <td className="px-3 md:px-4 py-3">
+                  <td className="px-4 md:px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       {row.thumb ? (
                         <img
                           src={row.thumb}
                           alt={row.title}
-                          className="h-10 w-10 rounded-lg object-cover"
+                          className="h-12 w-12 rounded-lg object-cover border border-border"
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded-lg bg-[#0E1A15] flex items-center justify-center text-xs font-medium text-[#7FA08F]">
+                        <div className="h-12 w-12 rounded-lg bg-soft border border-border flex items-center justify-center text-xs font-medium text-muted">
                           {row.title.slice(0, 2).toUpperCase()}
                         </div>
                       )}
                       <div>
-                        <div className="text-sm text-[#E8F6EE] font-medium">{row.title}</div>
-                        <div className="text-[11px] text-[#7FA08F] font-mono">{row.sku}</div>
+                        <div className="text-sm text-fg font-medium">{row.title}</div>
+                        <div className="text-xs text-muted num">{row.sku}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 md:px-4 py-3 text-sm text-[#E8F6EE]">
+                  <td className="px-4 md:px-5 py-3.5 text-sm text-fg num">
                     {formatSize(row.size, 'UK')}
                   </td>
-                  <td className="px-3 md:px-4 py-3">
+                  <td className="px-4 md:px-5 py-3.5">
                     <span
                       className={cn(
-                        'inline-flex px-2 py-0.5 text-xs font-medium rounded-full',
-                        row.status === 'active' && 'bg-accent/20 text-accent',
-                        row.status === 'listed' && 'bg-blue-500/20 text-blue-400',
-                        row.status === 'worn' && 'bg-warning/20 text-warning',
-                        row.status === 'sold' && 'bg-success/20 text-success'
+                        'inline-flex px-2.5 py-1 text-xs font-medium rounded-lg',
+                        row.status === 'active' && 'bg-soft text-fg',
+                        row.status === 'listed' && 'bg-accent-200 text-accent-600',
+                        row.status === 'worn' && 'bg-warning/15 text-warning',
+                        row.status === 'sold' && 'bg-profit-bg profit-text'
                       )}
                     >
                       {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
                     </span>
                   </td>
-                  <td className="px-3 md:px-4 py-3 text-right text-sm text-[#E8F6EE] font-mono">
+                  <td className="px-4 md:px-5 py-3.5 text-right text-sm text-fg num">
                     {format(convert(row.buy, 'GBP'))}
                   </td>
-                  <td className="px-3 md:px-4 py-3 text-right">
+                  <td className="px-4 md:px-5 py-3.5 text-right">
                     {row.market ? (
                       <div>
-                        <div className="text-sm text-[#E8F6EE] font-mono">{format(convert(row.market, 'GBP'))}</div>
+                        <div className="text-sm text-fg num">{format(convert(row.market, 'GBP'))}</div>
                         {row.marketSource && (
-                          <div className="text-[10px] text-[#7FA08F] font-mono mt-0.5">
+                          <div className="text-2xs text-dim num mt-0.5">
                             {row.marketSource} • {formatRelativeTime(row.marketUpdatedAt || undefined)}
                           </div>
                         )}
                       </div>
                     ) : (
-                      <span className="text-[#7FA08F]">—</span>
+                      <span className="text-dim">—</span>
                     )}
                   </td>
-                  <td className="px-3 md:px-4 py-3 text-right">
+                  <td className="px-4 md:px-5 py-3.5 text-right">
                     {unrealizedGain !== null ? (
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1.5">
                         {unrealizedGain >= 0 ? (
-                          <TrendingUp className="h-3.5 w-3.5 text-success" />
+                          <TrendingUp className="h-3.5 w-3.5 profit-text" />
                         ) : (
-                          <TrendingDown className="h-3.5 w-3.5 text-danger" />
+                          <TrendingDown className="h-3.5 w-3.5 loss-text" />
                         )}
                         <span
                           className={cn(
-                            'text-sm font-mono font-semibold',
-                            unrealizedGain >= 0 ? 'text-success' : 'text-danger'
+                            'text-sm num font-semibold',
+                            unrealizedGain >= 0 ? 'profit-text' : 'loss-text'
                           )}
                         >
                           {unrealizedGain >= 0 ? '+' : ''}{format(convert(unrealizedGain, 'GBP'))}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-[#7FA08F]">—</span>
+                      <span className="text-dim">—</span>
                     )}
                   </td>
-                  <td className="px-3 md:px-4 py-3 text-right">
+                  <td className="px-4 md:px-5 py-3.5 text-right">
                     {gainPct !== null ? (
                       <span
                         className={cn(
-                          'text-sm font-mono font-semibold',
-                          gainPct >= 0 ? 'text-success' : 'text-danger'
+                          'text-sm num font-semibold',
+                          gainPct >= 0 ? 'profit-text' : 'loss-text'
                         )}
                       >
                         {gainPct >= 0 ? '+' : ''}{gainPct.toFixed(1)}%
                       </span>
                     ) : (
-                      <span className="text-[#7FA08F]">—</span>
+                      <span className="text-dim">—</span>
                     )}
                   </td>
                 </tr>
