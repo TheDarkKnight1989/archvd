@@ -303,9 +303,33 @@ export function Sidebar() {
           <div
             className={cn(
               "px-3 pt-3",
-              isExpanded ? "space-y-1" : "flex items-center justify-center gap-1 py-2"
+              isExpanded ? "space-y-1" : "flex flex-col items-center justify-center gap-1 py-2"
             )}
           >
+            {/* Theme Toggle - Always visible */}
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className={cn(
+                "group rounded-lg flex items-center transition-boutique",
+                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                theme === 'dark' ? 'text-accent' : 'text-muted hover:text-fg',
+                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
+              )}
+              title={!isExpanded ? (theme === 'dark' ? 'Dark Mode' : 'Light Mode') : undefined}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? (
+                <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              ) : (
+                <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              )}
+              {isExpanded && (
+                <span className="text-xs font-medium flex-1 text-left">
+                  {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                </span>
+              )}
+            </button>
+
             {/* Settings */}
             <Link
               href="/settings"
@@ -398,32 +422,12 @@ export function Sidebar() {
             )}
           </div>
 
-          {/* Bottom Section: Preferences (only when expanded) */}
+          {/* Bottom Section: Currency (only when expanded) */}
           {isExpanded && (
             <div className="px-3 pb-3 pt-3 border-t border-border/20 space-y-2">
               <h3 className="label-uppercase text-muted/60 px-1 pb-1">
                 Preferences
               </h3>
-
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className={cn(
-                  "w-full h-9 rounded-lg flex items-center gap-2 px-2 transition-boutique",
-                  "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                  theme === 'dark' ? 'text-accent' : 'text-muted hover:text-fg'
-                )}
-                aria-label="Toggle theme"
-              >
-                {theme === 'dark' ? (
-                  <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-                ) : (
-                  <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-                )}
-                <span className="text-xs font-medium flex-1 text-left">
-                  {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
-                </span>
-              </button>
 
               {/* Currency Switcher */}
               <div className="flex items-center gap-2">
