@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ProductLineItem } from '@/components/product/ProductLineItem'
 import { useCurrency } from '@/hooks/useCurrency'
 import { cn } from '@/lib/utils/cn'
 import { toast } from 'sonner'
@@ -205,8 +206,7 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
           <Table>
             <TableHeader className="sticky top-0 bg-panel border-b border-keyline z-10 shadow-sm">
               <TableRow>
-                <TableHead className="label-up">Product</TableHead>
-                <TableHead className="label-up">Size</TableHead>
+                <TableHead className="label-up" colSpan={2}>Product</TableHead>
                 <TableHead className="label-up">Latest Price</TableHead>
                 <TableHead className="label-up">Target</TableHead>
                 <TableHead className="label-up">Diff %</TableHead>
@@ -232,41 +232,21 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
                       index % 2 === 0 ? "bg-table-zebra" : "bg-panel"
                     )}
                   >
-                    {/* Product */}
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {item.product_catalog?.image_url && (
-                          <img
-                            src={item.product_catalog.image_url}
-                            alt={item.sku}
-                            className="h-12 w-12 rounded object-cover border border-border"
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <Link
-                            href={`/portfolio/market?sku=${item.sku}`}
-                            className="group/link flex items-center gap-1.5 hover:text-accent transition-colors"
-                          >
-                            <p className="text-sm font-medium text-fg truncate">
-                              {item.product_catalog?.brand} {item.product_catalog?.model}
-                            </p>
-                            <ArrowRight className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity flex-shrink-0" />
-                          </Link>
-                          <p className="text-xs text-muted mono">{item.sku}</p>
-                          {item.product_catalog?.colorway && (
-                            <p className="text-xs text-dim mt-0.5">
-                              {item.product_catalog.colorway}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    {/* Size */}
-                    <TableCell className="mono">
-                      <span className="text-sm text-fg">
-                        {item.size || '—'}
-                      </span>
+                    {/* Product - Standardized ProductLineItem in compact mode */}
+                    <TableCell colSpan={2}>
+                      <ProductLineItem
+                        imageUrl={item.product_catalog?.image_url || null}
+                        imageAlt={item.sku}
+                        brand={item.product_catalog?.brand || ''}
+                        model={item.product_catalog?.model || ''}
+                        variant={item.product_catalog?.colorway}
+                        sku={item.sku}
+                        href={`/product/${item.sku}`}
+                        sizeUk={item.size}
+                        sizeSystem="UK"
+                        category="sneakers"
+                        compact
+                      />
                     </TableCell>
 
                     {/* Latest Price */}
