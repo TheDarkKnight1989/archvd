@@ -236,9 +236,9 @@ export default function PnLPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-fg relative inline-block">
+          <h1 className="font-display text-2xl font-semibold text-fg tracking-tight relative inline-block">
             Profit & Loss
-            <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent opacity-40"></span>
+            <span className="absolute bottom-0 left-0 w-16 h-px bg-accent/30"></span>
           </h1>
           <p className="text-sm text-dim mt-1">Monthly P&L and VAT reporting</p>
         </div>
@@ -280,9 +280,9 @@ export default function PnLPage() {
             <button
               key={p}
               onClick={() => handlePresetChange(p)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-boutique ${
                 preset === p
-                  ? 'bg-accent/20 text-fg border border-accent/40 glow-accent-hover'
+                  ? 'bg-accent/20 text-fg border border-accent/40'
                   : 'text-dim hover:text-fg hover:bg-elev-2 hover:outline hover:outline-1 hover:outline-accent/40'
               }`}
             >
@@ -324,34 +324,34 @@ export default function PnLPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
-          <div className="text-xs text-muted uppercase tracking-wide mb-1">Revenue</div>
+        <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
+          <div className="label-uppercase text-muted mb-1">Revenue</div>
           <div className="text-2xl font-bold text-fg font-mono">
             {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.revenue)}
           </div>
           <div className="text-xs text-dim mt-1">{kpis.numSales} sales</div>
         </div>
-        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
-          <div className="text-xs text-muted uppercase tracking-wide mb-1">COGS</div>
+        <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
+          <div className="label-uppercase text-muted mb-1">COGS</div>
           <div className="text-2xl font-bold text-fg font-mono">
             {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.cogs)}
           </div>
         </div>
-        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
-          <div className="text-xs text-muted uppercase tracking-wide mb-1">Gross Profit</div>
+        <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
+          <div className="label-uppercase text-muted mb-1">Gross Profit</div>
           <div className="text-2xl font-bold text-accent font-mono">
             {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.grossProfit)}
           </div>
         </div>
-        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
-          <div className="text-xs text-muted uppercase tracking-wide mb-1">Expenses</div>
+        <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
+          <div className="label-uppercase text-muted mb-1">Expenses</div>
           <div className="text-2xl font-bold text-fg font-mono">
             {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.expenses)}
           </div>
         </div>
-        <div className="bg-elev-2 gradient-elev glow-accent-hover border border-border rounded-xl p-4">
-          <div className="text-xs text-muted uppercase tracking-wide mb-1">Net Profit</div>
-          <div className={`text-2xl font-bold font-mono inline-flex items-center gap-2 ${kpis.netProfit >= 0 ? 'text-success' : 'text-danger'}`}>
+        <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
+          <div className="label-uppercase text-muted mb-1">Net Profit</div>
+          <div className={`text-2xl font-bold font-mono inline-flex items-center gap-2 ${kpis.netProfit >= 0 ? 'profit-text' : 'loss-text'}`}>
             {kpis.netProfit > 0 && <TrendingUp className="h-6 w-6" />}
             {kpis.netProfit < 0 && <TrendingDown className="h-6 w-6" />}
             {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.netProfit)}
@@ -360,28 +360,28 @@ export default function PnLPage() {
       </div>
 
       {/* Sold Items Table */}
-      <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
-        <div className="px-4 py-3 border-b border-[#15251B]">
-          <h2 className="text-lg font-semibold text-fg">Sold Items</h2>
+      <div className="rounded-2xl border border-border bg-elev-1 overflow-hidden shadow-soft">
+        <div className="px-4 py-3 border-b border-border">
+          <h2 className="font-display text-lg font-semibold text-fg tracking-tight">Sold Items</h2>
           <p className="text-xs text-dim mt-0.5">Items sold in {formatRangeDisplay(dateRange)}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
+            <thead className="bg-elev-2 border-b border-t border-t-accent/10 border-b-border">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Sold Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">SKU</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Item</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Size</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Purchase £</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Sold £</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Margin £</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Margin %</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">VAT Due £</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Platform</th>
+                <th className="label-uppercase px-4 py-3 text-left text-muted">Sold Date</th>
+                <th className="label-uppercase px-4 py-3 text-left text-muted">SKU</th>
+                <th className="label-uppercase px-4 py-3 text-left text-muted">Item</th>
+                <th className="label-uppercase px-4 py-3 text-left text-muted">Size</th>
+                <th className="label-uppercase px-4 py-3 text-right text-muted">Purchase £</th>
+                <th className="label-uppercase px-4 py-3 text-right text-muted">Sold £</th>
+                <th className="label-uppercase px-4 py-3 text-right text-muted">Margin £</th>
+                <th className="label-uppercase px-4 py-3 text-right text-muted">Margin %</th>
+                <th className="label-uppercase px-4 py-3 text-right text-muted">VAT Due £</th>
+                <th className="label-uppercase px-4 py-3 text-left text-muted">Platform</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#15251B]/40">
+            <tbody className="divide-y divide-border/40">
               {pnlItemsRaw.loading ? (
                 <tr>
                   <td colSpan={10} className="px-4 py-8 text-center text-dim">
@@ -399,13 +399,13 @@ export default function PnLPage() {
                   const marginPct = item.buyPrice > 0 ? (item.margin / item.buyPrice) * 100 : null
 
                   return (
-                    <tr key={item.id} className="hover:bg-[#0B1510] transition-colors">
-                      <td className="px-4 py-4 text-sm text-[#E8F6EE]">{formatDate(item.date)}</td>
-                      <td className="px-4 py-4 text-sm text-[#E8F6EE] font-mono">{item.sku}</td>
-                      <td className="px-4 py-4 text-sm text-[#E8F6EE]">
+                    <tr key={item.id} className="hover:bg-elev-2 transition-boutique">
+                      <td className="px-4 py-4 text-sm text-fg">{formatDate(item.date)}</td>
+                      <td className="px-4 py-4 text-sm text-fg font-mono">{item.sku}</td>
+                      <td className="px-4 py-4 text-sm text-fg">
                         <div className="font-medium">{item.brand} {item.model}</div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-[#E8F6EE]">{formatSize(item.size, 'UK')}</td>
+                      <td className="px-4 py-4 text-sm text-fg">{formatSize(item.size, 'UK')}</td>
                       <td className="px-4 py-4 text-right">
                         <PlainMoneyCell value={item.buyPrice} />
                       </td>
@@ -419,7 +419,7 @@ export default function PnLPage() {
                         <PercentCell value={marginPct} />
                       </td>
                       <td className="px-4 py-4 text-sm text-accent text-right font-mono font-medium">{formatCurrency(item.vatDue)}</td>
-                      <td className="px-4 py-4 text-sm text-[#7FA08F]">{item.platform || '—'}</td>
+                      <td className="px-4 py-4 text-sm text-muted">{item.platform || '—'}</td>
                     </tr>
                   )
                 })
@@ -461,22 +461,22 @@ export default function PnLPage() {
       </div>
 
       {/* Expenses Table */}
-      <div className="rounded-2xl border border-[#15251B] bg-[#08100C] overflow-hidden">
-        <div className="px-4 py-3 border-b border-[#15251B]">
-          <h2 className="text-lg font-semibold text-fg">Expenses</h2>
+      <div className="rounded-2xl border border-border bg-elev-1 overflow-hidden shadow-soft">
+        <div className="px-4 py-3 border-b border-border">
+          <h2 className="font-display text-lg font-semibold text-fg tracking-tight">Expenses</h2>
           <p className="text-xs text-dim mt-0.5">Expenses recorded in {formatRangeDisplay(dateRange)}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[#0B1510] border-b border-t border-t-[#0F8D65]/25 border-b-[#15251B]">
+            <thead className="bg-elev-2 border-b border-t border-t-accent/10 border-b-border">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Description</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-[#B7D0C2] uppercase tracking-wider">Amount £</th>
+                <th className="label-uppercase px-4 py-3 text-left text-muted">Date</th>
+                <th className="label-uppercase px-4 py-3 text-left text-muted">Description</th>
+                <th className="label-uppercase px-4 py-3 text-left text-muted">Category</th>
+                <th className="label-uppercase px-4 py-3 text-right text-muted">Amount £</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#15251B]/40">
+            <tbody className="divide-y divide-border/40">
               {pnlExpensesRaw.loading ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-dim">
@@ -491,11 +491,11 @@ export default function PnLPage() {
                 </tr>
               ) : (
                 filteredExpenses.map((expense) => (
-                  <tr key={expense.id} className="hover:bg-[#0B1510] transition-colors">
-                    <td className="px-4 py-4 text-sm text-[#E8F6EE]">{formatDate(expense.date)}</td>
-                    <td className="px-4 py-4 text-sm text-[#E8F6EE]">{expense.description}</td>
-                    <td className="px-4 py-4 text-sm text-[#7FA08F]">{expense.category}</td>
-                    <td className="px-4 py-4 text-sm text-[#E8F6EE] font-mono text-right">{formatCurrency(expense.amount)}</td>
+                  <tr key={expense.id} className="hover:bg-elev-2 transition-boutique">
+                    <td className="px-4 py-4 text-sm text-fg">{formatDate(expense.date)}</td>
+                    <td className="px-4 py-4 text-sm text-fg">{expense.description}</td>
+                    <td className="px-4 py-4 text-sm text-muted">{expense.category}</td>
+                    <td className="px-4 py-4 text-sm text-fg font-mono text-right">{formatCurrency(expense.amount)}</td>
                   </tr>
                 ))
               )}
