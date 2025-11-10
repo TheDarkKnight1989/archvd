@@ -121,16 +121,24 @@ export async function GET(request: NextRequest) {
       scope,
     } = tokens;
 
-    if (!access_token || !refresh_token) {
-      logger.error('[StockX OAuth Callback] Missing tokens', {
+    if (!access_token) {
+      logger.error('[StockX OAuth Callback] Missing access token', {
         tokens,
         fullResponse: JSON.stringify(tokens),
         keys: Object.keys(tokens)
       });
       return NextResponse.json(
-        { error: 'Missing access or refresh token', debug: tokens },
+        { error: 'Missing access token', debug: tokens },
         { status: 500 }
       );
+    }
+
+    // Log warning if no refresh token (some OAuth configs don't provide it)
+    if (!refresh_token) {
+      logger.warn('[StockX OAuth Callback] No refresh token provided', {
+        message: 'StockX did not return a refresh token. Token will need to be refreshed manually after expiration.',
+        expires_in
+      });
     }
 
     // Calculate expiration time

@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       `client_id=${encodeURIComponent(STOCKX_CLIENT_ID)}` +
       `&redirect_uri=${encodeURIComponent(STOCKX_REDIRECT_URI)}` +
       `&response_type=code` +
-      `&scope=${encodeURIComponent('openid profile email inventory:read sales:read')}` +
+      `&scope=${encodeURIComponent('openid profile email offline_access inventory:read sales:read')}` +
       `&state=${state}` +
       `&code_challenge=${codeChallenge}` +
       `&code_challenge_method=S256`
