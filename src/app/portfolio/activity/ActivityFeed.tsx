@@ -117,9 +117,9 @@ export function ActivityFeed({ initialEvents }: ActivityFeedProps) {
         <button
           onClick={() => setSelectedType('all')}
           className={cn(
-            'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-120',
-            'border border-border bg-elev-1 hover:bg-elev-2 glow-accent-hover',
-            selectedType === 'all' && 'bg-accent-200 text-fg border-accent-400/50'
+            'px-3 py-1.5 rounded-lg text-sm font-medium transition-boutique',
+            'border border-border bg-elev-1 hover:bg-elev-2 shadow-soft',
+            selectedType === 'all' && 'bg-accent-200 text-fg border-accent/50'
           )}
         >
           All
@@ -129,9 +129,9 @@ export function ActivityFeed({ initialEvents }: ActivityFeedProps) {
             key={type}
             onClick={() => setSelectedType(type)}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-all duration-120',
-              'border border-border bg-elev-1 hover:bg-elev-2 glow-accent-hover',
-              selectedType === type && 'bg-accent-200 text-fg border-accent-400/50'
+              'px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-boutique',
+              'border border-border bg-elev-1 hover:bg-elev-2 shadow-soft',
+              selectedType === type && 'bg-accent-200 text-fg border-accent/50'
             )}
           >
             {type}
@@ -154,7 +154,7 @@ export function ActivityFeed({ initialEvents }: ActivityFeedProps) {
           return (
             <div
               key={event.id}
-              className="bg-elev-1 border border-border rounded-lg p-4 hover:bg-elev-2 transition-all duration-120"
+              className="bg-elev-1 border border-border rounded-lg p-4 hover:bg-elev-2 transition-boutique"
             >
               <div className="flex items-start gap-3">
                 {/* Icon */}

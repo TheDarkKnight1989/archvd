@@ -333,8 +333,8 @@ export default function InventoryPage() {
                   }
                 }}
                 className={cn(
-                  'pl-9 bg-elev-0 border-border transition-all duration-120 text-fg',
-                  searchQuery && 'ring-2 ring-accent/40'
+                  'pl-9 bg-elev-0 border-border transition-boutique text-fg',
+                  searchQuery && 'ring-2 ring-focus'
                 )}
               />
             </div>
@@ -343,7 +343,7 @@ export default function InventoryPage() {
               onClick={() => setAddItemModalOpen(true)}
               variant="default"
               size="sm"
-              className="ml-auto transition-all duration-120 hover:shadow-[0_0_20px_rgba(0,255,148,0.4)] glow-accent-hover"
+              className="ml-auto transition-boutique shadow-soft"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Item

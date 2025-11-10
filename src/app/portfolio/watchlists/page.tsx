@@ -187,7 +187,7 @@ export default function WatchlistsPage() {
         <div>
           <h1 className="text-2xl font-bold text-fg relative inline-block">
             Watchlists
-            <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
+            <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent opacity-40"></span>
           </h1>
           <p className="text-sm text-dim mt-1">
             Track SKUs and get notified when prices meet your targets
@@ -196,7 +196,7 @@ export default function WatchlistsPage() {
         <Button
           onClick={() => setCreateDialogOpen(true)}
           variant="default"
-          className="bg-accent-400 text-black hover:bg-accent-500 transition-all duration-120 glow-accent-hover"
+          className="bg-accent text-black hover:bg-accent-600 transition-boutique shadow-soft"
         >
           <Plus className="h-4 w-4 mr-2" />
           New Watchlist
@@ -231,7 +231,7 @@ export default function WatchlistsPage() {
           <Button
             onClick={() => setCreateDialogOpen(true)}
             variant="outline"
-            className="border-accent-400/50 text-accent hover:bg-accent/10"
+            className="border-accent/50 text-accent hover:bg-accent/10"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Watchlist
@@ -252,10 +252,10 @@ export default function WatchlistsPage() {
                 key={watchlist.id}
                 elevation={selectedWatchlist?.id === watchlist.id ? 2 : 1}
                 className={cn(
-                  'p-4 cursor-pointer transition-all duration-120 group',
+                  'p-4 cursor-pointer transition-boutique group',
                   selectedWatchlist?.id === watchlist.id
-                    ? 'border-accent-400/50 bg-accent-400/5'
-                    : 'hover:border-accent-400/30 hover:bg-elev-2'
+                    ? 'border-accent/50 bg-accent/5'
+                    : 'hover:border-accent/30 hover:bg-elev-2'
                 )}
                 onClick={() => setSelectedWatchlist(watchlist)}
               >
@@ -326,14 +326,14 @@ export default function WatchlistsPage() {
                     className={cn(
                       'flex-1 px-4 py-3 text-sm font-medium transition-colors relative',
                       activeTab === 'items'
-                        ? 'text-accent-400 bg-accent-400/5'
+                        ? 'text-accent bg-accent/5'
                         : 'text-white/60 hover:text-white/80 hover:bg-white/5'
                     )}
                   >
                     <Bookmark className="inline-block w-4 h-4 mr-2 -mt-0.5" />
                     Items
                     {activeTab === 'items' && (
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accent-400" />
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accent" />
                     )}
                   </button>
                   <button
@@ -341,14 +341,14 @@ export default function WatchlistsPage() {
                     className={cn(
                       'flex-1 px-4 py-3 text-sm font-medium transition-colors relative',
                       activeTab === 'alerts'
-                        ? 'text-accent-400 bg-accent-400/5'
+                        ? 'text-accent bg-accent/5'
                         : 'text-white/60 hover:text-white/80 hover:bg-white/5'
                     )}
                   >
                     <AlertCircle className="inline-block w-4 h-4 mr-2 -mt-0.5" />
                     Alerts
                     {activeTab === 'alerts' && (
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accent-400" />
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accent" />
                     )}
                   </button>
                 </div>
