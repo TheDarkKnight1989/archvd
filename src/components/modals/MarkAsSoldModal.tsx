@@ -129,21 +129,19 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[500px] w-full rounded-2xl border border-border bg-elev-2 shadow-soft p-6 md:p-7">
-          <DialogHeader className="pb-4 border-b border-border/40">
-            <DialogTitle className="text-xl font-bold text-fg">
-              Mark as Sold
-            </DialogTitle>
-            <p className="text-sm text-muted mt-2">
+        <DialogContent className="max-w-[500px] w-full">
+          <DialogHeader>
+            <DialogTitle>Mark as Sold</DialogTitle>
+            <p className="text-sm text-muted mt-1">
               {item.brand} {item.model} · {item.sku}
             </p>
           </DialogHeader>
 
-          <div className="py-4 space-y-4">
+          <div className="p-5 md:p-6 space-y-4">
             {/* Sold Price & Currency */}
             <div className="grid grid-cols-[1fr_120px] gap-3">
               <div>
-                <Label htmlFor="soldPrice" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+                <Label htmlFor="soldPrice" className="label-uppercase mb-2 block">
                   Sold Price <span className="text-accent">*</span>
                 </Label>
                 <Input
@@ -154,19 +152,19 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
                   value={soldPrice}
                   onChange={(e) => setSoldPrice(e.target.value)}
                   placeholder="0.00"
-                  className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+                  className="num text-right tabular-nums"
                   autoFocus
                 />
               </div>
               <div>
-                <Label htmlFor="currency" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+                <Label htmlFor="currency" className="label-uppercase mb-2 block">
                   Currency
                 </Label>
                 <Select value={soldCurrency} onValueChange={(v: any) => setSoldCurrency(v)}>
-                  <SelectTrigger className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-elev-1 border-border">
+                  <SelectContent>
                     <SelectItem value="GBP">GBP (£)</SelectItem>
                     <SelectItem value="EUR">EUR (€)</SelectItem>
                     <SelectItem value="USD">USD ($)</SelectItem>
@@ -177,14 +175,14 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
 
             {/* Platform */}
             <div>
-              <Label htmlFor="platform" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+              <Label htmlFor="platform" className="label-uppercase mb-2 block">
                 Platform
               </Label>
               <Select value={soldPlatform} onValueChange={setSoldPlatform}>
-                <SelectTrigger className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120">
+                <SelectTrigger>
                   <SelectValue placeholder="Select platform..." />
                 </SelectTrigger>
-                <SelectContent className="bg-elev-1 border-border">
+                <SelectContent>
                   {PLATFORMS.map((platform) => (
                     <SelectItem key={platform} value={platform}>
                       {platform}
@@ -196,7 +194,7 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
 
             {/* Fees */}
             <div>
-              <Label htmlFor="fees" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+              <Label htmlFor="fees" className="label-uppercase mb-2 block">
                 Fees (£)
               </Label>
               <Input
@@ -207,13 +205,13 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
                 value={soldFees}
                 onChange={(e) => setSoldFees(e.target.value)}
                 placeholder="0.00"
-                className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+                className="num text-right tabular-nums"
               />
             </div>
 
             {/* Shipping */}
             <div>
-              <Label htmlFor="shipping" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+              <Label htmlFor="shipping" className="label-uppercase mb-2 block">
                 Shipping (£)
               </Label>
               <Input
@@ -224,13 +222,13 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
                 value={soldShipping}
                 onChange={(e) => setSoldShipping(e.target.value)}
                 placeholder="0.00"
-                className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+                className="num text-right tabular-nums"
               />
             </div>
 
             {/* Sold Date */}
             <div>
-              <Label htmlFor="soldDate" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+              <Label htmlFor="soldDate" className="label-uppercase mb-2 block">
                 Sold Date <span className="text-accent">*</span>
               </Label>
               <Input
@@ -238,13 +236,13 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
                 type="date"
                 value={soldDate}
                 onChange={(e) => setSoldDate(e.target.value)}
-                className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 font-mono focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+                className="num"
               />
             </div>
 
             {/* Notes */}
             <div>
-              <Label htmlFor="notes" className="text-[11px] uppercase tracking-wider text-dim font-semibold mb-1 block">
+              <Label htmlFor="notes" className="label-uppercase mb-2 block">
                 Notes
               </Label>
               <Textarea
@@ -253,50 +251,49 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Additional notes about the sale..."
                 rows={3}
-                className="text-sm bg-elev-1 border-border text-fg rounded-lg px-3 py-2 resize-none focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
               />
             </div>
 
             {/* Margin Preview */}
             {soldPrice && (
-              <div className="bg-elev-1 border border-border/40 rounded-lg p-4 space-y-2">
+              <div className="bg-soft border border-border rounded-lg p-4 space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-dim">Purchase Total:</span>
-                  <span className="font-mono text-fg">£{purchaseTotal.toFixed(2)}</span>
+                  <span className="text-muted">Purchase Total:</span>
+                  <span className="num text-fg">£{purchaseTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-dim">Sold Price:</span>
-                  <span className="font-mono text-fg">£{soldPriceNum.toFixed(2)}</span>
+                  <span className="text-muted">Sold Price:</span>
+                  <span className="num text-fg">£{soldPriceNum.toFixed(2)}</span>
                 </div>
                 {feesNum > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-dim">Fees:</span>
-                    <span className="font-mono text-fg">-£{feesNum.toFixed(2)}</span>
+                    <span className="text-muted">Fees:</span>
+                    <span className="num text-fg">-£{feesNum.toFixed(2)}</span>
                   </div>
                 )}
                 {shippingNum > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-dim">Shipping:</span>
-                    <span className="font-mono text-fg">-£{shippingNum.toFixed(2)}</span>
+                    <span className="text-muted">Shipping:</span>
+                    <span className="num text-fg">-£{shippingNum.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="border-t border-border/40 pt-2 flex items-center justify-between">
-                  <span className="text-xs text-dim uppercase tracking-wider">Margin:</span>
+                <div className="border-t border-border pt-2 flex items-center justify-between">
+                  <span className="label-uppercase">Margin:</span>
                   <div className="flex items-center gap-2">
                     {margin >= 0 ? (
-                      <TrendingUp className="h-4 w-4 text-success" />
+                      <TrendingUp className="h-4 w-4 profit-text" />
                     ) : (
-                      <TrendingDown className="h-4 w-4 text-danger" />
+                      <TrendingDown className="h-4 w-4 loss-text" />
                     )}
                     <span className={cn(
-                      "text-base font-mono font-semibold",
-                      margin >= 0 ? "text-success" : "text-danger"
+                      "text-base num font-semibold",
+                      margin >= 0 ? "profit-text" : "loss-text"
                     )}>
                       {margin >= 0 ? '+' : ''}£{margin.toFixed(2)}
                     </span>
                     <span className={cn(
-                      "text-sm font-mono",
-                      marginPct >= 0 ? "text-success" : "text-danger"
+                      "text-sm num",
+                      marginPct >= 0 ? "profit-text" : "loss-text"
                     )}>
                       ({marginPct >= 0 ? '+' : ''}{marginPct.toFixed(1)}%)
                     </span>
@@ -307,19 +304,17 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/40">
+          <div className="flex items-center justify-end gap-3 p-5 md:p-6 border-t border-border">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
-              className="border-border"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting || !soldPrice || parseFloat(soldPrice) <= 0}
-              className="bg-accent text-black hover:bg-accent-600 glow-accent-hover"
             >
               {isSubmitting ? 'Saving...' : 'Mark as Sold'}
             </Button>
