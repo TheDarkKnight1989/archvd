@@ -154,10 +154,10 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Estimated Value */}
         <Card className="p-6 bg-elev-2 border-border/40 hover:border-border transition-colors">
-          <div className="flex items-start justify-between mb-2">
-            <p className="text-xs text-accent uppercase tracking-wider font-cinzel">
+          <div className="flex items-start justify-between mb-3">
+            <span className="label-up">
               Estimated Value
-            </p>
+            </span>
             {kpis.missingPricesCount > 0 && (
               <Badge
                 variant="outline"
@@ -173,61 +173,58 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
               </Badge>
             )}
           </div>
-          <p className="text-3xl font-mono font-bold text-fg tabular-nums mb-1">
+          <p className="heading mono text-[32px] leading-none text-fg mb-2">
             {format(kpis.estimatedValue)}
           </p>
-          <p className="text-[10px] text-muted">
-            Prices as of {pricesAsOfFormatted}
+          <p className="kbd text-[10px]">
+            Updated {pricesAsOfFormatted}
           </p>
         </Card>
 
         {/* Invested */}
         <Card className="p-6 bg-elev-2 border-border/40 hover:border-border transition-colors">
-          <p className="text-xs text-accent uppercase tracking-wider font-cinzel mb-2">
+          <span className="label-up mb-3 block">
             Invested
-          </p>
-          <p className="text-3xl font-mono font-bold text-fg tabular-nums">
+          </span>
+          <p className="heading mono text-[32px] leading-none text-fg">
             {format(kpis.invested)}
           </p>
         </Card>
 
         {/* Unrealised P/L */}
         <Card className="p-6 bg-elev-2 border-border/40 hover:border-border transition-colors">
-          <p className="text-xs text-accent uppercase tracking-wider font-cinzel mb-2">
+          <span className="label-up mb-3 block">
             Unrealised P/L
-          </p>
+          </span>
           <div className="flex items-baseline gap-2 mb-1">
             <p className={cn(
-              "text-3xl font-mono font-bold tabular-nums",
-              plPositive ? "text-success" : "text-danger"
+              "heading mono text-[32px] leading-none",
+              plPositive ? "money-pos" : "money-neg"
             )}>
               {plPositive ? '+' : ''}{format(kpis.unrealisedPL)}
             </p>
             {kpis.unrealisedPLDelta7d !== null && (
-              <Badge
-                variant="outline"
+              <span
                 className={cn(
-                  "text-xs font-mono tabular-nums px-1.5 py-0.5 h-5",
-                  delta7dPositive
-                    ? "text-success border-success/40 bg-success/10"
-                    : "text-danger border-danger/40 bg-danger/10"
+                  "text-xs font-semibold rounded-md flex items-center gap-1",
+                  delta7dPositive ? "money-pos-tint" : "money-neg-tint"
                 )}
               >
-                {delta7dPositive ? <TrendingUp className="h-2.5 w-2.5 mr-0.5" /> : <TrendingDown className="h-2.5 w-2.5 mr-0.5" />}
+                {delta7dPositive ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                 {delta7dPositive ? '+' : ''}{kpis.unrealisedPLDelta7d.toFixed(1)}%
-              </Badge>
+              </span>
             )}
           </div>
         </Card>
 
         {/* ROI % */}
         <Card className="p-6 bg-elev-2 border-border/40 hover:border-border transition-colors">
-          <p className="text-xs text-accent uppercase tracking-wider font-cinzel mb-2">
+          <span className="label-up mb-3 block">
             ROI %
-          </p>
+          </span>
           <p className={cn(
-            "text-3xl font-mono font-bold tabular-nums",
-            roiPositive ? "text-success" : "text-danger"
+            "heading mono text-[32px] leading-none",
+            roiPositive ? "money-pos" : "money-neg"
           )}>
             {roiPositive ? '+' : ''}{kpis.roi.toFixed(2)}%
           </p>
@@ -299,16 +296,16 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* 30-day Portfolio Value */}
         <Card className="p-6 bg-elev-2 border-border/40 lg:col-span-2">
-          <p className="text-xs text-accent uppercase tracking-wider font-cinzel mb-4">
+          <span className="label-up mb-4 block">
             30-Day Portfolio Value
-          </p>
+          </span>
           {series30d.length > 0 && series30d.some(s => s.value !== null) ? (
             <div className="h-32 flex items-center justify-center">
               <Sparkline
                 data={series30d.map(s => s.value ?? 0).filter((v): v is number => v !== null)}
                 width={600}
                 height={128}
-                color="rgb(0, 255, 148)"
+                color="rgb(196, 164, 132)"
               />
             </div>
           ) : (
@@ -320,9 +317,9 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
 
         {/* Category Breakdown */}
         <Card className="p-6 bg-elev-2 border-border/40">
-          <p className="text-xs text-accent uppercase tracking-wider font-cinzel mb-4">
+          <span className="label-up mb-4 block">
             By Category
-          </p>
+          </span>
           {categoryBreakdown.length > 0 ? (
             <div className="space-y-3">
               {categoryBreakdown.map((cat) => (

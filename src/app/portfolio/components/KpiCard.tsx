@@ -31,7 +31,7 @@ export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCa
     <Card elevation="soft" className="p-5 md:p-6 hover-elevate">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="label-uppercase text-muted">{label}</span>
+          <span className="label-up">{label}</span>
           {tooltip && (
             <div className="group relative">
               <Info className="h-3.5 w-3.5 text-dim cursor-help transition-colors hover:text-muted" />
@@ -43,17 +43,17 @@ export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCa
           )}
         </div>
         {period && (
-          <span className="text-2xs font-medium text-muted px-2 py-1 bg-soft rounded-lg">
+          <span className="kbd">
             {period}
           </span>
         )}
       </div>
       <div className="flex items-baseline gap-3">
-        <span className="num text-3xl md:text-4xl font-semibold text-fg tracking-tight">
+        <span className="heading mono text-[32px] leading-none text-fg">
           {value}
         </span>
         {delta !== undefined && (
-          <span className={`text-sm num flex items-center gap-1 ${delta >= 0 ? 'profit-text' : 'loss-text'}`}>
+          <span className={`text-sm font-semibold rounded-md flex items-center gap-1 ${delta >= 0 ? 'money-pos-tint' : 'money-neg-tint'}`}>
             {delta >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
             {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
           </span>
