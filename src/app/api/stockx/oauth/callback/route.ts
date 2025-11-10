@@ -107,12 +107,6 @@ export async function GET(request: NextRequest) {
 
     const tokens = await tokenResponse.json();
 
-    // DEBUG: Log the full token response from StockX
-    console.log('=== STOCKX TOKEN RESPONSE DEBUG ===');
-    console.log('Full response:', JSON.stringify(tokens, null, 2));
-    console.log('Response keys:', Object.keys(tokens));
-    console.log('===================================');
-
     const {
       access_token,
       refresh_token,
@@ -123,12 +117,14 @@ export async function GET(request: NextRequest) {
 
     if (!access_token) {
       logger.error('[StockX OAuth Callback] Missing access token', {
-        tokens,
-        fullResponse: JSON.stringify(tokens),
-        keys: Object.keys(tokens)
+        hasRefreshToken: !!refresh_token,
+        tokenType: token_type,
+        scope,
+        expiresIn: expires_in,
+        responseKeys: Object.keys(tokens)
       });
       return NextResponse.json(
-        { error: 'Missing access token', debug: tokens },
+        { error: 'Missing access token' },
         { status: 500 }
       );
     }

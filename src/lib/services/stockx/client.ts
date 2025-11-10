@@ -101,7 +101,9 @@ export class StockxClient {
     console.log('[StockX] Refreshing user access token', { userId: this.userId })
 
     try {
-      const response = await fetch(`${this.baseUrl}/oauth/token`, {
+      // Use OAuth token URL (accounts.stockx.com) not API URL (api.stockx.com)
+      const tokenUrl = process.env.STOCKX_OAUTH_TOKEN_URL || 'https://accounts.stockx.com/oauth/token'
+      const response = await fetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -212,7 +214,9 @@ export class StockxClient {
     console.log('[StockX] Requesting new access token')
 
     try {
-      const response = await fetch(`${this.baseUrl}/oauth/token`, {
+      // Use OAuth token URL (accounts.stockx.com) not API URL (api.stockx.com)
+      const tokenUrl = process.env.STOCKX_OAUTH_TOKEN_URL || 'https://accounts.stockx.com/oauth/token'
+      const response = await fetch(tokenUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
