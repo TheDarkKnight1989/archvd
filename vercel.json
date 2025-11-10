@@ -11,6 +11,18 @@
     {
       "path": "/api/pricing/refresh",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/stockx/prices",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/stockx/sales",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/stockx/listings",
+      "schedule": "0 3 * * *"
     }
   ]
 }
