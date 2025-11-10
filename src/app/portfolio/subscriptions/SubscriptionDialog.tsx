@@ -161,7 +161,7 @@ export function SubscriptionDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Netflix, Spotify, Adobe"
-              className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+              className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:ring-focus transition-boutique"
               autoFocus
             />
           </div>
@@ -176,7 +176,7 @@ export function SubscriptionDialog({
               value={vendor}
               onChange={(e) => setVendor(e.target.value)}
               placeholder="Optional"
-              className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+              className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:ring-focus transition-boutique"
             />
           </div>
 
@@ -194,7 +194,7 @@ export function SubscriptionDialog({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+                className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 num text-right tabular-nums focus:ring-focus transition-boutique"
               />
             </div>
 
@@ -203,7 +203,7 @@ export function SubscriptionDialog({
                 Interval <span className="text-accent">*</span>
               </Label>
               <Select value={interval} onValueChange={(v: 'monthly' | 'annual') => setInterval(v)}>
-                <SelectTrigger className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:border-accent/50 focus:glow-accent-hover transition-all duration-120">
+                <SelectTrigger className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 focus:ring-focus transition-boutique">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-elev-1 border-border">
@@ -224,7 +224,7 @@ export function SubscriptionDialog({
               type="date"
               value={nextCharge}
               onChange={(e) => setNextCharge(e.target.value)}
-              className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 font-mono focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+              className="h-10 text-sm bg-elev-1 border-border text-fg rounded-lg px-3 font-mono focus:ring-focus transition-boutique"
             />
           </div>
 
@@ -239,7 +239,7 @@ export function SubscriptionDialog({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Additional notes..."
               rows={3}
-              className="text-sm bg-elev-1 border-border text-fg rounded-lg px-3 py-2 resize-none focus:border-accent/50 focus:glow-accent-hover transition-all duration-120"
+              className="text-sm bg-elev-1 border-border text-fg rounded-lg px-3 py-2 resize-none focus:ring-focus transition-boutique"
             />
           </div>
         </div>
@@ -257,7 +257,7 @@ export function SubscriptionDialog({
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting || !name.trim() || !amount || parseFloat(amount) <= 0}
-            className="bg-accent text-black hover:bg-accent-600 glow-accent-hover"
+            className="bg-accent text-black hover:bg-accent-600 shadow-soft"
           >
             {isSubmitting ? 'Saving...' : subscription ? 'Update' : 'Add'}
           </Button>

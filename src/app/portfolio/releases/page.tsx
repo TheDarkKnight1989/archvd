@@ -274,7 +274,7 @@ export default function ReleasesPage() {
         <div>
           <h1 className="text-2xl font-bold text-fg relative inline-block">
             Releases
-            <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent-400 opacity-40"></span>
+            <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent opacity-40"></span>
           </h1>
           <p className="text-sm text-dim mt-1">
             Sneaker releases from thedropdate.com • Auto-synced daily at 06:00 UTC
@@ -284,7 +284,7 @@ export default function ReleasesPage() {
           onClick={handleRefresh}
           disabled={syncing}
           variant="outline"
-          className="bg-elev-1 border-border hover:bg-elev-2 glow-accent-hover transition-all duration-120"
+          className="bg-elev-1 border-border hover:bg-elev-2 shadow-soft transition-boutique"
         >
           {syncing ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -306,9 +306,9 @@ export default function ReleasesPage() {
                 key={brand}
                 onClick={() => setFilterBrand(brand)}
                 className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-120',
-                  'border border-border bg-elev-1 hover:bg-elev-2 glow-accent-hover',
-                  filterBrand === brand && 'bg-accent-200 text-fg border-accent-400/50'
+                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-boutique',
+                  'border border-border bg-elev-1 hover:bg-elev-2 shadow-soft',
+                  filterBrand === brand && 'bg-accent-200 text-fg border-accent/50'
                 )}
               >
                 {brand}
@@ -326,9 +326,9 @@ export default function ReleasesPage() {
                 key={status}
                 onClick={() => setFilterStatus(status)}
                 className={cn(
-                  'px-4 py-1.5 rounded-md text-sm font-medium capitalize transition-all duration-120',
+                  'px-4 py-1.5 rounded-md text-sm font-medium capitalize transition-boutique',
                   filterStatus === status
-                    ? 'bg-accent-400 text-black shadow-sm'
+                    ? 'bg-accent text-black shadow-soft'
                     : 'text-muted hover:text-fg'
                 )}
               >
@@ -351,7 +351,7 @@ export default function ReleasesPage() {
                 type="date"
                 value={filterDateFrom}
                 onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-[150px] bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20 text-sm"
+                className="w-[150px] bg-elev-1 border-border focus:ring-focus text-sm"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -363,7 +363,7 @@ export default function ReleasesPage() {
                 type="date"
                 value={filterDateTo}
                 onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-[150px] bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20 text-sm"
+                className="w-[150px] bg-elev-1 border-border focus:ring-focus text-sm"
               />
             </div>
             {(filterDateFrom || filterDateTo) && (
@@ -389,7 +389,7 @@ export default function ReleasesPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="pl-10 bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20 glow-accent-focus transition-all duration-120"
+            className="pl-10 bg-elev-1 border-border focus:ring-focus transition-boutique"
           />
         </div>
 
@@ -603,7 +603,7 @@ export default function ReleasesPage() {
                       onClick={() => {
                         setWatchlistPickerOpen(true)
                       }}
-                      className="border-accent-400/50 text-accent hover:bg-accent/10"
+                      className="border-accent/50 text-accent hover:bg-accent/10"
                     >
                       <Bookmark className="h-4 w-4 mr-2" />
                       Add to Watchlist
