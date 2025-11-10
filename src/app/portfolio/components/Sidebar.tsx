@@ -169,7 +169,7 @@ export function Sidebar() {
       data-pinned={pinned || undefined}
       className={cn(
         'fixed left-0 top-0 h-dvh z-40 max-md:hidden',
-        'bg-elev-1 border-r border-border',
+        'bg-elev-1 border-r border-keyline',
         'transition-[width,background,box-shadow] duration-120 ease-terminal',
         isExpanded ? 'w-[320px]' : 'w-16'
       )}
@@ -232,8 +232,9 @@ export function Sidebar() {
               <h3
                 className={cn(
                   "label-uppercase px-3 pt-2 pb-1 transition-boutique",
-                  isExpanded ? "text-muted/60 opacity-100" : "opacity-0 pointer-events-none"
+                  isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
+                style={{ color: '#8B857B' }}
               >
                 Main
               </h3>
@@ -255,8 +256,9 @@ export function Sidebar() {
               <h3
                 className={cn(
                   "label-uppercase px-3 pt-2 pb-1 transition-boutique",
-                  isExpanded ? "text-muted/60 opacity-100" : "opacity-0 pointer-events-none"
+                  isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
+                style={{ color: '#8B857B' }}
               >
                 Tools
               </h3>
@@ -474,14 +476,9 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
           'transition-boutique',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
           isActive
-            ? 'bg-elev-2 border border-border/60 shadow-soft text-fg'
+            ? 'bg-[#F3EFE8] text-ink font-medium shadow-soft'
             : 'text-fg/90 hover:bg-elev-2/80'
         )}
-        style={{
-          background: isActive
-            ? 'radial-gradient(circle at center, rgba(var(--archvd-accent-400-rgb), 0.08) 0%, rgba(var(--archvd-accent-400-rgb), 0.02) 80%), var(--archvd-bg-elev-2)'
-            : undefined,
-        }}
       >
         {/* Active indicator bar with hover animation */}
         {(isActive || isHovered) && (
