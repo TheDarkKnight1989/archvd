@@ -1,7 +1,6 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TrendingUp, TrendingDown, Info } from 'lucide-react'
 
@@ -17,26 +16,26 @@ interface KpiCardProps {
 export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCardProps) {
   if (loading) {
     return (
-      <Card elevation={2} className="p-4 md:p-5 gradient-elev">
-        <div className="flex items-center justify-between mb-2">
+      <Card elevation="soft" className="p-5 md:p-6">
+        <div className="flex items-center justify-between mb-3">
           <Skeleton className="h-3 w-24" />
-          {period && <Skeleton className="h-5 w-8" />}
+          {period && <Skeleton className="h-4 w-12" />}
         </div>
-        <Skeleton className="h-8 w-32 mt-2" />
-        {delta !== undefined && <Skeleton className="h-4 w-16 mt-2" />}
+        <Skeleton className="h-9 w-32 mt-2" />
+        {delta !== undefined && <Skeleton className="h-4 w-16 mt-3" />}
       </Card>
     )
   }
 
   return (
-    <Card elevation={2} className="p-4 md:p-5 gradient-elev glow-accent-hover">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium text-muted">{label}</span>
+    <Card elevation="soft" className="p-5 md:p-6 hover-elevate">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="label-uppercase text-muted">{label}</span>
           {tooltip && (
             <div className="group relative">
-              <Info className="h-3.5 w-3.5 text-muted cursor-help" />
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-elev-3 border border-border rounded-lg text-xs text-fg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10 shadow-lg">
+              <Info className="h-3.5 w-3.5 text-dim cursor-help transition-colors hover:text-muted" />
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-surface border border-border rounded-xl text-xs text-fg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-boutique z-10 shadow-medium">
                 {tooltip}
                 <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-t-4 border-t-border"></div>
               </div>
@@ -44,18 +43,18 @@ export function KpiCard({ label, value, delta, period, loading, tooltip }: KpiCa
           )}
         </div>
         {period && (
-          <Badge variant="outline" className="text-[11px] px-2 py-0.5">
+          <span className="text-2xs font-medium text-muted px-2 py-1 bg-soft rounded-lg">
             {period}
-          </Badge>
+          </span>
         )}
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="num text-2xl md:text-3xl font-semibold text-fg">
+      <div className="flex items-baseline gap-3">
+        <span className="num text-3xl md:text-4xl font-semibold text-fg tracking-tight">
           {value}
         </span>
         {delta !== undefined && (
-          <span className={`text-sm font-mono flex items-center gap-1 ${delta >= 0 ? 'text-success' : 'text-danger'}`}>
-            {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+          <span className={`text-sm num flex items-center gap-1 ${delta >= 0 ? 'profit-text' : 'loss-text'}`}>
+            {delta >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
             {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
           </span>
         )}

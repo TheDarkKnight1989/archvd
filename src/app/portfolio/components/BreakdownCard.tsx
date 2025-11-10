@@ -44,14 +44,14 @@ export function BreakdownCard({ title, items, loading }: BreakdownCardProps) {
 
   if (items.length === 0) {
     return (
-      <Card>
+      <Card elevation="soft">
         <CardHeader>
           <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-dim">
-            <p className="text-sm">No data available</p>
-            <p className="text-xs mt-1">Add items to see breakdown</p>
+          <div className="text-center py-12 text-muted">
+            <p className="text-sm font-medium">No data available</p>
+            <p className="text-xs mt-1.5 text-dim">Add items to see breakdown</p>
           </div>
         </CardContent>
       </Card>
@@ -59,29 +59,29 @@ export function BreakdownCard({ title, items, loading }: BreakdownCardProps) {
   }
 
   return (
-    <Card>
+    <Card elevation="soft">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-3">
+        <ul className="space-y-4">
           {items.map((item, idx) => {
             // Clamp percentage to 0-100 range
             const clampedPct = Math.max(0, Math.min(100, item.pct))
             const displayPct = clampedPct.toFixed(1)
 
             return (
-              <li key={idx} className="space-y-1">
+              <li key={idx} className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted">{item.label}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="num text-xs text-dim">{displayPct}%</span>
-                    <span className="num text-sm text-fg">{format(convert(item.value, 'GBP'))}</span>
+                  <span className="font-medium text-fg">{item.label}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="num text-xs text-muted">{displayPct}%</span>
+                    <span className="num text-sm font-medium text-fg">{format(convert(item.value, 'GBP'))}</span>
                   </div>
                 </div>
-                <div className="h-1.5 rounded-full bg-accent-200">
+                <div className="h-2 rounded-full bg-soft overflow-hidden">
                   <div
-                    className="h-1.5 rounded-full bg-accent-500 transition-all duration-slow"
+                    className="h-2 rounded-full bg-accent transition-all duration-200 ease-out"
                     style={{ width: `${clampedPct}%` }}
                   />
                 </div>
