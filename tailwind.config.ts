@@ -13,8 +13,15 @@ const config: Config = {
         // Boutique v2 - Simplified naming (preferred)
         canvas: 'var(--bg)',
         panel: 'var(--panel)',
-        keyline: 'var(--keyline)',
+        keyline: {
+          DEFAULT: 'var(--keyline)',
+          strong: 'var(--keyline-strong)',
+        },
         ink: 'var(--ink)',
+        table: {
+          zebra: 'var(--table-zebra)',
+          hover: 'var(--table-hover)',
+        },
 
         // Legacy naming (backward compat)
         bg: 'var(--archvd-bg)',

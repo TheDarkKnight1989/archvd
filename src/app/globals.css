@@ -13,13 +13,13 @@
      ========================================== */
 
   /* Backgrounds */
-  --bg: #F6F2EA;              /* Warm beige canvas */
+  --bg: #F5F3EE;              /* Warm beige canvas - cooler to avoid cream fog */
   --panel: #FFFFFF;           /* White cards */
   --panel-soft: #FAF6EE;      /* Raised panels */
 
   /* Borders */
-  --keyline: #E8E3DC;         /* Standard dividers */
-  --keyline-strong: #DFD8D0;  /* Emphasized borders */
+  --keyline: #E4DED6;         /* Standard dividers - darker for better contrast */
+  --keyline-strong: #D8D1C7;  /* Emphasized borders */
 
   /* Text */
   --ink: #1E1E1E;             /* Primary text */
@@ -35,12 +35,16 @@
   --loss: #DC2626;            /* Red-600 */
   --loss-tint: #FDECEC;       /* Light red tint */
 
+  /* Table colors */
+  --table-zebra: #FAF8F5;     /* Even row background */
+  --table-hover: #F3EFE8;     /* Row hover state */
+
   /* Elevation shadows */
   --elev-1: 0 1px 2px rgba(0,0,0,.06);
   --elev-2: 0 4px 18px rgba(0,0,0,.08);
 
   /* Border radii */
-  --r-card: 16px;
+  --r-card: 20px;
   --r-input: 10px;
   --r-pill: 9999px;
 
@@ -52,12 +56,12 @@
      ========================================== */
 
   /* Backgrounds - Warm beige canvas */
-  --archvd-bg: #F6F2EA;
+  --archvd-bg: #F5F3EE;
   --archvd-surface: #FFFFFF;
   --archvd-soft: #FAF6EE;
 
   /* Elevation scale (for cards/overlays) */
-  --archvd-bg-elev-0: #F6F2EA; /* Page shell - warm beige canvas */
+  --archvd-bg-elev-0: #F5F3EE; /* Page shell - warm beige canvas */
   --archvd-bg-elev-1: #FFFFFF; /* Standard cards - clean white */
   --archvd-bg-elev-2: #FAF6EE; /* Raised cards - light beige tint */
   --archvd-bg-elev-3: #F2EDE6; /* Modals/dialogs - slightly darker beige */
@@ -146,6 +150,10 @@
   --profit-tint: rgba(74, 222, 128, 0.12);
   --loss: #F87171;            /* Lighter red for dark */
   --loss-tint: rgba(248, 113, 113, 0.12);
+
+  /* Table colors - Dark mode */
+  --table-zebra: rgba(255, 255, 255, 0.02);
+  --table-hover: rgba(255, 255, 255, 0.04);
 
   /* Elevation shadows - Deeper in dark mode */
   --elev-1: 0 2px 8px rgba(0,0,0,.3);
@@ -287,7 +295,14 @@
      Boutique v2 - Core Utilities
      ========================================== */
 
-  /* Panel cards */
+  /* Panel cards - Elevation system */
+  .elev-0 {
+    background: var(--panel);
+    border: 1px solid var(--keyline);
+    border-radius: var(--r-card);
+    /* No shadow - border-only elevation */
+  }
+
   .panel {
     background: var(--panel);
     border: 1px solid var(--keyline);
