@@ -123,7 +123,7 @@ export function AddToWatchlistDialog({
                 setError('')
               }}
               disabled={adding}
-              className="bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20 font-mono"
+              className="bg-elev-1 border-border focus:ring-focus font-mono"
               aria-label="SKU"
               autoFocus
             />
@@ -137,7 +137,7 @@ export function AddToWatchlistDialog({
               value={size}
               onChange={(e) => setSize(e.target.value)}
               disabled={adding}
-              className="bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20"
+              className="bg-elev-1 border-border focus:ring-focus"
               aria-label="Size"
             />
           </div>
@@ -154,7 +154,7 @@ export function AddToWatchlistDialog({
                 setError('')
               }}
               disabled={adding}
-              className="bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20 font-mono"
+              className="bg-elev-1 border-border focus:ring-focus font-mono"
               min="0"
               step="0.01"
               aria-label="Target price in GBP"
@@ -180,7 +180,7 @@ export function AddToWatchlistDialog({
           <Button
             onClick={handleAdd}
             disabled={adding || !sku.trim()}
-            className="bg-accent-400 text-black hover:bg-accent-500"
+            className="bg-accent text-black hover:bg-accent-600"
           >
             {adding ? (
               <>

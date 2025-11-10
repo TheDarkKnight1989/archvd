@@ -90,7 +90,7 @@ export function CreateWatchlistDialog({
                 }
               }}
               disabled={creating}
-              className="bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20"
+              className="bg-elev-1 border-border focus:ring-focus"
               maxLength={100}
               aria-label="Watchlist name"
               autoFocus
@@ -112,7 +112,7 @@ export function CreateWatchlistDialog({
           <Button
             onClick={handleCreate}
             disabled={creating || !name.trim()}
-            className="bg-accent-400 text-black hover:bg-accent-500"
+            className="bg-accent text-black hover:bg-accent-600"
           >
             {creating ? (
               <>

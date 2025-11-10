@@ -199,7 +199,7 @@ export function AddToWatchlistPicker({
                     variant="outline"
                     size="sm"
                     onClick={() => setCreatingNew(true)}
-                    className="border-accent-400/50 text-accent"
+                    className="border-accent/50 text-accent"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Create Watchlist
@@ -215,8 +215,8 @@ export function AddToWatchlistPicker({
                         className={cn(
                           'w-full flex items-center gap-3 p-3 rounded-lg border transition-all',
                           selectedWatchlistId === watchlist.id
-                            ? 'border-accent-400 bg-accent-400/10'
-                            : 'border-border hover:border-accent-400/50 hover:bg-elev-2'
+                            ? 'border-accent bg-accent/10'
+                            : 'border-border hover:border-accent/50 hover:bg-elev-2'
                         )}
                       >
                         <Bookmark
@@ -261,7 +261,7 @@ export function AddToWatchlistPicker({
                     }
                   }}
                   disabled={adding}
-                  className="bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20"
+                  className="bg-elev-1 border-border focus:ring-focus"
                   autoFocus
                 />
               </div>
@@ -282,7 +282,7 @@ export function AddToWatchlistPicker({
                   size="sm"
                   onClick={handleCreateWatchlist}
                   disabled={adding || !newWatchlistName.trim()}
-                  className="flex-1 bg-accent-400 text-black hover:bg-accent-500"
+                  className="flex-1 bg-accent text-black hover:bg-accent-600"
                 >
                   {adding ? (
                     <>
@@ -307,7 +307,7 @@ export function AddToWatchlistPicker({
                 value={size}
                 onChange={(e) => setSize(e.target.value)}
                 disabled={adding}
-                className="bg-elev-1 border-border focus:border-accent-400 focus:ring-accent-400/20"
+                className="bg-elev-1 border-border focus:ring-focus"
               />
             </div>
           )}
@@ -346,7 +346,7 @@ export function AddToWatchlistPicker({
             <Button
               onClick={handleAddToWatchlist}
               disabled={adding || !selectedWatchlistId}
-              className="bg-accent-400 text-black hover:bg-accent-500"
+              className="bg-accent text-black hover:bg-accent-600"
             >
               {adding ? (
                 <>
