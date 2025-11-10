@@ -106,6 +106,13 @@ export async function GET(request: NextRequest) {
     }
 
     const tokens = await tokenResponse.json();
+
+    // DEBUG: Log the full token response from StockX
+    console.log('=== STOCKX TOKEN RESPONSE DEBUG ===');
+    console.log('Full response:', JSON.stringify(tokens, null, 2));
+    console.log('Response keys:', Object.keys(tokens));
+    console.log('===================================');
+
     const {
       access_token,
       refresh_token,
@@ -115,9 +122,13 @@ export async function GET(request: NextRequest) {
     } = tokens;
 
     if (!access_token || !refresh_token) {
-      logger.error('[StockX OAuth Callback] Missing tokens', { tokens });
+      logger.error('[StockX OAuth Callback] Missing tokens', {
+        tokens,
+        fullResponse: JSON.stringify(tokens),
+        keys: Object.keys(tokens)
+      });
       return NextResponse.json(
-        { error: 'Missing access or refresh token' },
+        { error: 'Missing access or refresh token', debug: tokens },
         { status: 500 }
       );
     }
