@@ -259,7 +259,7 @@ async function handleWebhookEvent(
   }
 }
 
-async function handleListingStatusChanged(supabase: any, data: any) {
+async function handleListingStatusChanged(supabase: any, data: any): Promise<{ status: 'success' | 'skipped' | 'error'; message: string }> {
   logger.info('[Webhook] Processing listing.status.changed', {
     listing_id: data.listing_id,
     old_status: data.old_status,
@@ -287,7 +287,7 @@ async function handleListingStatusChanged(supabase: any, data: any) {
   return { status: 'success', message: 'Listing status updated' };
 }
 
-async function handleListingPriceChanged(supabase: any, data: any) {
+async function handleListingPriceChanged(supabase: any, data: any): Promise<{ status: 'success' | 'skipped' | 'error'; message: string }> {
   logger.info('[Webhook] Processing listing.price.changed', {
     listing_id: data.listing_id,
     old_price: data.old_price,
@@ -323,7 +323,7 @@ async function handleListingPriceChanged(supabase: any, data: any) {
   return { status: 'success', message: 'Listing price updated' };
 }
 
-async function handleOrderCreated(supabase: any, data: any) {
+async function handleOrderCreated(supabase: any, data: any): Promise<{ status: 'success' | 'skipped' | 'error'; message: string }> {
   logger.info('[Webhook] Processing order.created', {
     order_id: data.order_id,
     listing_id: data.listing_id,
@@ -334,7 +334,7 @@ async function handleOrderCreated(supabase: any, data: any) {
   return { status: 'success', message: 'Order created event logged' };
 }
 
-async function handleOrderUpdated(supabase: any, data: any) {
+async function handleOrderUpdated(supabase: any, data: any): Promise<{ status: 'success' | 'skipped' | 'error'; message: string }> {
   logger.info('[Webhook] Processing order.updated', {
     order_id: data.order_id,
     status: data.status,
@@ -344,7 +344,7 @@ async function handleOrderUpdated(supabase: any, data: any) {
   return { status: 'success', message: 'Order updated event logged' };
 }
 
-async function handlePayoutCreated(supabase: any, data: any) {
+async function handlePayoutCreated(supabase: any, data: any): Promise<{ status: 'success' | 'skipped' | 'error'; message: string }> {
   logger.info('[Webhook] Processing payout.created', {
     payout_id: data.payout_id,
     amount: data.amount,
