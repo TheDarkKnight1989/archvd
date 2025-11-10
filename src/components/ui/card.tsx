@@ -3,15 +3,15 @@ import { cn } from "@/lib/utils/cn"
 
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & { elevation?: 1 | 2 | 3 }
->(({ className, elevation = 1, ...props }, ref) => (
+  React.HTMLAttributes<HTMLDivElement> & { elevation?: 'soft' | 'medium' | 'large' }
+>(({ className, elevation = 'soft', ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      "rounded-2xl border border-border shadow-soft",
-      elevation === 1 && "bg-elev-1",
-      elevation === 2 && "bg-elev-2",
-      elevation === 3 && "bg-elev-3",
+      "rounded-2xl border border-border bg-surface transition-boutique",
+      elevation === 'soft' && "shadow-soft",
+      elevation === 'medium' && "shadow-medium",
+      elevation === 'large' && "shadow-large",
       className
     )}
     {...props}
@@ -25,7 +25,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-4 md:p-5", className)}
+    className={cn("flex flex-col space-y-2 p-5 md:p-6", className)}
     {...props}
   />
 ))
@@ -37,7 +37,7 @@ const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("text-sm font-medium text-muted", className)}
+    className={cn("font-display text-sm font-medium tracking-tight text-fg", className)}
     {...props}
   />
 ))
@@ -49,7 +49,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-xs text-dim", className)}
+    className={cn("text-xs text-muted leading-relaxed", className)}
     {...props}
   />
 ))
@@ -59,7 +59,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-4 md:p-5 pt-0", className)} {...props} />
+  <div ref={ref} className={cn("p-5 md:p-6 pt-0", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
