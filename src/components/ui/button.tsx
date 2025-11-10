@@ -7,11 +7,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-accent text-white hover:bg-accent-600 shadow-soft font-semibold",
+        default: "bg-accent text-white hover:bg-accent-600 shadow-soft hover:shadow-medium font-semibold",
         outline: "border border-keyline bg-panel text-fg hover:border-accent/40 hover:bg-soft",
         ghost: "hover:bg-soft text-fg",
-        destructive: "bg-loss text-white hover:bg-loss/90 shadow-soft font-semibold",
-        secondary: "bg-soft text-fg hover:bg-elev-2",
+        destructive: "bg-loss text-white hover:bg-loss/90 shadow-soft hover:shadow-medium font-semibold",
+        secondary: "border border-keyline-strong bg-panel text-fg hover:bg-[#FAF8F5]",
       },
       size: {
         default: "h-10 px-4 py-2",
