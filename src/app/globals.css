@@ -143,7 +143,7 @@
   --dim: #71717A;             /* Zinc-500 - tertiary text */
 
   /* Accent - Rich blue */
-  --accent: #3B82F6;          /* Blue-500 - vibrant primary blue */
+  --accent: #2563EB;          /* Blue-600 - deeper, more saturated blue */
 
   /* Profit / Loss - Vibrant for dark backgrounds */
   --profit: #22C55E;          /* Green-500 - bright profit green */
@@ -153,11 +153,11 @@
 
   /* Table colors - Subtle zebra with blue hover */
   --table-zebra: rgba(255, 255, 255, 0.02);
-  --table-hover: rgba(59, 130, 246, 0.08); /* Blue hover tint */
+  --table-hover: rgba(37, 99, 235, 0.10); /* Blue hover tint - deeper blue */
 
   /* Elevation shadows - Deep blacks with subtle blue glow */
-  --elev-1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 1px rgba(59,130,246,.05);
-  --elev-2: 0 4px 20px rgba(0,0,0,.6), 0 0 0 1px rgba(59,130,246,.08);
+  --elev-1: 0 1px 3px rgba(0,0,0,.5), 0 0 0 1px rgba(37,99,235,.05);
+  --elev-2: 0 4px 20px rgba(0,0,0,.6), 0 0 0 1px rgba(37,99,235,.08);
 
   /* ==========================================
      Legacy archvd tokens (backward compat)
@@ -185,12 +185,12 @@
   --archvd-fg-dim: #71717A;
 
   /* Accent - Blue scale */
-  --archvd-accent: #3B82F6;   /* Blue-500 */
-  --archvd-accent-600: #2563EB; /* Blue-600 - darker */
-  --archvd-accent-500: #3B82F6; /* Blue-500 */
-  --archvd-accent-400: #60A5FA; /* Blue-400 - lighter */
-  --archvd-accent-300: #93C5FD; /* Blue-300 */
-  --archvd-accent-200: #BFDBFE; /* Blue-200 */
+  --archvd-accent: #2563EB;   /* Blue-600 - deeper, more saturated */
+  --archvd-accent-600: #1D4ED8; /* Blue-700 - darker */
+  --archvd-accent-500: #2563EB; /* Blue-600 */
+  --archvd-accent-400: #3B82F6; /* Blue-500 - lighter */
+  --archvd-accent-300: #60A5FA; /* Blue-400 */
+  --archvd-accent-200: #93C5FD; /* Blue-300 */
 
   /* Profit / Loss */
   --archvd-profit: #22C55E;   /* Green-500 */
@@ -205,23 +205,23 @@
   --archvd-danger-200: rgba(239, 68, 68, 0.15);
 
   /* RGB variants for rgba() */
-  --archvd-accent-rgb: 59, 130, 246;      /* Blue-500 */
-  --archvd-accent-400-rgb: 96, 165, 250;  /* Blue-400 */
+  --archvd-accent-rgb: 37, 99, 235;       /* Blue-600 */
+  --archvd-accent-400-rgb: 59, 130, 246;  /* Blue-500 */
 
   /* Data Series - Blue scale */
-  --archvd-series-1: #3B82F6;  /* Blue-500 */
-  --archvd-series-2: #60A5FA;  /* Blue-400 */
-  --archvd-series-3: #93C5FD;  /* Blue-300 */
-  --archvd-series-4: #BFDBFE;  /* Blue-200 */
+  --archvd-series-1: #2563EB;  /* Blue-600 */
+  --archvd-series-2: #3B82F6;  /* Blue-500 */
+  --archvd-series-3: #60A5FA;  /* Blue-400 */
+  --archvd-series-4: #93C5FD;  /* Blue-300 */
 
   /* Focus ring - Blue */
-  --archvd-focus: #3B82F6;
-  --archvd-ring: rgba(59, 130, 246, 0.25);
+  --archvd-focus: #2563EB;
+  --archvd-ring: rgba(37, 99, 235, 0.25);
 
   /* Shadows - Deep with subtle blue glow */
-  --archvd-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(59, 130, 246, 0.05);
-  --archvd-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(59, 130, 246, 0.08);
-  --archvd-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(59, 130, 246, 0.10);
+  --archvd-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(37, 99, 235, 0.05);
+  --archvd-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(37, 99, 235, 0.08);
+  --archvd-shadow-large: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(37, 99, 235, 0.10);
 }
 
 /* High contrast mode */

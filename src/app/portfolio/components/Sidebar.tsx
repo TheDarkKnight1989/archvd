@@ -310,8 +310,9 @@ export function Sidebar() {
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className={cn(
-                "group rounded-lg flex items-center transition-boutique",
+                "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
                 theme === 'dark' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -334,8 +335,9 @@ export function Sidebar() {
             <Link
               href="/settings"
               className={cn(
-                "group rounded-lg flex items-center transition-boutique",
+                "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
                 pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -351,8 +353,9 @@ export function Sidebar() {
             <Link
               href="/portfolio/settings/accounting"
               className={cn(
-                "group rounded-lg flex items-center transition-boutique",
+                "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
                 pathname === '/portfolio/settings/accounting' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -368,8 +371,9 @@ export function Sidebar() {
             <Link
               href="/portfolio/import"
               className={cn(
-                "group rounded-lg flex items-center transition-boutique",
+                "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
                 pathname === '/portfolio/import' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -385,8 +389,9 @@ export function Sidebar() {
             <Link
               href="/profile"
               className={cn(
-                "group rounded-lg flex items-center transition-boutique",
+                "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
                 pathname === '/profile' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
@@ -403,8 +408,9 @@ export function Sidebar() {
               <button
                 onClick={() => setPinned(!pinned)}
                 className={cn(
-                  "h-9 w-full rounded-lg flex items-center gap-2 px-2 transition-boutique",
+                  "h-9 w-full rounded-lg flex items-center gap-2 px-2 transition-all duration-200",
                   "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                  "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
                   pinned ? 'text-accent' : 'text-muted hover:text-fg'
                 )}
                 title={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
