@@ -85,10 +85,10 @@ export async function POST(request: NextRequest) {
     // Fetch prices for each (SKU, size) pair
     for (const { sku, size } of pairs) {
       try {
-        // Note: Adjust endpoint based on actual StockX API
-        // Example: GET /api/v1/products/{sku}/market-data?size={size}
+        // Note: v2 API endpoint for product/market data - may need adjustment
+        // Using /v2/products/{sku} based on typical REST patterns
         const marketData = await client.request(
-          `/api/v1/products/${encodeURIComponent(sku)}/market-data?size=${encodeURIComponent(size)}`,
+          `/v2/products/${encodeURIComponent(sku)}?size=${encodeURIComponent(size)}`,
           {
             method: 'GET',
           }
@@ -96,18 +96,20 @@ export async function POST(request: NextRequest) {
 
         processedCount++;
 
-        if (!marketData || !marketData.data) {
+        if (!marketData) {
           skippedCount++;
           continue;
         }
 
+        // Extract market pricing data from response
+        // Response structure may vary - adjust based on actual API response
         const {
           lowest_ask,
           highest_bid,
           last_sale,
           currency = 'USD',
           as_of,
-        } = marketData.data;
+        } = marketData.market_data || marketData;
 
         // Upsert into stockx_market_prices
         const { error: priceError } = await supabase

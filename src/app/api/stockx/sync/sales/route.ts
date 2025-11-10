@@ -53,16 +53,15 @@ export async function POST(request: NextRequest) {
     // Get user-specific StockX client
     const client = getStockxClient(user.id);
 
-    // Fetch user's orders/sales from StockX
-    // Note: Adjust endpoint based on actual StockX API
-    const ordersResponse = await client.request(
-      `/api/v1/users/me/orders?since=${encodeURIComponent(since)}&type=sold`,
+    // Fetch user's orders/sales from StockX (v2 API)
+    const response = await client.request(
+      `/v2/selling/orders/history?pageSize=100`,
       {
         method: 'GET',
       }
     );
 
-    if (!ordersResponse || !Array.isArray(ordersResponse.data)) {
+    if (!response || !Array.isArray(response.orders)) {
       logger.warn('[StockX Sync Sales] No orders returned', { userId: user.id, since });
       return NextResponse.json({
         success: true,
@@ -73,12 +72,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let fetchedCount = ordersResponse.data.length;
+    // Filter orders by 'since' date client-side
+    const orders = response.orders.filter((order: any) => {
+      if (!order.sold_at) return false;
+      return new Date(order.sold_at) >= new Date(since);
+    });
+
+    let fetchedCount = orders.length;
     let createdCount = 0;
     let updatedCount = 0;
 
     // Process each order
-    for (const order of ordersResponse.data) {
+    for (const order of orders) {
       const {
         id: stockx_order_id,
         sku,

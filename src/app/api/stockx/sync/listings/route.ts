@@ -49,13 +49,10 @@ export async function POST(request: NextRequest) {
     // Get user-specific StockX client (will auto-load and refresh tokens)
     const client = getStockxClient(user.id);
 
-    // Fetch user's listings from StockX
-    // Note: Adjust endpoint based on actual StockX API
-    const listings = await client.request('/api/v1/users/me/listings', {
-      method: 'GET',
-    });
+    // Fetch user's listings from StockX (v2 API)
+    const response = await client.request('/v2/selling/listings?pageSize=100');
 
-    if (!listings || !Array.isArray(listings.data)) {
+    if (!response || !Array.isArray(response.listings)) {
       logger.warn('[StockX Sync Listings] No listings returned', { userId: user.id });
       return NextResponse.json({
         success: true,
@@ -65,12 +62,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let fetchedCount = listings.data.length;
+    const listings = response.listings;
+    let fetchedCount = listings.length;
     let mappedCount = 0;
     let upsertedProducts = 0;
 
     // Process listings
-    for (const listing of listings.data) {
+    for (const listing of listings) {
       const {
         id: stockx_listing_id,
         sku,
