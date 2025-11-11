@@ -85,6 +85,20 @@ export async function POST(request: NextRequest) {
     let mappedCount = 0;
     let upsertedProducts = 0;
 
+    // Check if user has any inventory items at all
+    const { data: userInventoryCheck, error: inventoryCheckError } = await supabase
+      .from('Inventory')
+      .select('id, sku, size, status')
+      .eq('user_id', user.id)
+      .limit(10);
+
+    logger.info('[StockX Sync Listings] User inventory check', {
+      userId: user.id,
+      inventoryCount: userInventoryCheck?.length || 0,
+      sampleInventory: userInventoryCheck?.map(i => ({ sku: i.sku, size: i.size, status: i.status })) || [],
+      hasError: !!inventoryCheckError,
+    });
+
     // Process listings
     for (const listing of listings) {
       const {
@@ -148,13 +162,25 @@ export async function POST(request: NextRequest) {
       }
 
       // Map to inventory by SKU + size
-      const { data: inventoryItems } = await supabase
+      const { data: inventoryItems, error: queryError } = await supabase
         .from('Inventory')
         .select('id')
         .eq('sku', sku)
         .eq('size', size)
         .eq('user_id', user.id)
         .in('status', ['active', 'listed']);
+
+      // Log first few attempts to see what we're matching
+      if (listings.indexOf(listing) < 3) {
+        logger.info('[StockX Sync Listings] Mapping attempt', {
+          listingIndex: listings.indexOf(listing),
+          sku,
+          size,
+          matchedCount: inventoryItems?.length || 0,
+          hasError: !!queryError,
+          error: queryError?.message,
+        });
+      }
 
       if (inventoryItems && inventoryItems.length > 0) {
         for (const item of inventoryItems) {
@@ -183,6 +209,18 @@ export async function POST(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime;
+
+    logger.info('[StockX Sync Listings] Sync complete', {
+      userId: user.id,
+      fetched: fetchedCount,
+      mapped: mappedCount,
+      upsertedProducts,
+      userInventoryCount: userInventoryCheck?.length || 0,
+      sampleStockxSkus: listings.slice(0, 5).map((l: any) => ({
+        sku: l.product?.sku || l.sku,
+        size: l.size,
+      })),
+    });
 
     logger.apiRequest(
       '/api/stockx/sync/listings',
