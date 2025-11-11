@@ -241,6 +241,10 @@ export async function POST(request: NextRequest) {
             sku: productSku,
             size,
             error: insertError?.message,
+            code: insertError?.code,
+            details: insertError?.details,
+            hint: insertError?.hint,
+            fullError: JSON.stringify(insertError),
           });
           continue;
         }
@@ -263,6 +267,10 @@ export async function POST(request: NextRequest) {
           logger.error('[StockX Sync Listings] Link creation error', {
             inventoryItemId,
             error: linkError.message,
+            code: linkError.code,
+            details: linkError.details,
+            hint: linkError.hint,
+            fullError: JSON.stringify(linkError),
           });
         } else {
           mappedCount++;
