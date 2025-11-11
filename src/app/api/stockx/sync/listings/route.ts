@@ -57,13 +57,26 @@ export async function POST(request: NextRequest) {
     // Fetch user's listings from StockX (v2 API)
     const response = await client.request('/v2/selling/listings?pageSize=100');
 
+    logger.info('[StockX Sync Listings] Response received', {
+      userId: user.id,
+      hasResponse: !!response,
+      responseKeys: response ? Object.keys(response) : [],
+      listingsIsArray: Array.isArray(response?.listings),
+      listingsCount: response?.listings?.length || 0,
+      sampleData: response ? JSON.stringify(response).substring(0, 500) : null,
+    });
+
     if (!response || !Array.isArray(response.listings)) {
-      logger.warn('[StockX Sync Listings] No listings returned', { userId: user.id });
+      logger.warn('[StockX Sync Listings] No listings returned', {
+        userId: user.id,
+        response: response ? JSON.stringify(response).substring(0, 1000) : null,
+      });
       return NextResponse.json({
         success: true,
         fetched: 0,
         mapped: 0,
         duration_ms: Date.now() - startTime,
+        message: 'No active listings found on StockX',
       });
     }
 
