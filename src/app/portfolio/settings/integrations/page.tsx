@@ -194,7 +194,7 @@ export default function IntegrationsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        alert(`✅ Listings synced!\nFetched: ${data.fetched}\nMapped: ${data.mapped}`);
+        alert(`✅ Listings synced!\nFetched: ${data.fetched}\nCreated/Updated: ${data.created || data.mapped || 0}\n\n${data.message || ''}`);
         await fetchStockxStatus();
       } else {
         const data = await response.json();

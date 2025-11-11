@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         fetched: 0,
-        mapped: 0,
+        created: 0,
+        upsertedProducts: 0,
         duration_ms: Date.now() - startTime,
         message: 'No active listings found on StockX',
       });
@@ -168,50 +169,104 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Map to inventory by SKU + size
-      const { data: inventoryItems, error: queryError } = await supabase
-        .from('Inventory')
-        .select('id')
-        .eq('sku', productSku)
-        .eq('size', size)
-        .eq('user_id', user.id)
-        .in('status', ['active', 'listed']);
+      // Create or update Inventory item from StockX listing
+      // First check if we already have an inventory item linked to this StockX listing
+      const { data: existingLink } = await supabase
+        .from('inventory_market_links')
+        .select('inventory_id, Inventory!inner(*)')
+        .eq('provider', 'stockx')
+        .eq('provider_listing_id', stockx_listing_id)
+        .eq('Inventory.user_id', user.id)
+        .single();
 
-      // Log first few attempts to see what we're matching
+      let inventoryItemId: string;
+
+      if (existingLink) {
+        // Update existing inventory item
+        inventoryItemId = existingLink.inventory_id;
+
+        const { error: updateError } = await supabase
+          .from('Inventory')
+          .update({
+            name: product.productName,
+            sku: productSku,
+            size: size,
+            status: listingStatus === 'ACTIVE' ? 'listed' : 'active',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', inventoryItemId);
+
+        if (updateError) {
+          logger.error('[StockX Sync Listings] Inventory update error', {
+            inventoryItemId,
+            error: updateError.message,
+          });
+        } else {
+          mappedCount++;
+        }
+      } else {
+        // Create new inventory item
+        const { data: newItem, error: insertError } = await supabase
+          .from('Inventory')
+          .insert({
+            user_id: user.id,
+            name: product.productName,
+            sku: productSku,
+            size: size,
+            status: 'listed',
+            purchase_price: null,
+            purchase_currency: currency,
+            purchase_date: new Date().toISOString(),
+            notes: `Imported from StockX listing ${stockx_listing_id}`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (insertError || !newItem) {
+          logger.error('[StockX Sync Listings] Inventory insert error', {
+            sku: productSku,
+            size,
+            error: insertError?.message,
+          });
+          continue;
+        }
+
+        inventoryItemId = newItem.id;
+
+        // Create inventory_market_link
+        const { error: linkError } = await supabase
+          .from('inventory_market_links')
+          .insert({
+            inventory_id: inventoryItemId,
+            provider: 'stockx',
+            provider_product_sku: productSku,
+            provider_listing_id: stockx_listing_id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (linkError) {
+          logger.error('[StockX Sync Listings] Link creation error', {
+            inventoryItemId,
+            error: linkError.message,
+          });
+        } else {
+          mappedCount++;
+        }
+      }
+
+      // Log first few attempts
       if (listings.indexOf(listing) < 3) {
-        logger.info('[StockX Sync Listings] Mapping attempt', {
+        logger.info('[StockX Sync Listings] Processing listing', {
           listingIndex: listings.indexOf(listing),
           productSku,
           size,
-          matchedCount: inventoryItems?.length || 0,
-          hasError: !!queryError,
-          error: queryError?.message,
+          productName: product.productName,
+          action: existingLink ? 'updated' : 'created',
+          inventoryItemId,
         });
-      }
-
-      if (inventoryItems && inventoryItems.length > 0) {
-        for (const item of inventoryItems) {
-          // Create inventory_market_links
-          const { error: linkError } = await supabase
-            .from('inventory_market_links')
-            .upsert(
-              {
-                inventory_id: item.id,
-                provider: 'stockx',
-                provider_product_sku: productSku,
-                provider_listing_id: stockx_listing_id,
-                updated_at: new Date().toISOString(),
-              },
-              {
-                onConflict: 'inventory_id,provider',
-                ignoreDuplicates: false,
-              }
-            );
-
-          if (!linkError) {
-            mappedCount++;
-          }
-        }
       }
     }
 
@@ -220,7 +275,7 @@ export async function POST(request: NextRequest) {
     logger.info('[StockX Sync Listings] Sync complete', {
       userId: user.id,
       fetched: fetchedCount,
-      mapped: mappedCount,
+      created: mappedCount,
       upsertedProducts,
       userInventoryCount: userInventoryCheck?.length || 0,
       sampleStockxSkus: listings.slice(0, 5).map((l: any) => ({
@@ -237,7 +292,7 @@ export async function POST(request: NextRequest) {
       duration,
       {
         fetched: fetchedCount,
-        mapped: mappedCount,
+        created: mappedCount,
         upsertedProducts,
       }
     );
@@ -245,9 +300,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       fetched: fetchedCount,
-      mapped: mappedCount,
+      created: mappedCount, // Changed from "mapped" to "created" for clarity
       upsertedProducts,
       duration_ms: duration,
+      message: `Synced ${fetchedCount} StockX listings, created/updated ${mappedCount} inventory items`,
     });
 
   } catch (error: any) {
