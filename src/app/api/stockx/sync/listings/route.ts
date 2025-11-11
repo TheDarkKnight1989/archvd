@@ -97,10 +97,19 @@ export async function POST(request: NextRequest) {
         product,
       } = listing;
 
+      // Skip listings without SKU
+      const productSku = product?.sku || sku;
+      if (!productSku) {
+        logger.warn('[StockX Sync Listings] Skipping listing without SKU', {
+          listingId: stockx_listing_id,
+          listingData: JSON.stringify(listing).substring(0, 500),
+        });
+        continue;
+      }
+
       // Upsert product catalog if we have product details
       if (product) {
         // Generate slug from SKU
-        const productSku = product.sku || sku;
         const slug = productSku.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
         const { error: productError } = await supabase
