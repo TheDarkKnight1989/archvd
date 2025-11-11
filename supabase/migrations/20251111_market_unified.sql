@@ -217,26 +217,33 @@ where provider = 'stockx';
 
 -- Market products: public read
 alter table market_products enable row level security;
-create policy if not exists "Market products are viewable by everyone"
+
+drop policy if exists "Market products are viewable by everyone" on market_products;
+create policy "Market products are viewable by everyone"
   on market_products for select
   using (true);
 
 -- Market prices: public read
 alter table market_prices enable row level security;
-create policy if not exists "Market prices are viewable by everyone"
+
+drop policy if exists "Market prices are viewable by everyone" on market_prices;
+create policy "Market prices are viewable by everyone"
   on market_prices for select
   using (true);
 
 -- Market orders: public read
 alter table market_orders enable row level security;
-create policy if not exists "Market orders are viewable by everyone"
+
+drop policy if exists "Market orders are viewable by everyone" on market_orders;
+create policy "Market orders are viewable by everyone"
   on market_orders for select
   using (true);
 
 -- Inventory market links: user-scoped
 alter table inventory_market_links enable row level security;
 
-create policy if not exists "Users can view their own inventory market links"
+drop policy if exists "Users can view their own inventory market links" on inventory_market_links;
+create policy "Users can view their own inventory market links"
   on inventory_market_links for select
   using (
     inventory_id in (
@@ -244,7 +251,8 @@ create policy if not exists "Users can view their own inventory market links"
     )
   );
 
-create policy if not exists "Users can insert their own inventory market links"
+drop policy if exists "Users can insert their own inventory market links" on inventory_market_links;
+create policy "Users can insert their own inventory market links"
   on inventory_market_links for insert
   with check (
     inventory_id in (
@@ -252,7 +260,8 @@ create policy if not exists "Users can insert their own inventory market links"
     )
   );
 
-create policy if not exists "Users can update their own inventory market links"
+drop policy if exists "Users can update their own inventory market links" on inventory_market_links;
+create policy "Users can update their own inventory market links"
   on inventory_market_links for update
   using (
     inventory_id in (
@@ -260,7 +269,8 @@ create policy if not exists "Users can update their own inventory market links"
     )
   );
 
-create policy if not exists "Users can delete their own inventory market links"
+drop policy if exists "Users can delete their own inventory market links" on inventory_market_links;
+create policy "Users can delete their own inventory market links"
   on inventory_market_links for delete
   using (
     inventory_id in (
