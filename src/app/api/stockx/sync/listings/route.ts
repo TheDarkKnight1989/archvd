@@ -81,20 +81,27 @@ export async function POST(request: NextRequest) {
 
       // Upsert product catalog if we have product details
       if (product) {
+        // Generate slug from SKU
+        const productSku = product.sku || sku;
+        const slug = productSku.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
         const { error: productError } = await supabase
           .from('stockx_products')
           .upsert(
             {
-              sku: product.sku || sku,
-              title: product.title,
-              brand: product.brand,
+              sku: productSku,
+              slug: slug,
+              name: product.title || product.name || `${product.brand} ${product.model}`,
+              brand: product.brand || 'Unknown',
               model: product.model,
               colorway: product.colorway,
               release_date: product.release_date,
               retail_price: product.retail_price,
-              retail_currency: product.retail_currency || currency,
               image_url: product.image_url,
-              category: 'sneaker',
+              meta: {
+                retail_currency: product.retail_currency || currency,
+                category: 'sneaker',
+              },
               updated_at: new Date().toISOString(),
             },
             {
@@ -103,7 +110,12 @@ export async function POST(request: NextRequest) {
             }
           );
 
-        if (!productError) {
+        if (productError) {
+          logger.error('[StockX Sync Listings] Product upsert error', {
+            sku: productSku,
+            error: productError.message,
+          });
+        } else {
           upsertedProducts++;
         }
       }
