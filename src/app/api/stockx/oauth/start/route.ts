@@ -61,10 +61,11 @@ export async function GET(request: NextRequest) {
     // Note: In production, store these securely (Redis, encrypted cookie, etc.)
     const response = NextResponse.redirect(
       `${STOCKX_OAUTH_AUTHORIZE_URL}?` +
-      `client_id=${encodeURIComponent(STOCKX_CLIENT_ID)}` +
+      `response_type=code` +
+      `&client_id=${encodeURIComponent(STOCKX_CLIENT_ID)}` +
       `&redirect_uri=${encodeURIComponent(STOCKX_REDIRECT_URI)}` +
-      `&response_type=code` +
-      `&scope=${encodeURIComponent('openid profile email offline_access inventory:read sales:read')}` +
+      `&scope=${encodeURIComponent('offline_access openid')}` +
+      `&audience=gateway.stockx.com` +
       `&state=${state}` +
       `&code_challenge=${codeChallenge}` +
       `&code_challenge_method=S256`
