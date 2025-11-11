@@ -198,7 +198,9 @@ export default function IntegrationsPage() {
         await fetchStockxStatus();
       } else {
         const data = await response.json();
-        alert(`❌ Sync failed: ${data.error || 'Unknown error'}`);
+        const errorMsg = data.details ? `${data.error}\n\nDetails: ${data.details}` : data.error || 'Unknown error';
+        alert(`❌ Sync failed: ${errorMsg}`);
+        console.error('[StockX Sync] Error response:', data);
       }
     } catch (error) {
       console.error('Listings sync failed:', error);
@@ -221,7 +223,9 @@ export default function IntegrationsPage() {
         await fetchStockxStatus();
       } else {
         const data = await response.json();
-        alert(`❌ Sync failed: ${data.error || 'Unknown error'}`);
+        const errorMsg = data.details ? `${data.error}\n\nDetails: ${data.details}` : data.error || 'Unknown error';
+        alert(`❌ Sync failed: ${errorMsg}`);
+        console.error('[StockX Sync Sales] Error response:', data);
       }
     } catch (error) {
       console.error('Sales sync failed:', error);
@@ -244,7 +248,9 @@ export default function IntegrationsPage() {
         await fetchStockxStatus();
       } else {
         const data = await response.json();
-        alert(`❌ Sync failed: ${data.error || 'Unknown error'}`);
+        const errorMsg = data.details ? `${data.error}\n\nDetails: ${data.details}` : data.error || 'Unknown error';
+        alert(`❌ Sync failed: ${errorMsg}`);
+        console.error('[StockX Sync Prices] Error response:', data);
       }
     } catch (error) {
       console.error('Prices sync failed:', error);
