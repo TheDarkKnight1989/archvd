@@ -49,6 +49,11 @@ export async function POST(request: NextRequest) {
     // Get user-specific StockX client (will auto-load and refresh tokens)
     const client = getStockxClient(user.id);
 
+    logger.info('[StockX Sync Listings] Starting sync', {
+      userId: user.id,
+      endpoint: '/v2/selling/listings?pageSize=100',
+    });
+
     // Fetch user's listings from StockX (v2 API)
     const response = await client.request('/v2/selling/listings?pageSize=100');
 
@@ -197,6 +202,22 @@ export async function POST(request: NextRequest) {
             'Retry-After': '60',
           },
         }
+      );
+    }
+
+    // Handle 401 authentication errors
+    if (error.message?.includes('401')) {
+      logger.error('[StockX Sync Listings] Authentication failed', {
+        message: error.message,
+        duration,
+      });
+
+      return NextResponse.json(
+        {
+          error: 'StockX authentication failed',
+          details: 'Your StockX access token may have expired. Please try disconnecting and reconnecting your StockX account.',
+        },
+        { status: 401 }
       );
     }
 
