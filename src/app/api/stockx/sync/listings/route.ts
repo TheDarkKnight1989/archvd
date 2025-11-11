@@ -188,10 +188,12 @@ export async function POST(request: NextRequest) {
         const { error: updateError } = await supabase
           .from('Inventory')
           .update({
-            name: product.productName,
             sku: productSku,
+            style_id: productSku,
             size: size,
-            status: listingStatus === 'ACTIVE' ? 'listed' : 'active',
+            size_uk: size,
+            status: listingStatus === 'ACTIVE' || listingStatus === 'LISTED' ? 'listed' : 'active',
+            notes: `Imported from StockX: ${product.productName} (${stockx_listing_id})`,
             updated_at: new Date().toISOString(),
           })
           .eq('id', inventoryItemId);
@@ -210,16 +212,26 @@ export async function POST(request: NextRequest) {
           .from('Inventory')
           .insert({
             user_id: user.id,
-            name: product.productName,
             sku: productSku,
+            brand: 'Unknown', // Will be enriched later
+            model: null,
+            colorway: null,
+            style_id: productSku,
             size: size,
+            size_uk: size,
+            size_alt: null,
+            category: 'sneaker',
+            condition: 'new',
+            purchase_price: 0,
+            tax: null,
+            shipping: null,
+            place_of_purchase: 'StockX',
+            purchase_date: null,
+            order_number: null,
+            tags: ['stockx-import'],
+            custom_market_value: null,
+            notes: `Imported from StockX: ${product.productName} (${stockx_listing_id})`,
             status: 'listed',
-            purchase_price: null,
-            purchase_currency: currency,
-            purchase_date: new Date().toISOString(),
-            notes: `Imported from StockX listing ${stockx_listing_id}`,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           })
           .select('id')
           .single();
