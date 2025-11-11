@@ -101,28 +101,34 @@ export async function POST(request: NextRequest) {
 
     // Process listings
     for (const listing of listings) {
+      // StockX API v2 structure
       const {
-        id: stockx_listing_id,
-        sku,
-        size,
-        condition = 'new',
-        asking_price_amount,
-        currency = 'USD',
+        listingId: stockx_listing_id,
         product,
+        variant,
+        amount: asking_price_amount,
+        currencyCode: currency = 'USD',
+        status: listingStatus,
       } = listing;
 
-      // Skip listings without SKU
-      const productSku = product?.sku || sku;
-      if (!productSku) {
-        logger.warn('[StockX Sync Listings] Skipping listing without SKU', {
+      // Extract SKU from product.styleId (StockX v2 format)
+      const productSku = product?.styleId;
+      const size = variant?.variantValue;
+
+      // Skip listings without SKU or size
+      if (!productSku || !size) {
+        logger.warn('[StockX Sync Listings] Skipping listing without SKU or size', {
           listingId: stockx_listing_id,
-          listingData: JSON.stringify(listing).substring(0, 500),
+          hasSku: !!productSku,
+          hasSize: !!size,
+          productStyleId: product?.styleId,
+          variantValue: variant?.variantValue,
         });
         continue;
       }
 
       // Upsert product catalog if we have product details
-      if (product) {
+      if (product && product.productName) {
         // Generate slug from SKU
         const slug = productSku.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -132,15 +138,16 @@ export async function POST(request: NextRequest) {
             {
               sku: productSku,
               slug: slug,
-              name: product.title || product.name || `${product.brand} ${product.model}`,
-              brand: product.brand || 'Unknown',
-              model: product.model,
-              colorway: product.colorway,
-              release_date: product.release_date,
-              retail_price: product.retail_price,
-              image_url: product.image_url,
+              name: product.productName,
+              brand: 'Unknown', // StockX v2 API doesn't provide brand in listings response
+              model: null,
+              colorway: null,
+              release_date: null,
+              retail_price: null,
+              image_url: null,
               meta: {
-                retail_currency: product.retail_currency || currency,
+                product_id: product.productId,
+                retail_currency: currency,
                 category: 'sneaker',
               },
               updated_at: new Date().toISOString(),
@@ -165,7 +172,7 @@ export async function POST(request: NextRequest) {
       const { data: inventoryItems, error: queryError } = await supabase
         .from('Inventory')
         .select('id')
-        .eq('sku', sku)
+        .eq('sku', productSku)
         .eq('size', size)
         .eq('user_id', user.id)
         .in('status', ['active', 'listed']);
@@ -174,7 +181,7 @@ export async function POST(request: NextRequest) {
       if (listings.indexOf(listing) < 3) {
         logger.info('[StockX Sync Listings] Mapping attempt', {
           listingIndex: listings.indexOf(listing),
-          sku,
+          productSku,
           size,
           matchedCount: inventoryItems?.length || 0,
           hasError: !!queryError,
@@ -191,7 +198,7 @@ export async function POST(request: NextRequest) {
               {
                 inventory_id: item.id,
                 provider: 'stockx',
-                provider_product_sku: sku,
+                provider_product_sku: productSku,
                 provider_listing_id: stockx_listing_id,
                 updated_at: new Date().toISOString(),
               },
@@ -217,9 +224,11 @@ export async function POST(request: NextRequest) {
       upsertedProducts,
       userInventoryCount: userInventoryCheck?.length || 0,
       sampleStockxSkus: listings.slice(0, 5).map((l: any) => ({
-        sku: l.product?.sku || l.sku,
-        size: l.size,
+        sku: l.product?.styleId,
+        size: l.variant?.variantValue,
+        productName: l.product?.productName,
       })),
+      userInventorySample: userInventoryCheck?.slice(0, 5).map(i => ({ sku: i.sku, size: i.size })) || [],
     });
 
     logger.apiRequest(
