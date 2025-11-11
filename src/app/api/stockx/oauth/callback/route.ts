@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
         client_id: STOCKX_CLIENT_ID,
         client_secret: STOCKX_CLIENT_SECRET,
         code_verifier: codeVerifier,
+        audience: 'gateway.stockx.com',
       }),
     });
 

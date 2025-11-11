@@ -116,6 +116,7 @@ export class StockxClient {
           refresh_token: this.refreshToken,
           client_id: this.clientId,
           client_secret: this.clientSecret,
+          audience: 'gateway.stockx.com',
         }),
       })
 
@@ -261,6 +262,7 @@ export class StockxClient {
           grant_type: 'client_credentials',
           client_id: this.clientId,
           client_secret: this.clientSecret,
+          audience: 'gateway.stockx.com',
         }),
       })
 
