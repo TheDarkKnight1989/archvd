@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { itemSchema } from '@/lib/validation/item';
 import { createClient } from '@/lib/supabase/server';
+import { enqueueJob } from '@/lib/market/enqueue';
 
 export async function POST(req: Request) {
   try {
@@ -55,6 +56,50 @@ export async function POST(req: Request) {
     if (error) {
       // Surface RLS/constraint issues cleanly
       return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
+    }
+
+    // Create purchase transaction record
+    if (input.purchase_price && input.purchase_date) {
+      const title = [input.brand, input.model, input.colorway]
+        .filter(Boolean)
+        .join(' ')
+
+      const totalCost = (input.purchase_price || 0) + (input.tax || 0) + (input.shipping || 0)
+
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: session.user.id,
+          type: 'purchase',
+          inventory_id: data.id,
+          sku: input.sku || null,
+          size_uk: input.size_uk || null,
+          title: title || null,
+          image_url: null, // Will be resolved by image fallback chain later
+          qty: 1,
+          unit_price: input.purchase_price,
+          fees: (input.tax || 0) + (input.shipping || 0), // Combine tax+shipping as fees
+          platform: input.place_of_purchase || null,
+          notes: input.notes || null,
+          occurred_at: input.purchase_date,
+        })
+
+      if (transactionError) {
+        console.error('[Add Item] Transaction creation error:', transactionError)
+        // Don't fail the request if transaction creation fails, just log the error
+      }
+    }
+
+    // WHY: Enqueue market data fetch for this item (priority 150 = hot, user just added)
+    // Never call provider APIs directly from UI - always use queue to respect rate limits
+    if (data.sku && data.size_uk) {
+      await enqueueJob({
+        provider: 'stockx', // Default to StockX for now
+        sku: data.sku,
+        size: data.size_uk,
+        priority: 150, // Hot priority - user just added this item
+        userId: session.user.id,
+      });
     }
 
     return NextResponse.json({ ok: true, item: data }, { status: 201 });

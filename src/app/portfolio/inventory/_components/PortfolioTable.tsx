@@ -17,10 +17,12 @@ import { Package, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { MoneyCell, PercentCell, PlainMoneyCell } from '@/lib/format/money'
 import { ProductLineItem } from '@/components/product/ProductLineItem'
+import { ProvenanceBadge } from '@/components/product/ProvenanceBadge'
 import { TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
 import { RowActions } from './RowActions'
 import { InventoryCard, InventoryCardSkeleton } from './InventoryCard'
 import type { EnrichedInventoryItem } from '@/hooks/usePortfolioInventory'
+import type { Provider } from '@/types/product'
 
 const columnHelper = createColumnHelper<EnrichedInventoryItem>()
 
@@ -36,6 +38,7 @@ export interface PortfolioTableProps {
   onAddExpense?: (item: EnrichedInventoryItem) => void
   onAddToWatchlist?: (item: EnrichedInventoryItem) => void
   onAddItem?: () => void
+  hiddenIncompleteCount?: number
 }
 
 /**
@@ -55,6 +58,7 @@ export function PortfolioTable({
   onAddExpense,
   onAddToWatchlist,
   onAddItem,
+  hiddenIncompleteCount = 0,
 }: PortfolioTableProps) {
   const { convert, format } = useCurrency()
 
@@ -74,7 +78,7 @@ export function PortfolioTable({
               imageAlt={item.full_title}
               brand={item.brand || ''}
               model={item.model || ''}
-              variant={item.colorway || item.variant}
+              variant={item.colorway ?? undefined}
               sku={item.sku}
               href={`/product/${item.sku}`}
               sizeUk={item.size_uk || item.size}
@@ -179,17 +183,27 @@ export function PortfolioTable({
         header: () => <div className="text-right">Market £</div>,
         cell: (info) => {
           const value = info.getValue()
-          const source = info.row.original.market_source
+          const item = info.row.original
+          const source = item.market_source
+          const timestamp = item.stockx_price_as_of || item.market_updated_at
 
           return value !== null && value !== undefined ? (
-            <div className="text-right mono">
-              <PlainMoneyCell value={value} />
-              {source !== '-' && (
-                <div className="text-[10px] text-[#7FA08F] mono mt-0.5">{source}</div>
+            <div className="text-right">
+              <div className="mono">
+                <PlainMoneyCell value={value} />
+              </div>
+              {source && source !== '-' && timestamp && (
+                <div className="flex justify-end mt-1">
+                  <ProvenanceBadge
+                    provider={source as Provider}
+                    timestamp={timestamp}
+                    variant="compact"
+                  />
+                </div>
               )}
             </div>
           ) : (
-            <div className="text-right text-[#7FA08F]">—</div>
+            <div className="text-right text-dim">—</div>
           )
         },
         enableSorting: true,
@@ -303,6 +317,26 @@ export function PortfolioTable({
 
   return (
     <>
+      {/* Incomplete Items Banner */}
+      {hiddenIncompleteCount > 0 && (
+        <div className="mb-4 p-3 rounded-lg border border-warning/30 bg-warning/10 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="text-warning text-sm font-medium">
+              Hidden {hiddenIncompleteCount} incomplete item{hiddenIncompleteCount !== 1 ? 's' : ''}
+            </div>
+            <div className="text-dim text-xs">
+              (missing product info or market data)
+            </div>
+          </div>
+          <a
+            href="/portfolio/maintenance/incomplete"
+            className="text-xs text-accent hover:text-accent-600 font-medium underline"
+          >
+            Review &rarr;
+          </a>
+        </div>
+      )}
+
       {/* Mobile Card View */}
       <div className="lg:hidden space-y-3">
         {rows.map((row) => (

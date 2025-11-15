@@ -47,15 +47,28 @@ export function usePortfolioInventory() {
 
       if (inventoryError) throw inventoryError
 
-      // Fetch Alias mapping status from inventory_market_links
-      const { data: aliasLinks, error: aliasError } = await supabase
+      // Fetch ALL market links (not just Alias) to hydrate product data
+      const { data: marketLinks, error: marketLinksError } = await supabase
         .from('inventory_market_links')
-        .select('inventory_id, provider_product_id, provider_product_sku')
-        .eq('provider', 'alias')
+        .select('inventory_id, provider, provider_product_id, provider_product_sku')
 
-      if (aliasError) {
-        console.warn('[usePortfolioInventory] Failed to fetch Alias links:', aliasError)
+      if (marketLinksError) {
+        console.warn('[usePortfolioInventory] Failed to fetch market links:', marketLinksError)
       }
+
+      // Fetch market products to hydrate brand/model/image
+      const marketProductSkus = marketLinks?.map(link => link.provider_product_sku).filter(Boolean) || []
+      const { data: marketProducts, error: marketProductsError } = await supabase
+        .from('market_products')
+        .select('sku, brand, model, colorway, image_url, provider')
+        .in('sku', marketProductSkus.length > 0 ? marketProductSkus : ['__none__'])
+
+      if (marketProductsError) {
+        console.warn('[usePortfolioInventory] Failed to fetch market products:', marketProductsError)
+      }
+
+      // Fetch Alias mapping status from inventory_market_links (legacy)
+      const aliasLinks = marketLinks?.filter(link => link.provider === 'alias')
 
       // Fetch StockX mapping status from inventory_market_links
       const { data: stockxLinks, error: stockxError } = await supabase
@@ -143,9 +156,45 @@ export function usePortfolioInventory() {
         }
       }
 
+      // Build map of market products by SKU for hydration
+      const marketProductMap = new Map<string, any>()
+      if (marketProducts) {
+        for (const product of marketProducts) {
+          marketProductMap.set(product.sku, product)
+        }
+      }
+
+      // Build map of inventory_id -> market product SKU for linking
+      const inventoryToMarketMap = new Map<string, string>()
+      if (marketLinks) {
+        for (const link of marketLinks) {
+          inventoryToMarketMap.set(link.inventory_id, link.provider_product_sku)
+        }
+      }
+
       // Merge Pokémon market values and Alias status into inventory items
       const mergedItems = (inventoryData || []).map((item: InventoryItem) => {
         let enrichedItem = { ...item }
+
+        // HYDRATION: Fill missing brand/model/image from market_products if available
+        const marketSku = inventoryToMarketMap.get(item.id)
+        const marketProduct = marketSku ? marketProductMap.get(marketSku) : null
+
+        if (marketProduct) {
+          // Only hydrate if the field is missing or empty
+          if (!enrichedItem.brand) {
+            enrichedItem.brand = marketProduct.brand
+          }
+          if (!enrichedItem.model) {
+            enrichedItem.model = marketProduct.model
+          }
+          if (!enrichedItem.colorway) {
+            enrichedItem.colorway = marketProduct.colorway
+          }
+          if (!enrichedItem.image_url) {
+            enrichedItem.image_url = marketProduct.image_url
+          }
+        }
 
         // Add Pokémon pricing if applicable
         if (item.category === 'pokemon') {

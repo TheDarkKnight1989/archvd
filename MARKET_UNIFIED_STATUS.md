@@ -2,10 +2,23 @@
 
 ## ✅ COMPLETED: Step 1 - Schema & Views (Additive Migration)
 
+**Status:** ✅ Ready to apply (all errors fixed)
+
 **Files Created:**
-- `supabase/migrations/20251111_market_unified.sql` - Complete database schema
+- `supabase/migrations/20251111_market_unified.sql` - Complete database schema (VERIFIED)
 - `scripts/apply-market-migration.mjs` - Migration application script
+- `MIGRATION_APPLICATION_GUIDE.md` - Detailed application instructions
 - Updated `package.json` with new npm scripts
+
+**Fixes Applied:**
+- ✅ RLS policy syntax corrected (DROP + CREATE pattern)
+- ✅ Column names match existing code (`provider_listing_id`, `provider_product_sku`)
+- ✅ All missing timestamps added
+- ✅ All indexes reference correct column names
+- ✅ No syntax errors remaining
+
+**How to Apply:**
+See `MIGRATION_APPLICATION_GUIDE.md` for detailed instructions. Recommended method: Supabase Dashboard SQL Editor.
 
 **Database Schema:**
 ```

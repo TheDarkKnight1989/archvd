@@ -222,11 +222,11 @@ export function InventoryTableV3({
                 <th className="px-4 py-3.5 text-right label-up w-[120px]">
                   <SortableHeader column="invested" label="Invested" align="right" />
                 </th>
-                <th className="px-4 py-3.5 text-right label-up w-[100px]">
-                  <SortableHeader column="pl" label="P/L" align="right" />
+                <th className="px-4 py-3.5 text-right label-up w-[120px]">
+                  <SortableHeader column="pl" label="Unrealised P/L" align="right" />
                 </th>
-                <th className="px-4 py-3.5 text-right label-up w-[100px]">
-                  <SortableHeader column="performance" label="Performance" align="right" />
+                <th className="px-4 py-3.5 text-right label-up w-[110px]">
+                  <SortableHeader column="performance" label="Performance %" align="right" />
                 </th>
                 <th className="px-4 py-3.5 text-center label-up w-[80px]"></th>
               </tr>

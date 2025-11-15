@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
-import { usePortfolioInventory, type EnrichedInventoryItem } from '@/hooks/usePortfolioInventory'
+import { useInventoryV3 } from '@/hooks/useInventoryV3'
+import type { EnrichedLineItem } from '@/lib/portfolio/types'
 import { useInventoryCounts } from '@/hooks/useInventoryCounts'
 import { parseParams, buildQuery, type TableParams } from '@/lib/url/params'
 import { useSavedViews } from '@/hooks/useSavedViews'
@@ -22,8 +23,8 @@ import { SavedViewChip } from '@/components/SavedViewChip'
 import { ColumnChooser, type ColumnConfig } from '@/components/ColumnChooser'
 import { MarketModal } from '@/components/MarketModal'
 
-// Portfolio V2 Components
-import { PortfolioTable } from './_components/PortfolioTable'
+// Portfolio V3 Components
+import { InventoryTableV3 } from './_components/InventoryTableV3'
 import { FilterTabs } from './_components/FilterTabs'
 
 export default function InventoryPage() {
@@ -34,8 +35,8 @@ export default function InventoryPage() {
   // Parse URL params
   const urlParams = parseParams(searchParams)
 
-  // Data fetching via portfolio hook
-  const { items, loading, error: fetchError, refetch } = usePortfolioInventory()
+  // Data fetching via V3 hook
+  const { items, loading, error: fetchError, refetch } = useInventoryV3()
 
   // Filter out sold items (they belong in Sales page now)
   const activeItems = useMemo(() => {
@@ -77,13 +78,13 @@ export default function InventoryPage() {
 
   // Modal state
   const [addItemModalOpen, setAddItemModalOpen] = useState(false)
-  const [editItem, setEditItem] = useState<EnrichedInventoryItem | null>(null)
+  const [editItem, setEditItem] = useState<EnrichedLineItem | null>(null)
   const [marketModalOpen, setMarketModalOpen] = useState(false)
-  const [selectedMarketItem, setSelectedMarketItem] = useState<EnrichedInventoryItem | null>(null)
+  const [selectedMarketItem, setSelectedMarketItem] = useState<EnrichedLineItem | null>(null)
   const [markAsSoldModalOpen, setMarkAsSoldModalOpen] = useState(false)
-  const [itemToSell, setItemToSell] = useState<EnrichedInventoryItem | null>(null)
+  const [itemToSell, setItemToSell] = useState<EnrichedLineItem | null>(null)
   const [watchlistPickerOpen, setWatchlistPickerOpen] = useState(false)
-  const [selectedItemForWatchlist, setSelectedItemForWatchlist] = useState<EnrichedInventoryItem | null>(null)
+  const [selectedItemForWatchlist, setSelectedItemForWatchlist] = useState<EnrichedLineItem | null>(null)
 
   // Update URL params
   const updateParams = (updates: Partial<TableParams>) => {
@@ -106,7 +107,9 @@ export default function InventoryPage() {
   }
 
   // Callback when item is added via modal
-  const handleItemAdded = () => {
+  const handleItemAdded = async () => {
+    // Small delay to ensure database transaction completes
+    await new Promise(resolve => setTimeout(resolve, 300))
     refetch()
   }
 
@@ -153,7 +156,8 @@ export default function InventoryPage() {
       }
 
       // Size filter
-      if (selectedSize.length > 0 && !selectedSize.includes(item.size_uk || item.size || '')) {
+      const sizeStr = item.size_uk?.toString() || ''
+      if (selectedSize.length > 0 && !selectedSize.includes(sizeStr)) {
         return false
       }
 
@@ -164,7 +168,7 @@ export default function InventoryPage() {
           item.sku.toLowerCase().includes(q) ||
           item.brand?.toLowerCase().includes(q) ||
           item.model?.toLowerCase().includes(q) ||
-          item.full_title.toLowerCase().includes(q)
+          (item.colorway?.toLowerCase().includes(q) || false)
         if (!matches) return false
       }
 
@@ -187,36 +191,36 @@ export default function InventoryPage() {
       'shipping',
       'total_cost',
       'market_value',
+      'instant_sell',
       'gain_loss_pct',
       'status',
       'location',
       'created_at',
     ]
     const rows = filteredItems.map((item) => {
-      const buy = item.purchase_price || 0
-      const tax = item.tax || 0
-      const shipping = item.shipping || 0
-      const total = buy + tax + shipping
-      const market = item.market_value
-      const gainLossPct = market && total > 0 ? ((market - total) / total) * 100 : ''
+      const invested = item.invested || 0
+      const market = item.market.price || 0
+      const gainLossPct = item.performancePct ?? ''
+      const fullTitle = [item.brand, item.model, item.colorway].filter(Boolean).join(' ')
 
       return [
-        item.full_title,
+        fullTitle,
         item.sku,
         item.brand ?? '',
         item.model ?? '',
         item.category ?? '',
         item.size_uk ?? '',
-        item.purchase_date ?? '',
-        item.purchase_price,
-        item.tax ?? 0,
-        item.shipping ?? 0,
-        total.toFixed(2),
-        item.market_value ?? '',
+        item.purchaseDate ?? '',
+        item.avgCost.toFixed(2),
+        '', // tax (not available in V3)
+        '', // shipping (not available in V3)
+        invested.toFixed(2),
+        market !== 0 ? market.toFixed(2) : '',
+        item.instantSell?.gross ?? '',
         gainLossPct !== '' ? gainLossPct.toFixed(2) : '',
         item.status ?? '',
-        item.location ?? '',
-        item.created_at,
+        '', // location (not available in V3)
+        '', // created_at (not available in V3)
       ].map((field) => `"${field}"`)
     })
 
@@ -232,27 +236,27 @@ export default function InventoryPage() {
   }
 
   // Row action handlers
-  const handleRowClick = (item: EnrichedInventoryItem) => {
+  const handleRowClick = (item: EnrichedLineItem) => {
     setSelectedMarketItem(item)
     setMarketModalOpen(true)
   }
 
-  const handleEdit = (item: EnrichedInventoryItem) => {
+  const handleEdit = (item: EnrichedLineItem) => {
     setEditItem(item)
     setAddItemModalOpen(true)
   }
 
-  const handleToggleSold = async (item: EnrichedInventoryItem) => {
+  const handleToggleSold = async (item: EnrichedLineItem) => {
     setItemToSell(item)
     setMarkAsSoldModalOpen(true)
   }
 
-  const handleAddExpense = (item: EnrichedInventoryItem) => {
+  const handleAddExpense = (item: EnrichedLineItem) => {
     // TODO: Implement add expense modal
     console.log('Add expense:', item.sku)
   }
 
-  const handleAddToWatchlist = (item: EnrichedInventoryItem) => {
+  const handleAddToWatchlist = (item: EnrichedLineItem) => {
     setSelectedItemForWatchlist(item)
     setWatchlistPickerOpen(true)
   }
@@ -468,16 +472,13 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Portfolio Table */}
-      <PortfolioTable
+      {/* Portfolio Table V3 */}
+      <InventoryTableV3
         items={filteredItems}
         loading={loading}
-        sorting={sorting}
-        onSortingChange={setSorting}
-        columnVisibility={columnVisibility}
         onRowClick={handleRowClick}
         onEdit={handleEdit}
-        onToggleSold={handleToggleSold}
+        onMarkSold={handleToggleSold}
         onAddExpense={handleAddExpense}
         onAddToWatchlist={handleAddToWatchlist}
         onAddItem={() => setAddItemModalOpen(true)}
@@ -499,9 +500,9 @@ export default function InventoryPage() {
           sku: itemToSell.sku,
           brand: itemToSell.brand,
           model: itemToSell.model,
-          purchase_price: itemToSell.purchase_price,
-          tax: itemToSell.tax,
-          shipping: itemToSell.shipping,
+          purchase_price: itemToSell.invested, // WHY: V3 uses invested instead of purchase_price
+          tax: 0, // WHY: tax is included in invested
+          shipping: 0, // WHY: shipping is included in invested
         } : null}
         onSuccess={handleItemAdded}
       />
@@ -512,21 +513,21 @@ export default function InventoryPage() {
           open={marketModalOpen}
           onOpenChange={setMarketModalOpen}
           product={{
-            name: selectedMarketItem.full_title,
+            name: `${selectedMarketItem.brand} ${selectedMarketItem.model}`,
             sku: selectedMarketItem.sku,
             brand: selectedMarketItem.brand || '',
           }}
           sizes={['UK6', 'UK7', 'UK8', 'UK9', 'UK10', 'UK11', 'UK12']}
-          activeSize={selectedMarketItem.size_uk || selectedMarketItem.size || 'UK9'}
+          activeSize={selectedMarketItem.size_uk?.toString() || 'UK9'}
           onSizeChange={() => {}}
           range="30d"
           onRangeChange={() => {}}
-          series={selectedMarketItem.sparkline_data.map((d) => ({
+          series={selectedMarketItem.market.spark30d.map((d) => ({
             date: d.date,
-            price: d.value,
+            price: d.price || 0,
           }))}
-          sourceBadge={selectedMarketItem.market_source}
-          lastUpdatedISO={selectedMarketItem.market_updated_at || new Date().toISOString()}
+          sourceBadge={selectedMarketItem.market.provider || 'unknown'}
+          lastUpdatedISO={selectedMarketItem.market.updatedAt || new Date().toISOString()}
         />
       )}
 
@@ -536,7 +537,7 @@ export default function InventoryPage() {
           open={watchlistPickerOpen}
           onOpenChange={setWatchlistPickerOpen}
           sku={selectedItemForWatchlist.sku}
-          defaultSize={selectedItemForWatchlist.size_uk || selectedItemForWatchlist.size || undefined}
+          defaultSize={selectedItemForWatchlist.size_uk?.toString() || undefined}
         />
       )}
     </div>

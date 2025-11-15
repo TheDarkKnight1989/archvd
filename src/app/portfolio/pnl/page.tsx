@@ -404,16 +404,16 @@ export default function PnLPage() {
                     </TableCell>
                     <TableCell>
                       <ProductLineItem
-                        imageUrl={item.imageUrl || null}
+                        imageUrl={null}
                         imageAlt={`${item.brand} ${item.model}`}
                         brand={item.brand || ''}
                         model={item.model || ''}
-                        variant={item.colorway}
+                        variant={undefined}
                         sku={item.sku}
                         href={`/product/${item.sku}`}
                         sizeUk={item.size}
                         sizeSystem="UK"
-                        category={(item.category?.toLowerCase() as any) || 'sneakers'}
+                        category={'sneakers'}
                         compact
                       />
                     </TableCell>

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * Apply market unified migration
+ * Apply market unified migration using direct postgres connection
  */
 
-import { createClient } from '@supabase/supabase-js';
+import pkg from 'pg';
+const { Client } = pkg;
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -11,45 +12,43 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const databaseUrl = process.env.DATABASE_URL;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+if (!databaseUrl) {
+  console.error('❌ Missing DATABASE_URL environment variable');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
-
 async function applyMigration() {
-  console.log('📦 Applying market unified migration...\n');
-
-  const migrationPath = join(__dirname, '..', 'supabase', 'migrations', '20251111_market_unified.sql');
-  const sql = readFileSync(migrationPath, 'utf-8');
+  const client = new Client({
+    connectionString: databaseUrl,
+  });
 
   try {
-    const { data, error } = await supabase.rpc('exec_sql', { sql_string: sql }).single();
+    console.log('📦 Applying market unified migration...\n');
 
-    if (error) {
-      // Try direct execution if exec_sql doesn't exist
-      const { error: directError } = await supabase.from('_migrations').insert({
-        name: '20251111_market_unified',
-        executed_at: new Date().toISOString()
-      });
+    await client.connect();
+    console.log('✅ Connected to database\n');
 
-      if (directError) {
-        console.error('❌ Migration failed:', error);
-        process.exit(1);
-      }
+    const migrationPath = join(__dirname, '..', 'supabase', 'migrations', '20251111_market_unified.sql');
+    const sql = readFileSync(migrationPath, 'utf-8');
+
+    // Execute the entire migration as a single transaction
+    await client.query('BEGIN');
+    console.log('🔄 Starting transaction...\n');
+
+    try {
+      await client.query(sql);
+      await client.query('COMMIT');
+      console.log('✅ Transaction committed\n');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('❌ Transaction rolled back due to error\n');
+      throw err;
     }
 
-    console.log('✅ Migration applied successfully!');
-    console.log('\n📋 Created tables:');
+    console.log('✅ Migration applied successfully!\n');
+    console.log('📋 Created tables:');
     console.log('  - market_products');
     console.log('  - market_prices');
     console.log('  - inventory_market_links');
@@ -71,8 +70,14 @@ async function applyMigration() {
     console.log('  3. npm run refresh:mvs          # Refresh materialized views');
 
   } catch (err) {
-    console.error('❌ Error applying migration:', err);
+    console.error('❌ Error applying migration:');
+    console.error(err.message);
+    if (err.position) {
+      console.error(`Position in SQL: ${err.position}`);
+    }
     process.exit(1);
+  } finally {
+    await client.end();
   }
 }
 

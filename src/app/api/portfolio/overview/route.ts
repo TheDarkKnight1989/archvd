@@ -1,46 +1,99 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { logger } from '@/lib/logger';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/logger'
 
 /**
- * Portfolio Overview API
- * Returns KPIs, 30-day value history, and category breakdown
+ * Portfolio Overview API (Matrix V2)
+ *
+ * Returns live market data from unified schema:
+ * - latest_market_prices (provider preference: StockX > Alias > eBay > Seed)
+ * - portfolio_value_daily (30-day history MV)
+ * - inventory_market_links (SKU+size mapping)
+ *
+ * Performance: 60s server-side LRU cache by (userId, currency)
  */
+
+type CategoryBreakdown = {
+  category: string
+  value: number
+  percentage: number
+}
+
+type PortfolioOverview = {
+  isEmpty: boolean
+  kpis: {
+    estimatedValue: number
+    invested: number
+    unrealisedPL: number
+    unrealisedPLDelta7d: number | null
+    roi: number
+    missingPricesCount: number
+    provider: 'stockx' | 'alias' | 'ebay' | 'seed' | 'mixed' | 'none'
+  }
+  series30d: Array<{ date: string; value: number | null }>
+  categoryBreakdown: CategoryBreakdown[]
+  missingItems: Array<{
+    id: string
+    sku: string
+    size_uk: string | null
+    reason: string
+  }>
+  meta: {
+    pricesAsOf: string
+  }
+}
+
+// Simple in-memory cache (60s TTL)
+const cache = new Map<string, { data: PortfolioOverview; expiresAt: number }>()
+
+function getCacheKey(userId: string, currency: string): string {
+  return `${userId}:${currency}`
+}
+
 export async function GET(request: NextRequest) {
-  const startTime = Date.now();
+  const startTime = Date.now()
 
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const currency = (searchParams.get('currency') || 'GBP') as 'GBP' | 'EUR' | 'USD';
+    const searchParams = request.nextUrl.searchParams
+    const currency = (searchParams.get('currency') || 'GBP') as 'GBP' | 'EUR' | 'USD'
 
-    const supabase = await createClient();
+    const supabase = await createClient()
 
     // Get user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch all active inventory items with latest prices
-    const { data: items, error: itemsError } = await supabase
-      .from('portfolio_latest_prices')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('status', 'active');
-
-    if (itemsError) {
-      throw itemsError;
-    }
-
-    if (!items || items.length === 0) {
-      // Empty portfolio
-      logger.apiRequest('/api/portfolio/overview',
-        { currency, user_id: user.id },
+    // Check cache
+    const cacheKey = getCacheKey(user.id, currency)
+    const cached = cache.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now()) {
+      logger.apiRequest(
+        '/api/portfolio/overview',
+        { currency, user_id: user.id, cached: true },
         Date.now() - startTime,
-        { itemCount: 0 }
-      );
+        {}
+      )
+      return NextResponse.json(cached.data)
+    }
 
-      return NextResponse.json({
+    // 1. Fetch active inventory items
+    const { data: inventory, error: inventoryError } = await supabase
+      .from('Inventory')
+      .select('id, sku, size, size_uk, purchase_price, tax, shipping, purchase_total, category')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+
+    if (inventoryError) {
+      throw inventoryError
+    }
+
+    if (!inventory || inventory.length === 0) {
+      const emptyResponse: PortfolioOverview = {
         isEmpty: true,
         kpis: {
           estimatedValue: 0,
@@ -49,6 +102,7 @@ export async function GET(request: NextRequest) {
           unrealisedPLDelta7d: null,
           roi: 0,
           missingPricesCount: 0,
+          provider: 'none',
         },
         series30d: [],
         categoryBreakdown: [],
@@ -56,115 +110,223 @@ export async function GET(request: NextRequest) {
         meta: {
           pricesAsOf: new Date().toISOString(),
         },
-      });
+      }
+
+      logger.apiRequest(
+        '/api/portfolio/overview',
+        { currency, user_id: user.id },
+        Date.now() - startTime,
+        { itemCount: 0 }
+      )
+
+      return NextResponse.json(emptyResponse)
     }
 
-    // Calculate KPIs
-    let totalEstimatedValue = 0;
-    let totalInvested = 0;
-    let missingPricesCount = 0;
-    let latestPriceTimestamp: Date | null = null;
-    const missingItems: { id: string; sku: string; size_uk: string | null }[] = [];
+    // 2. Fetch market links for these inventory items
+    const inventoryIds = inventory.map((i) => i.id)
+    const { data: marketLinks, error: linksError } = await supabase
+      .from('inventory_market_links')
+      .select('inventory_id, provider_product_sku')
+      .in('inventory_id', inventoryIds)
 
-    const categoryValues = new Map<string, number>();
+    if (linksError) {
+      logger.warn('[Portfolio Overview] Error fetching market links', {
+        message: linksError.message,
+      })
+    }
 
-    items.forEach((item: any) => {
-      const quantity = item.quantity || 1;
-      const purchasePrice = parseFloat(item.purchase_price || 0);
-      const marketPrice = item.latest_market_price ? parseFloat(item.latest_market_price) : null;
+    // Build map: inventory_id -> market SKU
+    const inventoryToMarketSku = new Map<string, string>()
+    marketLinks?.forEach((link) => {
+      inventoryToMarketSku.set(link.inventory_id, link.provider_product_sku)
+    })
 
-      totalInvested += purchasePrice * quantity;
+    // 3. Get all market SKUs + sizes to query for prices
+    const marketQueries: { sku: string; size: string | null }[] = []
+    inventory.forEach((item) => {
+      const marketSku = inventoryToMarketSku.get(item.id)
+      if (marketSku) {
+        let size = item.size_uk || item.size || null
+        // Parse UK prefix if present (e.g., "UK8" → "8")
+        if (size && typeof size === 'string' && size.toUpperCase().startsWith('UK')) {
+          size = size.substring(2).trim()
+        }
+        marketQueries.push({ sku: marketSku, size })
+      }
+    })
 
-      if (marketPrice) {
-        totalEstimatedValue += marketPrice * quantity;
+    // 4. Fetch latest prices from latest_market_prices (provider preference built-in)
+    const priceMap = new Map<string, any>()
+    if (marketQueries.length > 0) {
+      // Query latest_market_prices for all SKU+size combinations
+      // Note: This view already has provider preference logic
+      for (const query of marketQueries) {
+        const qb = supabase
+          .from('latest_market_prices')
+          .select('sku, size_uk, last_sale, ask, bid, provider, as_of')
+          .eq('sku', query.sku)
 
-        // Track latest price timestamp
-        if (item.price_as_of) {
-          const priceDate = new Date(item.price_as_of);
-          if (latestPriceTimestamp === null || priceDate > latestPriceTimestamp) {
-            latestPriceTimestamp = priceDate;
-          }
+        if (query.size) {
+          qb.eq('size_uk', query.size)
+        } else {
+          qb.is('size_uk', null)
         }
 
-        // Category breakdown
-        const category = item.category || 'Other';
-        categoryValues.set(category, (categoryValues.get(category) || 0) + (marketPrice * quantity));
-      } else {
-        missingPricesCount++;
-        // Track items missing prices
-        missingItems.push({
+        const { data: priceData } = await qb.limit(1).single()
+
+        if (priceData) {
+          // Prefer last_sale, fallback to ask or bid
+          const price = priceData.last_sale || priceData.ask || priceData.bid
+          if (price) {
+            const key = `${query.sku}:${query.size || 'null'}`
+            priceMap.set(key, { ...priceData, price })
+          }
+        }
+      }
+    }
+
+    // 5. Calculate KPIs
+    let totalEstimatedValue = 0
+    let totalInvested = 0
+    const providers = new Set<string>()
+    let latestPriceTimestamp: Date | null = null
+    const missingPrices: Array<{ id: string; sku: string; size: string | null; reason: string }> = []
+
+    inventory.forEach((item) => {
+      const invested =
+        item.purchase_total || item.purchase_price + (item.tax || 0) + (item.shipping || 0)
+      totalInvested += invested
+
+      const marketSku = inventoryToMarketSku.get(item.id)
+      if (!marketSku) {
+        missingPrices.push({
           id: item.id,
           sku: item.sku,
-          size_uk: item.size_uk || null,
-        });
-        // For items without market price, use purchase price as fallback
-        totalEstimatedValue += purchasePrice * quantity;
-        const category = item.category || 'Other';
-        categoryValues.set(category, (categoryValues.get(category) || 0) + (purchasePrice * quantity));
+          size: item.size_uk || item.size,
+          reason: 'No market mapping',
+        })
+        return
       }
-    });
 
-    const unrealisedPL = totalEstimatedValue - totalInvested;
-    const roi = totalInvested > 0 ? (unrealisedPL / totalInvested) * 100 : 0;
+      let size = item.size_uk || item.size || null
+      // Parse UK prefix if present (e.g., "UK8" → "8")
+      if (size && typeof size === 'string' && size.toUpperCase().startsWith('UK')) {
+        size = size.substring(2).trim()
+      }
+      const priceKey = `${marketSku}:${size || 'null'}`
+      const priceData = priceMap.get(priceKey)
 
-    // Build category breakdown
-    const categoryBreakdown = Array.from(categoryValues.entries()).map(([category, value]) => ({
-      category,
-      value,
-      percentage: totalEstimatedValue > 0 ? (value / totalEstimatedValue) * 100 : 0,
-    })).sort((a, b) => b.value - a.value);
+      if (!priceData) {
+        missingPrices.push({
+          id: item.id,
+          sku: item.sku,
+          size: size,
+          reason: 'No market price available',
+        })
+        return
+      }
 
-    // Fetch 30-day value history from portfolio_value_daily materialized view
+      totalEstimatedValue += priceData.price
+      providers.add(priceData.provider)
+
+      if (priceData.as_of) {
+        const priceDate = new Date(priceData.as_of)
+        if (!latestPriceTimestamp || priceDate > latestPriceTimestamp) {
+          latestPriceTimestamp = priceDate
+        }
+      }
+    })
+
+    const unrealisedPL = totalEstimatedValue - totalInvested
+    const roi = totalInvested > 0 ? (unrealisedPL / totalInvested) * 100 : 0
+
+    // Determine provider
+    let provider: PortfolioOverview['kpis']['provider'] = 'none'
+    if (providers.size === 0) {
+      provider = 'none'
+    } else if (providers.size === 1) {
+      provider = Array.from(providers)[0] as any
+    } else {
+      provider = 'mixed'
+    }
+
+    // 7. Calculate 7-day delta (percentage change in unrealised P/L)
+    // Fetch portfolio value from 7 days ago
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+
+    const { data: portfolioValue7d } = await supabase
+      .from('portfolio_value_daily')
+      .select('value_base_gbp')
+      .eq('user_id', user.id)
+      .eq('day', sevenDaysAgoStr)
+      .single()
+
+    let unrealisedPLDelta7d: number | null = null
+    if (portfolioValue7d && portfolioValue7d.value_base_gbp && totalInvested > 0) {
+      const value7d = parseFloat(portfolioValue7d.value_base_gbp)
+      const unrealisedPL7d = value7d - totalInvested
+      const delta = unrealisedPL - unrealisedPL7d
+      unrealisedPLDelta7d = unrealisedPL7d !== 0 ? (delta / Math.abs(unrealisedPL7d)) * 100 : null
+    }
+
+    // 8. Calculate category breakdown
+    const categoryMap = new Map<string, number>()
+    inventory.forEach((item) => {
+      const category = item.category || 'uncategorized'
+      const marketSku = inventoryToMarketSku.get(item.id)
+      const size = item.size_uk || item.size || null
+      const priceKey = `${marketSku}:${size || 'null'}`
+      const priceData = marketSku ? priceMap.get(priceKey) : null
+      const value = priceData?.price || item.purchase_total || item.purchase_price || 0
+      categoryMap.set(category, (categoryMap.get(category) || 0) + value)
+    })
+
+    const totalCategoryValue = Array.from(categoryMap.values()).reduce((sum, val) => sum + val, 0)
+    const categoryBreakdown: CategoryBreakdown[] = Array.from(categoryMap.entries())
+      .map(([category, value]) => ({
+        category,
+        value,
+        percentage: totalCategoryValue > 0 ? (value / totalCategoryValue) * 100 : 0,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5) // Top 5 categories
+
+    // 6. Fetch 30-day series from portfolio_value_daily
     const { data: portfolioValues, error: valuesError } = await supabase
       .from('portfolio_value_daily')
       .select('day, value_base_gbp')
       .eq('user_id', user.id)
-      .order('day', { ascending: true });
+      .gte('day', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      .order('day', { ascending: true })
 
     if (valuesError) {
-      logger.error('[Portfolio Overview] Error fetching portfolio values', {
+      logger.warn('[Portfolio Overview] Error fetching portfolio values', {
         message: valuesError.message,
-        user_id: user.id,
-      });
+      })
     }
 
-    // Convert to series30d format
-    const series30d: { date: string; value: number | null }[] = [];
-    const today = new Date();
-
-    // Generate last 30 days
-    const valueMap = new Map<string, number>();
+    // Convert to series30d format (null-pad missing days)
+    const series30d: Array<{ date: string; value: number | null }> = []
+    const valueMap = new Map<string, number>()
     portfolioValues?.forEach((pv: any) => {
-      valueMap.set(pv.day, parseFloat(pv.value_base_gbp));
-    });
+      valueMap.set(pv.day, parseFloat(pv.value_base_gbp))
+    })
 
+    const today = new Date()
     for (let i = 29; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+      const date = new Date(today)
+      date.setDate(today.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
 
-      const value = valueMap.get(dateStr) || null;
       series30d.push({
         date: dateStr,
-        value,
-      });
+        value: valueMap.get(dateStr) || null,
+      })
     }
 
-    // Calculate 7d delta for P/L
-    let unrealisedPLDelta7d = null;
-    if (series30d.length >= 8) {
-      const value7dAgo = series30d[series30d.length - 8]?.value;
-      const valueToday = series30d[series30d.length - 1]?.value;
-
-      if (value7dAgo && valueToday && value7dAgo > 0) {
-        unrealisedPLDelta7d = ((valueToday - value7dAgo) / value7dAgo) * 100;
-      }
-    }
-
-    // Prepare pricesAsOf timestamp
-    const pricesAsOfTimestamp = latestPriceTimestamp || new Date();
-
-    const responseData = {
+    const response: PortfolioOverview = {
       isEmpty: false,
       kpis: {
         estimatedValue: totalEstimatedValue,
@@ -172,46 +334,47 @@ export async function GET(request: NextRequest) {
         unrealisedPL,
         unrealisedPLDelta7d,
         roi,
-        missingPricesCount,
+        missingPricesCount: missingPrices.length,
+        provider,
       },
       series30d,
       categoryBreakdown,
-      missingItems,
+      missingItems: missingPrices.map((item) => ({
+        id: item.id,
+        sku: item.sku,
+        size_uk: item.size,
+        reason: item.reason,
+      })),
       meta: {
-        pricesAsOf: pricesAsOfTimestamp.toISOString(),
+        pricesAsOf: (latestPriceTimestamp || new Date()).toISOString(),
       },
-    };
+    }
 
-    // Calculate series metrics for logging
-    const seriesLength = series30d.length;
-    const nonNullPoints = series30d.filter(s => s.value !== null).length;
-    const dateSpan = series30d.length > 0
-      ? `${series30d[0].date} to ${series30d[series30d.length - 1].date}`
-      : 'none';
+    // Cache for 60s
+    cache.set(cacheKey, {
+      data: response,
+      expiresAt: Date.now() + 60 * 1000,
+    })
 
-    logger.apiRequest('/api/portfolio/overview',
+    logger.apiRequest(
+      '/api/portfolio/overview',
       { currency, user_id: user.id },
       Date.now() - startTime,
       {
-        itemCount: items.length,
-        missingPricesCount,
-        seriesLength,
-        nonNullPoints,
-        dateSpan,
+        itemCount: inventory.length,
+        missingPricesCount: missingPrices.length,
+        seriesLength: series30d.length,
+        nonNullPoints: series30d.filter((s) => s.value !== null).length,
       }
-    );
+    )
 
-    return NextResponse.json(responseData);
-
+    return NextResponse.json(response)
   } catch (error: any) {
     logger.error('[Portfolio Overview] Error', {
       message: error.message,
       stack: error.stack,
-    });
+    })
 
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
   }
 }

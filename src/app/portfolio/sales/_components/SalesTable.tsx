@@ -51,7 +51,7 @@ export function SalesTable({
               imageAlt={`${item.brand} ${item.model}`}
               brand={item.brand || ''}
               model={item.model || ''}
-              variant={item.colorway || item.variant}
+              variant={undefined}
               sku={item.sku}
               href={`/product/${item.sku}`}
               sizeUk={item.size_uk}
@@ -66,7 +66,7 @@ export function SalesTable({
 
       columnHelper.accessor('purchase_price', {
         id: 'purchase_price',
-        header: () => <div className="text-right">Purchase £</div>,
+        header: () => <div className="text-right">Buy £</div>,
         cell: (info) => {
           const price = info.getValue()
           const tax = info.row.original.tax || 0
@@ -84,7 +84,7 @@ export function SalesTable({
 
       columnHelper.accessor('sold_price', {
         id: 'sold_price',
-        header: () => <div className="text-right">Sold £</div>,
+        header: () => <div className="text-right">Sale £</div>,
         cell: (info) => (
           <div className="text-right mono">
             <PlainMoneyCell value={info.getValue()} />
@@ -93,9 +93,53 @@ export function SalesTable({
         enableSorting: true,
       }),
 
+      columnHelper.accessor('commission', {
+        id: 'commission',
+        header: () => <div className="text-right">Fees £</div>,
+        cell: (info) => {
+          const commission = info.getValue()
+          const item = info.row.original
+          const isStockX = item.platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
+
+          // Only show commission for StockX sales
+          if (!isStockX || !commission) {
+            return <div className="text-right text-dim">—</div>
+          }
+
+          return (
+            <div className="text-right mono">
+              <PlainMoneyCell value={commission} />
+            </div>
+          )
+        },
+        enableSorting: false,
+      }),
+
+      columnHelper.accessor('net_payout', {
+        id: 'net_payout',
+        header: () => <div className="text-right">Net £</div>,
+        cell: (info) => {
+          const netPayout = info.getValue()
+          const item = info.row.original
+          const isStockX = item.platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
+
+          // Only show net payout for StockX sales
+          if (!isStockX || !netPayout) {
+            return <div className="text-right text-dim">—</div>
+          }
+
+          return (
+            <div className="text-right mono">
+              <PlainMoneyCell value={netPayout} />
+            </div>
+          )
+        },
+        enableSorting: false,
+      }),
+
       columnHelper.accessor('margin_gbp', {
         id: 'margin_gbp',
-        header: () => <div className="text-right">Margin £</div>,
+        header: () => <div className="text-right">Realised Profit £</div>,
         cell: (info) => (
           <div className="text-right mono">
             <MoneyCell value={info.getValue()} showArrow />
@@ -154,50 +198,6 @@ export function SalesTable({
             </div>
           ) : (
             <span className="text-dim">—</span>
-          )
-        },
-        enableSorting: false,
-      }),
-
-      columnHelper.accessor('commission', {
-        id: 'commission',
-        header: () => <div className="text-right">Commission £</div>,
-        cell: (info) => {
-          const commission = info.getValue()
-          const item = info.row.original
-          const isStockX = item.platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
-
-          // Only show commission for StockX sales
-          if (!isStockX || !commission) {
-            return <div className="text-right text-dim">—</div>
-          }
-
-          return (
-            <div className="text-right mono">
-              <PlainMoneyCell value={commission} />
-            </div>
-          )
-        },
-        enableSorting: false,
-      }),
-
-      columnHelper.accessor('net_payout', {
-        id: 'net_payout',
-        header: () => <div className="text-right">Net Payout £</div>,
-        cell: (info) => {
-          const netPayout = info.getValue()
-          const item = info.row.original
-          const isStockX = item.platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
-
-          // Only show net payout for StockX sales
-          if (!isStockX || !netPayout) {
-            return <div className="text-right text-dim">—</div>
-          }
-
-          return (
-            <div className="text-right mono">
-              <PlainMoneyCell value={netPayout} />
-            </div>
           )
         },
         enableSorting: false,

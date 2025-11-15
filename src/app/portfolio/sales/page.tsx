@@ -59,7 +59,7 @@ export default function SalesPage() {
   const kpis = useMemo(() => {
     const totalSales = items.reduce((sum, item) => sum + (item.sold_price || 0), 0)
     const totalCOGS = items.reduce((sum, item) =>
-      sum + (item.purchase_price || 0) + (item.tax || 0) + (item.shipping || 0) + (item.sold_fees || 0), 0
+      sum + (item.purchase_price || 0) + (item.tax || 0) + (item.shipping || 0) + (item.commission || 0), 0
     )
     const totalMargin = items.reduce((sum, item) => sum + (item.margin_gbp || 0), 0)
     const avgMargin = items.length > 0

@@ -140,7 +140,7 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
 
   if (loading) {
     return (
-      <Card elevation={1} className="p-12 text-center">
+      <Card elevation="soft" className="p-12 text-center">
         <Loader2 className="h-8 w-8 animate-spin text-accent mx-auto" />
       </Card>
     )
@@ -148,7 +148,7 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
 
   if (items.length === 0) {
     return (
-      <Card elevation={1} className="p-12 text-center">
+      <Card elevation="soft" className="p-12 text-center">
         <Package className="h-12 w-12 mx-auto text-dim mb-4" />
         <p className="text-fg font-medium">No items in this watchlist</p>
         <p className="text-sm text-dim mt-2 mb-4">
@@ -222,7 +222,7 @@ export function WatchlistTable({ watchlistId, watchlistName, onItemAdded }: Watc
                       imageAlt={item.sku}
                       brand={item.product_catalog?.brand || ''}
                       model={item.product_catalog?.model || ''}
-                      variant={item.product_catalog?.colorway}
+                      variant={item.product_catalog?.colorway ?? undefined}
                       sku={item.sku}
                       href={`/product/${item.sku}`}
                       sizeUk={item.size}

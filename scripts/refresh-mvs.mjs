@@ -23,20 +23,30 @@ async function refreshMVs() {
   console.log('🔄 Refreshing materialized views...\n')
 
   try {
-    // Refresh StockX views
-    console.log('🏪 Refreshing StockX views...')
+    // Refresh unified market views (priority - new schema)
+    console.log('🏪 Refreshing unified market views...')
+    const { error: marketError } = await supabase.rpc('refresh_all_market_mvs')
+
+    if (marketError) {
+      console.error('❌ Error refreshing market MVs:', marketError.message)
+      console.warn('⚠️  Continuing with other refreshes...\n')
+    } else {
+      console.log('✅ Market price daily medians + portfolio value refreshed\n')
+    }
+
+    // Refresh StockX views (legacy)
+    console.log('🏪 Refreshing legacy StockX views...')
     const { error: stockxError } = await supabase.rpc('refresh_stockx_mvs')
 
     if (stockxError) {
       console.error('❌ Error refreshing StockX MVs:', stockxError.message)
-      // Don't throw - this function may not exist yet
       console.warn('⚠️  Continuing with other refreshes...\n')
     } else {
       console.log('✅ StockX views refreshed\n')
     }
 
-    // Refresh sneaker daily medians
-    console.log('📊 Refreshing sneaker_price_daily_medians...')
+    // Refresh sneaker daily medians (legacy)
+    console.log('📊 Refreshing legacy sneaker_price_daily_medians...')
     const { error: sneakerError } = await supabase.rpc('refresh_sneaker_daily_medians')
 
     if (sneakerError) {
@@ -44,17 +54,6 @@ async function refreshMVs() {
       console.warn('⚠️  Continuing with other refreshes...\n')
     } else {
       console.log('✅ Sneaker daily medians refreshed\n')
-    }
-
-    // Refresh portfolio value daily
-    console.log('💼 Refreshing portfolio_value_daily...')
-    const { error: portfolioError } = await supabase.rpc('refresh_portfolio_value_daily')
-
-    if (portfolioError) {
-      console.error('❌ Error refreshing portfolio MV:', portfolioError.message)
-      console.warn('⚠️  Continuing...\n')
-    } else {
-      console.log('✅ Portfolio value daily refreshed\n')
     }
 
     console.log('✨ All materialized views refreshed!')

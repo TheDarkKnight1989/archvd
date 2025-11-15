@@ -11,6 +11,7 @@ import { insertBatch } from '@/lib/supabase/items'
 import { Badge } from '@/components/ui/badge'
 import type { RawRow, HeaderMapping, RowValidation, ImportStep } from '@/lib/import/types'
 import { v4 as uuidv4 } from 'uuid'
+import { cn } from '@/lib/utils/cn'
 
 interface BulkImportModalProps {
   open: boolean

@@ -86,7 +86,7 @@ export function InventoryTable({
         id: 'sku',
         header: 'SKU',
         cell: (info) => (
-          <div className="text-sm text-muted mono">{info.getValue()}</div>
+          <div className="text-sm text-fg mono font-medium">{info.getValue()}</div>
         ),
         enableSorting: true,
       }),

@@ -8,7 +8,7 @@
 -- ============================================================================
 create table if not exists market_products (
   id uuid primary key default gen_random_uuid(),
-  provider text not null check (provider in ('stockx','alias','ebay')),
+  provider text not null check (provider in ('stockx','alias','ebay','seed')),
   provider_product_id text not null,
   brand text,
   model text,
@@ -17,6 +17,7 @@ create table if not exists market_products (
   slug text,
   image_url text,
   release_date date,
+  meta jsonb default '{}'::jsonb,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -34,7 +35,7 @@ create index if not exists idx_market_products_slug
 -- ============================================================================
 create table if not exists market_prices (
   id bigserial primary key,
-  provider text not null check (provider in ('stockx','alias','ebay')),
+  provider text not null check (provider in ('stockx','alias','ebay','seed')),
   sku text not null,
   size_uk text,                      -- nullable for one-size products
   currency text not null,            -- 'GBP'|'EUR'|'USD'
@@ -53,7 +54,8 @@ create index if not exists idx_market_prices_sku_date
 
 -- 3. Daily medians (Materialized View)
 -- ============================================================================
-create materialized view if not exists market_price_daily_medians as
+drop materialized view if exists market_price_daily_medians cascade;
+create materialized view market_price_daily_medians as
 select
   provider,
   sku,
@@ -65,21 +67,23 @@ from market_prices
 group by 1,2,3,4
 with no data;
 
-create index if not exists idx_mv_medians_key
+create unique index if not exists idx_mv_medians_key
   on market_price_daily_medians(provider, sku, size_uk, day);
 
 -- 4. Inventory linkage (unifies stockx/alias links)
 -- ============================================================================
 create table if not exists inventory_market_links (
   inventory_id uuid not null references "Inventory"(id) on delete cascade,
-  provider text not null check (provider in ('stockx','alias','ebay')),
-  listing_id text,
-  sku text,
+  provider text not null check (provider in ('stockx','alias','ebay','seed')),
+  provider_listing_id text,
+  provider_product_sku text,
   size_uk text,
   ask_price numeric,
   status text,
   last_sync_at timestamptz,
   meta jsonb default '{}'::jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
   primary key (inventory_id, provider)
 );
 
@@ -87,13 +91,13 @@ create index if not exists idx_inventory_market_links_provider
   on inventory_market_links(provider);
 
 create index if not exists idx_inventory_market_links_listing_id
-  on inventory_market_links(provider, listing_id);
+  on inventory_market_links(provider, provider_listing_id);
 
 -- 5. Imported orders (raw)
 -- ============================================================================
 create table if not exists market_orders (
   id bigserial primary key,
-  provider text not null check (provider in ('stockx','alias','ebay')),
+  provider text not null check (provider in ('stockx','alias','ebay','seed')),
   order_id text not null,
   sku text,
   size_uk text,
@@ -116,7 +120,8 @@ create index if not exists idx_market_orders_sku
 
 -- 6. Latest price preference view (StockX -> Alias -> eBay)
 -- ============================================================================
-create or replace view latest_market_prices as
+drop view if exists latest_market_prices cascade;
+create view latest_market_prices as
 with ranked as (
   select
     sku,
@@ -153,7 +158,8 @@ where rnk = 1;
 
 -- 7. Portfolio daily value (uses unified medians; 30d window)
 -- ============================================================================
-create materialized view if not exists portfolio_value_daily as
+drop materialized view if exists portfolio_value_daily cascade;
+create materialized view portfolio_value_daily as
 select
   i.user_id,
   d.day,
@@ -171,15 +177,16 @@ where d.day >= (current_date - interval '30 days')
 group by 1,2
 with no data;
 
-create index if not exists idx_portfolio_value_daily_user
-  on portfolio_value_daily(user_id, day desc);
+create unique index if not exists idx_portfolio_value_daily_user
+  on portfolio_value_daily(user_id, day);
 
 -- ============================================================================
 -- Compatibility views (backward compatibility with existing code)
 -- ============================================================================
 
 -- StockX products compatibility
-create or replace view stockx_products_compat as
+drop view if exists stockx_products_compat cascade;
+create view stockx_products_compat as
 select
   sku,
   slug,
@@ -199,7 +206,8 @@ from market_products
 where provider = 'stockx';
 
 -- StockX latest prices compatibility
-create or replace view stockx_latest_prices as
+drop view if exists stockx_latest_prices cascade;
+create view stockx_latest_prices as
 select
   sku,
   size_uk,

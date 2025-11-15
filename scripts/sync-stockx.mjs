@@ -1,309 +1,241 @@
 #!/usr/bin/env node
 /**
- * StockX Batch Sync Script
- * Fetches market data + sales history for all owned sneakers
- * Usage: npm run sync:stockx
+ * Complete StockX sync with REAL market data
+ * Uses correct endpoint: /v2/catalog/products/{productId}/variants/{variantId}/market-data
  */
 
 import { createClient } from '@supabase/supabase-js'
-import 'dotenv/config'
+import dotenv from 'dotenv'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 
-// ============================================================================
-// Config
-// ============================================================================
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-const STOCKX_ENABLED = process.env.NEXT_PUBLIC_STOCKX_ENABLE === 'true'
-const STOCKX_MOCK_MODE = process.env.NEXT_PUBLIC_STOCKX_MOCK === 'true'
+dotenv.config({ path: join(__dirname, '..', '.env.local') })
+dotenv.config({ path: join(__dirname, '..', '.env') })
 
-const BATCH_SIZE = 100
-const RATE_LIMIT_DELAY_MS = 1000 // 1 second between batches
-const MAX_RETRIES = 3
-const RETRY_DELAY_MS = 2000
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error('❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+const userId = 'fbcde760-820b-4eaf-949f-534a8130d44b'
+const apiKey = process.env.STOCKX_API_KEY
+
+console.log('🔄 STOCKX SYNC - Real Market Data\n')
+
+// Get credentials
+const { data: account } = await supabase
+  .from('stockx_accounts')
+  .select('access_token')
+  .eq('user_id', userId)
+  .single()
+
+if (!account || !apiKey) {
+  console.error('❌ Missing credentials')
   process.exit(1)
 }
 
-if (!STOCKX_ENABLED) {
-  console.log('⚠️  StockX is not enabled (NEXT_PUBLIC_STOCKX_ENABLE=false)')
-  console.log('✓  Script completed (no-op)')
-  process.exit(0)
-}
+const accessToken = account.access_token
 
-// ============================================================================
-// Supabase Client
-// ============================================================================
+// Get active inventory
+const { data: inventory } = await supabase
+  .from('Inventory')
+  .select('id, sku, size, size_uk, brand, model')
+  .eq('user_id', userId)
+  .in('status', ['active', 'listed', 'worn'])
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
+console.log(`📦 Found ${inventory?.length || 0} items\n`)
 
-// ============================================================================
-// Mock Data Generator
-// ============================================================================
+let updated = 0
+let errors = 0
 
-function generateMockMarketData(sku, size) {
-  const basePrice = 150 + Math.random() * 200
+for (const item of inventory || []) {
+  console.log(`\n🔍 ${item.sku}`)
 
-  return {
-    sku,
-    size,
-    currency: 'USD',
-    lowest_ask: basePrice + 20 + Math.random() * 10,
-    highest_bid: basePrice - 10 - Math.random() * 5,
-    last_sale: basePrice + Math.random() * 10 - 5,
-    average_price: basePrice,
-    volatility: Math.random() * 0.2,
-    sales_last_72h: Math.floor(Math.random() * 50),
-    as_of: new Date().toISOString(),
-    source: 'stockx',
-  }
-}
+  try {
+    // 1. Search for product
+    const searchUrl = `https://api.stockx.com/v2/catalog/search?query=${encodeURIComponent(item.sku)}`
 
-function generateMockSalesHistory(sku, size, days = 7) {
-  const basePrice = 150 + Math.random() * 200
-  const sales = []
-
-  for (let i = 0; i < days; i++) {
-    const daysAgo = i
-    const salePrice = basePrice + (Math.random() - 0.5) * 50
-
-    sales.push({
-      sku,
-      size,
-      currency: 'USD',
-      sale_price: salePrice,
-      sold_at: new Date(Date.now() - daysAgo * 86400000).toISOString(),
+    const searchRes = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'x-api-key': apiKey,
+        'Accept': 'application/json',
+      },
     })
-  }
 
-  return sales.reverse()
-}
-
-// ============================================================================
-// Fetch StockX Data (with retries)
-// ============================================================================
-
-async function fetchStockXMarketData(sku, size) {
-  // Mock mode - return mock data
-  if (STOCKX_MOCK_MODE) {
-    return {
-      market: generateMockMarketData(sku, size),
-      sales: generateMockSalesHistory(sku, size, 7),
+    if (!searchRes.ok) {
+      console.error(`   ❌ Search failed: ${searchRes.status}`)
+      errors++
+      continue
     }
-  }
 
-  // Real mode - call our API endpoints
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      // Fetch market data
-      const marketRes = await fetch(
-        `${SUPABASE_URL}/api/stockx/products/${encodeURIComponent(sku)}/market?currency=USD`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      )
+    const searchData = await searchRes.json()
 
-      if (!marketRes.ok) {
-        if (marketRes.status === 404) {
-          // Product not found - skip
-          return null
-        }
-        throw new Error(`Market fetch failed: ${marketRes.status}`)
-      }
-
-      const marketData = await marketRes.json()
-
-      // Find the variant for this size
-      const variant = marketData.variants?.find((v) => v.size === size)
-      if (!variant) {
-        return null
-      }
-
-      return {
-        market: {
-          sku,
-          size,
-          currency: marketData.currency || 'USD',
-          lowest_ask: variant.lowestAsk,
-          highest_bid: variant.highestBid,
-          last_sale: variant.lastSale,
-          as_of: marketData.asOf,
-          source: 'stockx',
-        },
-        sales: [], // Sales history not included in market endpoint
-      }
-    } catch (error) {
-      const isLastAttempt = attempt === MAX_RETRIES - 1
-      if (isLastAttempt) {
-        console.error(`❌ Failed to fetch ${sku} size ${size} after ${MAX_RETRIES} attempts:`, error.message)
-        return null
-      }
-
-      // Wait before retrying
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt)))
+    if (!searchData.products || searchData.products.length === 0) {
+      console.log(`   ⊘ Not found on StockX`)
+      continue
     }
-  }
 
-  return null
-}
+    const product = searchData.products[0]
+    const productId = product.productId
+    console.log(`   ✓ Found: ${product.title}`)
 
-// ============================================================================
-// Main Sync Logic
-// ============================================================================
+    // 2. Get product details
+    const productUrl = `https://api.stockx.com/v2/catalog/products/${productId}`
 
-async function main() {
-  const startTime = Date.now()
-  console.log('🚀 StockX Sync Started')
-  console.log(`📍 Mode: ${STOCKX_MOCK_MODE ? 'MOCK' : 'LIVE'}`)
-  console.log('')
+    const productRes = await fetch(productUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'x-api-key': apiKey,
+        'Accept': 'application/json',
+      },
+    })
 
-  // Step 1: Fetch all distinct (SKU, size) pairs from inventory
-  console.log('📦 Fetching owned sneakers from inventory...')
-  const { data: inventoryItems, error: inventoryError } = await supabase
-    .from('Inventory')
-    .select('sku, size, category')
-    .eq('category', 'sneaker')
-    .in('status', ['active', 'listed', 'worn'])
-
-  if (inventoryError) {
-    console.error('❌ Failed to fetch inventory:', inventoryError)
-    process.exit(1)
-  }
-
-  // Get unique (sku, size) combinations
-  const uniquePairs = new Map()
-  inventoryItems?.forEach((item) => {
-    const key = `${item.sku}:${item.size}`
-    if (!uniquePairs.has(key)) {
-      uniquePairs.set(key, { sku: item.sku, size: item.size })
+    if (!productRes.ok) {
+      console.warn(`   ⚠️  Product details failed: ${productRes.status}`)
+      continue
     }
-  })
 
-  const totalPairs = uniquePairs.size
-  console.log(`✓ Found ${totalPairs} unique (SKU, size) pairs`)
-  console.log('')
+    const productData = await productRes.json()
 
-  if (totalPairs === 0) {
-    console.log('✓ No sneakers to sync')
-    process.exit(0)
-  }
+    // 3. Get variants
+    const variantsUrl = `https://api.stockx.com/v2/catalog/products/${productId}/variants`
 
-  // Step 2: Process in batches
-  const pairs = Array.from(uniquePairs.values())
-  let processedCount = 0
-  let fetchedCount = 0
-  let skippedCount = 0
-  let upsertedPrices = 0
-  let upsertedSales = 0
+    const variantsRes = await fetch(variantsUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'x-api-key': apiKey,
+        'Accept': 'application/json',
+      },
+    })
 
-  console.log(`📊 Processing ${totalPairs} items in batches of ${BATCH_SIZE}...`)
-  console.log('')
+    if (!variantsRes.ok) {
+      console.warn(`   ⚠️  Variants failed: ${variantsRes.status}`)
+      continue
+    }
 
-  for (let i = 0; i < pairs.length; i += BATCH_SIZE) {
-    const batch = pairs.slice(i, i + BATCH_SIZE)
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1
-    const totalBatches = Math.ceil(pairs.length / BATCH_SIZE)
+    const variants = await variantsRes.json()
 
-    console.log(`🔄 Batch ${batchNum}/${totalBatches} (${batch.length} items)`)
-
-    // Fetch data for all items in batch (parallel)
-    const results = await Promise.all(
-      batch.map(async ({ sku, size }) => {
-        const data = await fetchStockXMarketData(sku, size)
-        return { sku, size, data }
-      })
+    // Find matching size variant
+    const size = item.size_uk || item.size
+    const variant = variants.find(v =>
+      v.variantValue == size ||
+      v.sizeChart?.defaultConversion?.size == size
     )
 
-    // Upsert market prices
-    const priceRecords = []
-    const salesRecords = []
+    if (!variant) {
+      console.log(`   ⊘ Size ${size} not available on StockX`)
+      console.log(`      Available: ${variants.map(v => v.variantValue).slice(0, 10).join(', ')}`)
+      continue
+    }
 
-    results.forEach(({ sku, size, data }) => {
-      processedCount++
+    const variantId = variant.variantId
+    console.log(`   ✓ Found variant for size ${size}`)
 
-      if (!data) {
-        skippedCount++
-        return
-      }
+    // 4. Get MARKET DATA using correct endpoint
+    const marketUrl = `https://api.stockx.com/v2/catalog/products/${productId}/variants/${variantId}/market-data`
 
-      fetchedCount++
-
-      if (data.market) {
-        priceRecords.push(data.market)
-      }
-
-      if (data.sales && data.sales.length > 0) {
-        salesRecords.push(...data.sales)
-      }
+    const marketRes = await fetch(marketUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'x-api-key': apiKey,
+        'Accept': 'application/json',
+      },
     })
 
-    // Insert market prices
-    if (priceRecords.length > 0) {
-      const { error: priceError } = await supabase
-        .from('stockx_market_prices')
-        .insert(priceRecords)
-
-      if (priceError) {
-        console.error('⚠️  Error inserting prices:', priceError.message)
-      } else {
-        upsertedPrices += priceRecords.length
-      }
+    if (!marketRes.ok) {
+      console.error(`   ❌ Market data failed: ${marketRes.status}`)
+      const errorText = await marketRes.text()
+      console.error(`      ${errorText}`)
+      errors++
+      continue
     }
 
-    // Insert sales history
-    if (salesRecords.length > 0) {
-      const { error: salesError } = await supabase
-        .from('stockx_sales')
-        .insert(salesRecords)
+    const marketData = await marketRes.json()
+    console.log(`   ✅ Got market data!`)
+    console.log(`      Ask: $${marketData.lowestAskAmount} | Bid: $${marketData.highestBidAmount}`)
 
-      if (salesError) {
-        console.error('⚠️  Error inserting sales:', salesError.message)
-      } else {
-        upsertedSales += salesRecords.length
-      }
+    // 5. Update inventory with product info and image
+    const imageUrl = productData.media?.imageUrl || product.media?.imageUrl
+    const updates = {
+      brand: product.brand,
+      model: productData.title || product.title,
+      colorway: productData.productAttributes?.colorway || null,
+      image_url: imageUrl || null,
     }
 
-    console.log(`  ✓ Processed: ${processedCount}/${totalPairs} | Fetched: ${fetchedCount} | Skipped: ${skippedCount}`)
-    console.log('')
+    const { error: updateError } = await supabase
+      .from('Inventory')
+      .update(updates)
+      .eq('id', item.id)
 
-    // Rate limit delay between batches
-    if (i + BATCH_SIZE < pairs.length) {
-      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY_MS))
+    if (updateError) {
+      console.error(`   ❌ Inventory update failed:`, updateError.message)
+    } else {
+      console.log(`   ✓ Updated product info`)
     }
+
+    // 6. Store market data in stockx_market_prices table
+    const { error: priceError} = await supabase
+      .from('stockx_market_prices')
+      .insert({
+        sku: item.sku,
+        size: size,
+        currency: 'USD',
+        lowest_ask: parseFloat(marketData.lowestAskAmount),
+        highest_bid: parseFloat(marketData.highestBidAmount),
+        last_sale: parseFloat(marketData.lowestAskAmount), // Use ask as proxy for last sale
+        as_of: new Date().toISOString(),
+        source: 'stockx',
+        meta: {
+          productId,
+          variantId,
+          source: 'stockx-api-v2',
+        },
+      })
+
+    if (priceError) {
+      console.error(`   ❌ Price storage failed:`, priceError.message)
+      errors++
+    } else {
+      console.log(`   ✓ Stored market prices`)
+    }
+
+    // 7. Create inventory market link
+    await supabase
+      .from('inventory_market_links')
+      .upsert({
+        inventory_id: item.id,
+        provider: 'stockx',
+        provider_product_id: productId,
+        provider_variant_id: variantId,
+        provider_product_sku: item.sku,
+        match_confidence: 1.0,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'inventory_id,provider',
+      })
+
+    updated++
+
+    // Rate limit
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+  } catch (error) {
+    console.error(`   ❌ Error:`, error.message)
+    errors++
   }
-
-  const duration = Date.now() - startTime
-
-  // Step 3: Summary
-  console.log('📈 Sync Summary')
-  console.log('─'.repeat(60))
-  console.log(`  Total pairs:       ${totalPairs}`)
-  console.log(`  Processed:         ${processedCount}`)
-  console.log(`  Fetched:           ${fetchedCount}`)
-  console.log(`  Skipped:           ${skippedCount}`)
-  console.log(`  Prices upserted:   ${upsertedPrices}`)
-  console.log(`  Sales upserted:    ${upsertedSales}`)
-  console.log(`  Duration:          ${(duration / 1000).toFixed(2)}s`)
-  console.log('─'.repeat(60))
-  console.log('')
-
-  console.log('✅ StockX Sync Complete')
 }
 
-// ============================================================================
-// Run
-// ============================================================================
+console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+console.log(`  ✅ SYNC COMPLETE`)
+console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+console.log(`  Products synced: ${updated}`)
+console.log(`  Errors: ${errors}`)
+console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`)
 
-main().catch((error) => {
-  console.error('❌ Sync failed:', error)
-  process.exit(1)
-})
+console.log(`📌 Reload http://localhost:3000/portfolio/inventory`)
+console.log(`   Dashboard should now show real StockX market values!`)

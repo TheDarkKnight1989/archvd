@@ -125,7 +125,7 @@ export default function AccountingSettingsPage() {
       )}
 
       {/* Base Currency Card */}
-      <Card elevation={1} className="border border-border rounded-2xl">
+      <Card elevation="soft" className="border border-border rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-fg">Base Currency</CardTitle>
           <CardDescription className="text-sm text-muted">
@@ -206,7 +206,7 @@ export default function AccountingSettingsPage() {
       </Card>
 
       {/* FX Rates Info Card */}
-      <Card elevation={1} className="border border-border rounded-2xl">
+      <Card elevation="soft" className="border border-border rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-fg">Exchange Rates</CardTitle>
           <CardDescription className="text-sm text-muted">

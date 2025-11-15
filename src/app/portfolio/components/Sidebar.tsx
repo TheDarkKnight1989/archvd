@@ -23,6 +23,7 @@ import {
   Activity,
   Eye,
   FileText,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useSidebar } from '@/contexts/SidebarContext'
@@ -36,6 +37,7 @@ const primaryNav = [
   { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Portfolio' },
   { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Items' },
   { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
+  { id: 'transactions', icon: ArrowLeftRight, href: '/portfolio/transactions/history', label: 'Transactions' },
   { id: 'pnl', icon: FileText, href: '/portfolio/pnl', label: 'P&L' },
   { id: 'analytics', icon: BarChart3, href: '/portfolio/analytics', label: 'Analytics', badge: 'ALPHA' },
 ]
@@ -540,9 +542,6 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
             isActive ? 'text-accent' : 'text-muted group-hover:text-accent'
           )}
           strokeWidth={isActive ? 2 : 1.75}
-          style={isActive ? {
-            filter: 'drop-shadow(0 0 4px rgba(var(--archvd-accent-rgb), 0.4))'
-          } : undefined}
         />
 
         {/* Label - opacity transition with translateX */}

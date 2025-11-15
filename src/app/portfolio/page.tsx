@@ -91,6 +91,27 @@ export default function DashboardPage() {
     }
   }, [])
 
+  // WHY: Enqueue stale items for background refresh when page loads (priority 100)
+  // Debounced server-side to max once per hour per user
+  useEffect(() => {
+    if (!userId) return
+
+    const enqueueStale = async () => {
+      try {
+        await fetch('/api/portfolio/enqueue-stale', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        // Silent - don't show toast, this runs in background
+      } catch (error) {
+        console.error('Failed to enqueue stale items:', error)
+        // Silent failure - not critical
+      }
+    }
+
+    enqueueStale()
+  }, [userId])
+
   // Real data hooks
   const kpiStats = useKPIStats(userId)
   const brandBreakdown = useBrandBreakdown(userId)
@@ -172,11 +193,11 @@ export default function DashboardPage() {
 
       if (response.ok) {
         setToast({
-          message: `Updated ${result.updated} of ${result.total} items • Portfolio: ${format(convert(result.portfolioValue || 0, 'GBP'))}`,
+          message: result.message || `Enqueued ${result.enqueued} price refresh jobs. Prices will update in ~1-2 minutes.`,
           variant: 'success',
         })
-        // Reload page to refresh all data
-        setTimeout(() => window.location.reload(), 2000)
+        // Note: Don't reload page immediately - prices will update via scheduler
+        // User can manually refresh page to see updated prices after ~1-2 minutes
       } else {
         setToast({
           message: result.error || 'Failed to refresh pricing',
@@ -223,7 +244,11 @@ export default function DashboardPage() {
         <section className="px-3 md:px-6 lg:px-8 py-4 md:py-6">
           <div className="mx-auto max-w-[1280px] space-y-4 md:space-y-6">
             {/* Portfolio Overview V1 */}
-            <PortfolioOverview onOpenQuickAdd={() => setQuickAddOpen(true)} />
+            <PortfolioOverview
+              onOpenQuickAdd={() => setQuickAddOpen(true)}
+              onRefreshPrices={handleRefreshPricing}
+              isRefreshing={isRefreshing}
+            />
 
             {/* Inventory Section Header */}
             <div className="pt-4">

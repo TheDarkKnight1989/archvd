@@ -416,7 +416,7 @@ export default function ExpensesPage() {
       {/* Two-column layout */}
       <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-3 md:gap-4">
         {/* Add Expense Card */}
-        <Card elevation={1} className="border border-border rounded-2xl">
+        <Card elevation="soft" className="border border-border rounded-2xl">
           <CardHeader>
             <CardTitle className="text-sm text-muted font-normal">Add Expense</CardTitle>
           </CardHeader>
@@ -489,7 +489,7 @@ export default function ExpensesPage() {
         </Card>
 
         {/* Table */}
-        <Card elevation={1} className="border border-border rounded-2xl overflow-hidden">
+        <Card elevation="soft" className="border border-border rounded-2xl overflow-hidden">
           {loading ? (
             <div className="p-3 space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (

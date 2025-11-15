@@ -141,12 +141,12 @@ export function WatchlistAlertsTable({ currency = 'GBP' }: WatchlistAlertsTableP
                   imageAlt={alert.name}
                   brand={brand}
                   model={model}
-                  variant={null}
+                  variant={undefined}
                   sku={alert.sku}
                   href={`/product/${alert.sku}`}
                   sizeUk={alert.size}
                   sizeSystem="UK"
-                  category={alert.category}
+                  category={alert.category === 'sneaker' ? 'sneakers' : alert.category}
                   compact
                 />
               </TableCell>

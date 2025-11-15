@@ -82,10 +82,10 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
           sold_price: parseFloat(soldPrice),
           sold_date: soldDate,
           sale_currency: soldCurrency,
-          platform: soldPlatform || null,
+          ...(soldPlatform && { platform: soldPlatform }),
           fees: feesNum,
           shipping: shippingNum,
-          notes: notes || null,
+          ...(notes && { notes }),
         }),
       })
 

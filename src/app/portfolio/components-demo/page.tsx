@@ -13,14 +13,12 @@ import type { ColumnConfig } from '@/components/ColumnChooser'
 import { SavedViewChip } from '@/components/SavedViewChip'
 import { IntegrationCard, IntegrationCardSkeleton } from '@/components/IntegrationCard'
 import { CurrencySwitcher } from '@/components/CurrencySwitcher'
-import type { Currency } from '@/components/CurrencySwitcher'
 import { Card } from '@/components/ui/card'
 
 export default function ComponentsDemoPage() {
   useRequireAuth()
 
   // State for interactive components
-  const [currency, setCurrency] = useState<Currency>('GBP')
   const [marketModalOpen, setMarketModalOpen] = useState(false)
   const [selectedSize, setSelectedSize] = useState('UK9')
   const [timeRange, setTimeRange] = useState<TimeRange>('30d')
@@ -55,7 +53,7 @@ export default function ComponentsDemoPage() {
             Interactive showcase of all Matrix V2 Phase 3 components
           </p>
         </div>
-        <CurrencySwitcher value={currency} onChange={setCurrency} />
+        <CurrencySwitcher />
       </div>
 
       {/* ActivityFeedItem */}
@@ -129,7 +127,7 @@ export default function ComponentsDemoPage() {
       {/* MarketModal Trigger */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-fg">MarketModal</h2>
-        <Card elevation={1} className="p-6">
+        <Card elevation="soft" className="p-6">
           <button
             onClick={() => setMarketModalOpen(true)}
             className="px-4 py-2 bg-accent text-black rounded-lg font-medium hover:bg-accent-600 transition-all duration-120 glow-accent-hover"
@@ -199,7 +197,7 @@ export default function ComponentsDemoPage() {
       {/* ColumnChooser & SavedViewChip */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-fg">ColumnChooser & SavedViewChip</h2>
-        <Card elevation={1} className="p-6">
+        <Card elevation="soft" className="p-6">
           <div className="flex flex-wrap gap-3 items-center">
             <SavedViewChip
               label="In Stock"

@@ -222,7 +222,7 @@ export default function WatchlistsPage() {
 
       {/* Empty State */}
       {!loading && watchlists.length === 0 && (
-        <Card elevation={1} className="p-12 text-center">
+        <Card elevation="soft" className="p-12 text-center">
           <Bookmark className="h-12 w-12 mx-auto text-dim mb-4" />
           <p className="text-fg font-medium">No watchlists yet</p>
           <p className="text-sm text-dim mt-2 mb-4">
@@ -318,7 +318,7 @@ export default function WatchlistsPage() {
           {/* Right Panel: Watchlist Items Table or Alerts */}
           <div className="lg:col-span-3">
             {selectedWatchlist ? (
-              <Card elevation={1} className="overflow-hidden">
+              <Card elevation="soft" className="overflow-hidden">
                 {/* Tab Navigation */}
                 <div className="flex border-b border-white/10">
                   <button
@@ -367,7 +367,7 @@ export default function WatchlistsPage() {
                 </div>
               </Card>
             ) : (
-              <Card elevation={1} className="p-12 text-center">
+              <Card elevation="soft" className="p-12 text-center">
                 <ChevronRight className="h-12 w-12 mx-auto text-dim mb-4" />
                 <p className="text-fg font-medium">Select a watchlist</p>
                 <p className="text-sm text-dim mt-2">

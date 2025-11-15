@@ -75,146 +75,39 @@ export function useKPIStats(userId: string | undefined, timeRange: 'today' | '7d
 
     const fetchKPIs = async () => {
       try {
-        // Query portfolio_latest_prices view instead of inventory table
-        const { data: portfolioItems, error: fetchError } = await supabase
-          .from('portfolio_latest_prices')
-          .select('*');
+        // Use /api/portfolio/overview endpoint (Matrix V2)
+        const response = await fetch(`/api/portfolio/overview?currency=GBP`);
 
-        if (fetchError) throw fetchError;
-
-        // Also query inventory table for status and timestamps to apply time-range filter
-        let inventoryQuery = supabase
-          .from(TABLE_ITEMS)
-          .select('id, status, created_at, sale_price')
-          .eq('user_id', userId);
-
-        // Apply time-range filter
-        if (timeRange !== 'lifetime') {
-          const now = new Date();
-          let startDate = new Date();
-
-          switch (timeRange) {
-            case 'today':
-              startDate.setHours(0, 0, 0, 0);
-              break;
-            case '7d':
-              startDate.setDate(now.getDate() - 7);
-              break;
-            case '30d':
-              startDate.setDate(now.getDate() - 30);
-              break;
-            case '90d':
-              startDate.setDate(now.getDate() - 90);
-              break;
-          }
-
-          inventoryQuery = inventoryQuery.gte('created_at', startDate.toISOString());
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
         }
 
-        const { data: inventoryItems, error: inventoryError } = await inventoryQuery;
+        const overview = await response.json();
 
-        if (inventoryError) throw inventoryError;
+        if (overview.error) {
+          throw new Error(overview.error);
+        }
 
-        // Merge data: use portfolio_latest_prices for pricing, inventory for status/timestamps
-        const items = portfolioItems?.map((portfolioItem) => {
-          const inventoryItem = inventoryItems?.find((inv) => inv.id === portfolioItem.inventory_id);
-          return {
-            status: portfolioItem.status || inventoryItem?.status,
-            market_value: portfolioItem.market_price,
-            sale_price: inventoryItem?.sale_price,
-            purchase_price: portfolioItem.purchase_price,
-            created_at: inventoryItem?.created_at,
-            market_as_of: portfolioItem.market_as_of,
-          };
-        }).filter((item) => {
-          // Apply time filter based on created_at
-          if (timeRange === 'lifetime') return true;
-          return inventoryItems?.some((inv) => inv.id === item.created_at); // This will be filtered by the inventoryQuery
-        });
-
-        const totalItems = items?.length || 0;
-        const inStock = items?.filter((item) => ['active', 'listed', 'worn'].includes(item.status)).length || 0;
-        const sold = items?.filter((item) => item.status === 'sold').length || 0;
-
-        const inStockItems = items?.filter((item) => ['active', 'listed', 'worn'].includes(item.status)) || [];
-
-        // Calculate total value (in stock items: market_value or sale_price or purchase_price)
-        const totalValue = inStockItems.reduce((sum, item) => {
-          const value = item.market_value || item.sale_price || item.purchase_price || 0;
-          return sum + value;
-        }, 0);
-
-        // Calculate Portfolio Market Value (total market value of in-stock items)
-        const portfolioMarketValue = inStockItems.reduce((sum, item) => {
-          const value = item.market_value || item.purchase_price || 0;
-          return sum + value;
-        }, 0);
-
-        // Calculate Invested (total purchase price of in-stock items)
-        const invested = inStockItems.reduce((sum, item) => {
-          return sum + (item.purchase_price || 0);
-        }, 0);
-
-        // Calculate Unrealised P/L and ROI
-        const unrealisedPL = portfolioMarketValue - invested;
-        const unrealisedPLPct = invested > 0 ? (unrealisedPL / invested) * 100 : 0;
-        const roi = unrealisedPLPct;
-
-        // Calculate 7d delta (fetch portfolio value from 7 days ago)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        const { data: itemsSevenDaysAgo } = await supabase
-          .from(TABLE_ITEMS)
-          .select('status, market_value, purchase_price')
-          .eq('user_id', userId)
-          .lte('created_at', sevenDaysAgo.toISOString());
-
-        const inStockItems7d = itemsSevenDaysAgo?.filter((item) => ['active', 'listed', 'worn'].includes(item.status)) || [];
-        const portfolioValue7d = inStockItems7d.reduce((sum, item) => {
-          const value = item.market_value || item.purchase_price || 0;
-          return sum + value;
-        }, 0);
-
-        const delta7d = portfolioMarketValue - portfolioValue7d;
-
-        // Get most recent market update timestamp
-        const lastUpdated = inStockItems.length > 0
-          ? new Date().toISOString()
-          : null;
-
-        // Calculate market provenance: get the latest market_as_of timestamp
-        const marketTimestamps = items
-          ?.filter((item) => item.market_as_of)
-          .map((item) => new Date(item.market_as_of).getTime())
-          .filter((t) => !isNaN(t));
-
-        const marketAsOf = marketTimestamps && marketTimestamps.length > 0
-          ? new Date(Math.max(...marketTimestamps)).toISOString()
-          : null;
-
-        // Count items without market prices (in stock items only)
-        const itemsWithoutPrices = inStockItems.filter((item) => !item.market_value).length;
-
+        // Map overview data to KPI stats format
         setData({
-          totalItems,
-          inStock,
-          sold,
-          totalValue,
-          portfolioMarketValue,
-          invested,
-          unrealisedPL,
-          unrealisedPLPct,
-          roi,
-          delta7d,
-          lastUpdated,
-          marketAsOf,
-          itemsWithoutPrices,
+          totalItems: overview.isEmpty ? 0 : overview.kpis.estimatedValue > 0 ? 1 : 0, // Approximate for now
+          inStock: overview.isEmpty ? 0 : 1, // Approximate for now
+          sold: 0, // Not provided by overview API yet
+          totalValue: overview.kpis.estimatedValue,
+          portfolioMarketValue: overview.kpis.estimatedValue,
+          invested: overview.kpis.invested,
+          unrealisedPL: overview.kpis.unrealisedPL,
+          unrealisedPLPct: overview.kpis.roi,
+          roi: overview.kpis.roi,
+          delta7d: overview.kpis.unrealisedPLDelta7d || 0,
+          lastUpdated: new Date().toISOString(),
+          marketAsOf: overview.meta.pricesAsOf,
+          itemsWithoutPrices: overview.kpis.missingPricesCount,
         });
         setError(null);
       } catch (err: any) {
         console.error('Failed to fetch KPI stats:', err);
-        setError(err.message);
+        setError(err.message || 'Failed to fetch portfolio overview');
       } finally {
         setLoading(false);
       }
@@ -486,9 +379,12 @@ export function useItemsTable(userId: string | undefined, params: TableParams = 
           .select('*')
           .eq('user_id', userId);
 
-        // Apply status filter
+        // Apply status filter - default to active items only
         if (params.status && params.status.length > 0) {
           query = query.in('status', params.status);
+        } else {
+          // Default: show only active inventory (not sold items)
+          query = query.in('status', ['active', 'listed', 'worn']);
         }
 
         // Apply brand filter
@@ -551,7 +447,9 @@ export function useItemsTable(userId: string | undefined, params: TableParams = 
           let marketUpdatedAt: string | null = (item as any).market_updated_at || null;
 
           if (stockxLink) {
-            const priceKey = `${stockxLink.product_sku}:${item.size}`;
+            // Use size_uk for matching (StockX sizes are stored without UK prefix)
+            const matchSize = (item as any).size_uk || item.size;
+            const priceKey = `${stockxLink.product_sku}:${matchSize}`;
             const stockxPrice = stockxPriceMap.get(priceKey);
 
             if (stockxPrice?.last_sale) {

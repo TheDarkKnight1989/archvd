@@ -2,9 +2,11 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import * as Tooltip from '@radix-ui/react-tooltip'
+import { getProductImage, getFallbackChain, type ProductImageInput } from '@/lib/product/getProductImage'
 
 // Size system types
 type SizeSystem = 'UK' | 'US' | 'EU' | 'JP'
@@ -18,6 +20,11 @@ export type ProductLineItemProps = {
   // Visuals
   imageUrl: string | null
   imageAlt?: string
+
+  // Fallback metadata (for image resolver)
+  marketImageUrl?: string | null
+  inventoryImageUrl?: string | null
+  provider?: 'stockx' | 'alias' | 'ebay' | 'seed' | null
 
   // Text
   brand: string
@@ -103,6 +110,9 @@ function formatSizeLabel(
 export function ProductLineItem({
   imageUrl,
   imageAlt,
+  marketImageUrl,
+  inventoryImageUrl,
+  provider,
   brand,
   model,
   variant,
@@ -128,6 +138,55 @@ export function ProductLineItem({
     return formatSizeLabel(convertedSize, sizeSystem, sizeGender)
   }, [convertedSize, sizeSystem, sizeGender])
 
+  // Resolve product image with fallback chain
+  const resolvedImage = React.useMemo(() => {
+    return getProductImage({
+      marketImageUrl,
+      inventoryImageUrl: inventoryImageUrl || imageUrl, // Support legacy imageUrl prop
+      provider,
+      brand,
+      model,
+      colorway: variant,
+      sku,
+    })
+  }, [marketImageUrl, inventoryImageUrl, imageUrl, provider, brand, model, variant, sku])
+
+  // Fallback chain for onError handlers
+  const fallbackChain = React.useMemo(() => {
+    return getFallbackChain({
+      marketImageUrl,
+      inventoryImageUrl: inventoryImageUrl || imageUrl,
+      provider,
+      brand,
+      model,
+      colorway: variant,
+      sku,
+    })
+  }, [marketImageUrl, inventoryImageUrl, imageUrl, provider, brand, model, variant, sku])
+
+  // Track current fallback index for onError handling
+  const [fallbackIndex, setFallbackIndex] = React.useState(0)
+  const [imgSrc, setImgSrc] = React.useState(resolvedImage.src)
+  const [hasError, setHasError] = React.useState(false)
+
+  // Reset when resolved image changes
+  React.useEffect(() => {
+    setImgSrc(resolvedImage.src)
+    setFallbackIndex(0)
+    setHasError(false)
+  }, [resolvedImage.src])
+
+  const handleImageError = React.useCallback(() => {
+    // Try next fallback in chain
+    if (fallbackIndex < fallbackChain.length) {
+      setImgSrc(fallbackChain[fallbackIndex])
+      setFallbackIndex(prev => prev + 1)
+    } else {
+      // All fallbacks failed, show placeholder
+      setHasError(true)
+    }
+  }, [fallbackIndex, fallbackChain])
+
   const handleClick = (e: React.MouseEvent) => {
     if (onOpen) {
       e.preventDefault()
@@ -136,6 +195,7 @@ export function ProductLineItem({
   }
 
   const imageSizeClass = compact ? 'h-10 w-10' : 'h-10 w-10 lg:h-11 lg:w-11'
+  const imageSize = compact ? 40 : 44
 
   return (
     <div className={cn('flex gap-3 items-start', className)}>
@@ -143,19 +203,21 @@ export function ProductLineItem({
       <div
         className={cn(
           imageSizeClass,
-          'rounded-lg overflow-hidden flex-shrink-0 bg-elev-1 transition-transform duration-200 group-hover:-translate-y-[0.5px]'
+          'rounded-lg overflow-hidden flex-shrink-0 bg-elev-1 transition-transform duration-200 group-hover:-translate-y-[0.5px] relative'
         )}
       >
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={imageAlt || `${brand} ${model}`}
-            className="w-full h-full object-cover"
-          />
-        ) : (
+        {hasError ? (
           <div className="w-full h-full flex items-center justify-center bg-elev-2 text-xs font-medium text-dim">
             {brand?.slice(0, 2).toUpperCase() || 'IT'}
           </div>
+        ) : (
+          <img
+            src={imgSrc}
+            alt={imageAlt || resolvedImage.alt}
+            onError={handleImageError}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
         )}
       </div>
 
@@ -166,7 +228,7 @@ export function ProductLineItem({
           <Link
             href={href}
             onClick={handleClick}
-            className="text-sm text-ink tracking-tight hover:text-ink/70 transition-colors line-clamp-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:rounded"
+            className="text-sm text-fg tracking-tight hover:text-muted transition-colors line-clamp-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:rounded"
             aria-label={`View ${brand} ${model} details`}
           >
             {brand} {model}
@@ -178,7 +240,7 @@ export function ProductLineItem({
                 <Link
                   href={href}
                   onClick={handleClick}
-                  className="flex-shrink-0 text-ink/50 hover:text-ink/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:rounded"
+                  className="flex-shrink-0 text-muted hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:rounded"
                   aria-hidden="true"
                 >
                   <ExternalLink className="h-3.5 w-3.5" strokeWidth={2} />
@@ -199,7 +261,7 @@ export function ProductLineItem({
 
         {/* Variant/colorway (semibold) */}
         {variant && (
-          <div className="text-[13px] font-semibold text-ink line-clamp-1" title={variant}>
+          <div className="text-[13px] font-semibold text-fg line-clamp-1" title={variant}>
             {variant}
           </div>
         )}
@@ -209,7 +271,7 @@ export function ProductLineItem({
           {/* Size chip for sneakers/streetwear */}
           {sizeLabel && category !== 'pokemon' && (
             <span
-              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-[#F3EFE8] text-ink/80 whitespace-nowrap"
+              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted whitespace-nowrap"
               title={`Size: ${sizeLabel}`}
             >
               <span className="font-semibold">Size:</span>
@@ -220,7 +282,7 @@ export function ProductLineItem({
           {/* Language tag for Pokémon sealed */}
           {languageTag && category === 'pokemon' && (
             <span
-              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-[#F3EFE8] text-ink/80 font-medium"
+              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted font-medium"
               title={`Language: ${languageTag}`}
             >
               {languageTag}
@@ -229,7 +291,7 @@ export function ProductLineItem({
 
           {/* SKU chip (always shown) */}
           <span
-            className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-[#F3EFE8] text-ink/80 font-mono"
+            className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted font-mono"
             title={`SKU: ${sku}`}
           >
             {sku}

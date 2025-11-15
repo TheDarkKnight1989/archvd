@@ -8,9 +8,13 @@ import { Button } from '@/components/ui/button'
 import { Sparkline } from '@/components/ui/sparkline'
 import { cn } from '@/lib/utils/cn'
 import { useCurrency } from '@/hooks/useCurrency'
+import { ProvenanceBadge } from '@/components/product/ProvenanceBadge'
+import type { Provider } from '@/types/product'
 
 interface PortfolioOverviewProps {
   onOpenQuickAdd?: () => void
+  onRefreshPrices?: () => void
+  isRefreshing?: boolean
 }
 
 interface KPIs {
@@ -20,6 +24,7 @@ interface KPIs {
   unrealisedPLDelta7d: number | null
   roi: number
   missingPricesCount: number
+  provider: 'stockx' | 'alias' | 'ebay' | 'seed' | 'mixed' | 'none'
 }
 
 interface CategoryBreakdown {
@@ -45,7 +50,7 @@ interface OverviewData {
   }
 }
 
-export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
+export function PortfolioOverview({ onOpenQuickAdd, onRefreshPrices, isRefreshing = false }: PortfolioOverviewProps) {
   const { currency, format } = useCurrency()
   const [data, setData] = useState<OverviewData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -150,6 +155,31 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
 
   return (
     <div className="space-y-6 mb-8">
+      {/* Header with Refresh Button */}
+      {onRefreshPrices && (
+        <div className="flex justify-end">
+          <Button
+            onClick={onRefreshPrices}
+            disabled={isRefreshing}
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs border-border hover:border-accent/40 transition-colors"
+          >
+            {isRefreshing ? (
+              <>
+                <span className="inline-block h-3 w-3 mr-2 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <TrendingUp className="h-3 w-3 mr-1.5" />
+                Refresh prices
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Estimated Value */}
@@ -173,12 +203,21 @@ export function PortfolioOverview({ onOpenQuickAdd }: PortfolioOverviewProps) {
               </Badge>
             )}
           </div>
-          <p className="heading mono kpi-number text-fg mb-2">
+          <p className="heading mono kpi-number text-fg mb-2 text-[32px]">
             {format(kpis.estimatedValue)}
           </p>
-          <p className="kbd text-[10px]">
-            Updated {pricesAsOfFormatted}
-          </p>
+          {kpis.provider !== 'none' && (
+            <div className="flex items-center">
+              <ProvenanceBadge
+                provider={kpis.provider === 'mixed' ? 'stockx' : (kpis.provider as Provider)}
+                timestamp={meta.pricesAsOf}
+                variant="compact"
+              />
+              {kpis.provider === 'mixed' && (
+                <span className="text-[10px] text-dim ml-1.5 kbd">mixed sources</span>
+              )}
+            </div>
+          )}
         </Card>
 
         {/* Invested */}

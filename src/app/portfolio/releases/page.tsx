@@ -296,7 +296,7 @@ export default function ReleasesPage() {
       </div>
 
       {/* Filters Section */}
-      <Card elevation={1} className="p-4 space-y-4">
+      <Card elevation="soft" className="p-4 space-y-4">
         {/* Brand Pills */}
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-muted font-medium">Brand:</span>
@@ -435,7 +435,7 @@ export default function ReleasesPage() {
 
       {/* Empty State */}
       {!loading && filteredReleases.length === 0 && (
-        <Card elevation={1} className="p-12 text-center">
+        <Card elevation="soft" className="p-12 text-center">
           <Calendar className="h-12 w-12 mx-auto text-dim mb-4" />
           <p className="text-fg font-medium">No releases found</p>
           <p className="text-sm text-dim mt-2">
@@ -466,8 +466,8 @@ export default function ReleasesPage() {
                   imageUrl={release.image_url || '/placeholder-release.png'}
                   name={release.model}
                   brand={release.brand}
-                  colorway={release.colorway || undefined}
-                  releaseDateISO={release.release_date || undefined}
+                  colorway={release.colorway ?? undefined}
+                  releaseDateISO={release.release_date ?? undefined}
                   retailers={
                     release.retailers?.map((r) => ({
                       name: r.name,

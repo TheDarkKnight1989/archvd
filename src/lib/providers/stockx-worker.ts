@@ -118,7 +118,7 @@ export async function processStockXBatch(
       console.log(`[StockX Worker ${runId}] Processing ${job.sku}${job.size ? `:${job.size}` : ''}`)
 
       // Get user's currency preference
-      const currencyCode = await getUserCurrency(job.user_id)
+      const currencyCode = await getUserCurrency(job.user_id || null)
       console.log(`[StockX Worker ${runId}] Using currency: ${currencyCode}`)
 
       // 1. Search for product
@@ -266,9 +266,9 @@ export async function processStockXBatch(
           provider: 'stockx',
           sku: job.sku, // Fixed: use 'sku' not 'product_sku'
           size: job.size,
-          lowest_ask: marketData.lowestAskAmount ? parseFloat(marketData.lowestAskAmount) : null,
-          highest_bid: marketData.highestBidAmount ? parseFloat(marketData.highestBidAmount) : null,
-          last_sale: marketData.lastSaleAmount ? parseFloat(marketData.lastSaleAmount) : null,
+          lowest_ask: marketData.lowestAskAmount ? parseFloat(marketData.lowestAskAmount) : undefined,
+          highest_bid: marketData.highestBidAmount ? parseFloat(marketData.highestBidAmount) : undefined,
+          last_sale: marketData.lastSaleAmount ? parseFloat(marketData.lastSaleAmount) : undefined,
           currency: currencyCode,
           as_of: nowUtc(), // Fixed: add required as_of timestamp
         })

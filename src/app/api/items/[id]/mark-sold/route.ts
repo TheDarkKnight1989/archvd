@@ -51,10 +51,10 @@ export async function POST(
       notes
     } = validation.data
 
-    // Verify item exists and belongs to user
+    // Verify item exists and belongs to user (fetch full details for transaction)
     const { data: existingItem, error: fetchError } = await supabase
       .from('Inventory')
-      .select('id, user_id, status')
+      .select('id, user_id, status, sku, size_uk, brand, model, colorway, image_url')
       .eq('id', itemId)
       .single()
 
@@ -121,8 +121,6 @@ export async function POST(
       .from('Inventory')
       .update({
         status: 'sold',
-        sold_price,
-        sold_date,
         platform: platform,
         sales_fee: fees,
         notes: notes || null,
@@ -140,13 +138,15 @@ export async function POST(
       .single()
 
     if (updateError) {
-      console.error('[Mark as Sold] Update error:', updateError)
+      console.error('[Mark as Sold] Update error:', JSON.stringify(updateError, null, 2))
       await db.logApp('error', 'api:mark-sold', 'Failed to update item', {
         itemId,
-        error: updateError.message
+        error: updateError.message,
+        code: updateError.code,
+        details: updateError.details
       }, user.id)
       return NextResponse.json(
-        { error: 'Failed to update item', details: updateError.message },
+        { error: 'Failed to update item', details: updateError.message, code: updateError.code },
         { status: 500 }
       )
     }
@@ -171,6 +171,34 @@ export async function POST(
     if (auditError) {
       console.error('[Mark as Sold] Audit log error:', auditError)
       // Don't fail the request if audit logging fails, just log the error
+    }
+
+    // Create transaction record for sale
+    const title = [existingItem.brand, existingItem.model, existingItem.colorway]
+      .filter(Boolean)
+      .join(' ')
+
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: user.id,
+        type: 'sale',
+        inventory_id: itemId,
+        sku: existingItem.sku || null,
+        size_uk: existingItem.size_uk || null,
+        title: title || null,
+        image_url: existingItem.image_url || null,
+        qty: 1,
+        unit_price: saleAmountBase, // Store in base currency
+        fees: fees,
+        platform: platform || null,
+        notes: notes || null,
+        occurred_at: sold_date,
+      })
+
+    if (transactionError) {
+      console.error('[Mark as Sold] Transaction creation error:', transactionError)
+      // Don't fail the request if transaction creation fails, just log the error
     }
 
     // Log successful operation

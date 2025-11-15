@@ -12,6 +12,9 @@ import {
 import { cn } from '@/lib/utils/cn'
 import { toast } from 'sonner'
 
+// Re-export Currency type for external use
+export type { Currency } from '@/hooks/useCurrency'
+
 const CURRENCIES: { value: Currency; label: string; symbol: string }[] = [
   { value: 'GBP', label: 'GBP', symbol: '£' },
   { value: 'EUR', label: 'EUR', symbol: '€' },

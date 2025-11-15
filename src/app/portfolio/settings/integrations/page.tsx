@@ -270,7 +270,7 @@ export default function IntegrationsPage() {
       </div>
 
       {/* Alias (GOAT) Integration */}
-      <Card elevation={1} className="p-6">
+      <Card elevation="soft" className="p-6">
         <div className="flex items-start gap-4">
           {/* Logo/Icon */}
           <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#00FF94] to-[#00D97E] flex items-center justify-center flex-shrink-0">
@@ -391,7 +391,7 @@ export default function IntegrationsPage() {
       </Card>
 
       {/* StockX Integration */}
-      <Card elevation={1} className="p-6">
+      <Card elevation="soft" className="p-6">
         <div className="flex items-start gap-4">
           {/* Logo/Icon */}
           <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-[#00B359] to-[#008A44] flex items-center justify-center flex-shrink-0">
@@ -527,7 +527,7 @@ export default function IntegrationsPage() {
         </div>
       </Card>
 
-      <Card elevation={1} className="p-6 opacity-50">
+      <Card elevation="soft" className="p-6 opacity-50">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
             <span className="text-2xl font-bold text-white/50">F</span>
