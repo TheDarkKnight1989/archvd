@@ -242,7 +242,7 @@ export default function TransactionsHistoryPage() {
           <p className="text-sm text-muted mb-4 text-center max-w-sm">
             {tab === 'sales'
               ? 'When you mark items as sold, they will appear here with profit tracking.'
-              : 'When you add items to your inventory, purchase records will appear here.'}
+              : 'When you add items to your portfolio, purchase records will appear here.'}
           </p>
           <div className="flex items-center gap-3">
             <Button

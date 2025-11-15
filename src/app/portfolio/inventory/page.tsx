@@ -27,7 +27,7 @@ import { MarketModal } from '@/components/MarketModal'
 import { InventoryTableV3 } from './_components/InventoryTableV3'
 import { FilterTabs } from './_components/FilterTabs'
 
-export default function InventoryPage() {
+export default function PortfolioPage() {
   const { user } = useRequireAuth()
   const router = useRouter()
   const searchParams = useSearchParams()

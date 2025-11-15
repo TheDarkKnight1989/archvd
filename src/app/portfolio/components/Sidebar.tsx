@@ -34,8 +34,8 @@ import { useSearchParams } from 'next/navigation'
 
 // Navigation structure
 const primaryNav = [
-  { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Portfolio' },
-  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Items' },
+  { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Overview' },
+  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Portfolio' },
   { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
   { id: 'transactions', icon: ArrowLeftRight, href: '/portfolio/transactions/history', label: 'Transactions' },
   { id: 'pnl', icon: FileText, href: '/portfolio/pnl', label: 'P&L' },

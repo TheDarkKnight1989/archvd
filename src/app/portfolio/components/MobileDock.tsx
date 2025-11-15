@@ -23,16 +23,16 @@ import { cn } from '@/lib/utils/cn'
 import { useSidebar } from '@/contexts/SidebarContext'
 
 const dockItems = [
-  { icon: LayoutGrid, href: '/portfolio', label: 'Portfolio' },
-  { icon: Boxes, href: '/portfolio/inventory', label: 'Inventory' },
+  { icon: LayoutGrid, href: '/portfolio', label: 'Overview' },
+  { icon: Boxes, href: '/portfolio/inventory', label: 'Portfolio' },
   { icon: BarChart3, href: '/portfolio/expenses', label: 'Analytics' },
   { icon: User, href: '/profile', label: 'Profile' },
 ]
 
 // Full nav for drawer (same as sidebar)
 const primaryNav = [
-  { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Portfolio' },
-  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Inventory' },
+  { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Overview' },
+  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Portfolio' },
   { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
   { id: 'analytics', icon: BarChart3, href: '/portfolio/analytics', label: 'Analytics', badge: 'ALPHA' },
 ]

@@ -248,7 +248,7 @@ export default function IncompleteItemsPage() {
           <div className="text-center px-6 py-12">
             <div className="text-accent text-5xl mb-4">✓</div>
             <h3 className="text-xl font-semibold text-fg mb-2">All items are complete!</h3>
-            <p className="text-sm text-dim">No incomplete items found in your inventory.</p>
+            <p className="text-sm text-dim">No incomplete items found in your portfolio.</p>
           </div>
         </div>
       ) : (

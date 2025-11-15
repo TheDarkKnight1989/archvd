@@ -392,7 +392,7 @@ export function InventoryTable({
 
           {/* Heading */}
           <h3 className="text-xl font-semibold text-fg mb-3">
-            Your inventory is empty
+            Your portfolio is empty
           </h3>
 
           {/* Description */}

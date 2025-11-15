@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
           trend="up"
         />
         <StatCard
-          title="Inventory Turnover"
+          title="Portfolio Turnover"
           value="3.2x"
           change="-0.4x"
           icon={Package}

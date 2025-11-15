@@ -158,7 +158,7 @@ export function InventoryTableV3({
           <div className="inline-block mb-6">
             <Package className="h-16 w-16 mx-auto text-muted" strokeWidth={1.5} />
           </div>
-          <h3 className="text-xl font-semibold text-fg mb-3">Your inventory is empty</h3>
+          <h3 className="text-xl font-semibold text-fg mb-3">Your portfolio is empty</h3>
           <p className="text-sm text-muted mb-8 max-w-sm mx-auto leading-relaxed">
             Start building your portfolio by adding your first item. Track market values, monitor performance, and manage your collection.
           </p>

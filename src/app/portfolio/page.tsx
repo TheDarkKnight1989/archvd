@@ -162,7 +162,7 @@ export default function DashboardPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `archvd-inventory-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `archvd-portfolio-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -250,9 +250,9 @@ export default function DashboardPage() {
               isRefreshing={isRefreshing}
             />
 
-            {/* Inventory Section Header */}
+            {/* Portfolio Section Header */}
             <div className="pt-4">
-              <h2 className="font-display text-lg font-semibold text-fg tracking-tight mb-4">Inventory</h2>
+              <h2 className="font-display text-lg font-semibold text-fg tracking-tight mb-4">Portfolio</h2>
             </div>
 
             {/* Recent Activity - Now with portfolio activity feed */}
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                         key={item.sku + idx}
                         type={item.status === 'sold' ? 'sale' : 'purchase'}
                         title={`${item.status === 'sold' ? 'Sold' : 'Added'} — ${item.title}`}
-                        subtitle={item.status === 'sold' ? 'Marketplace' : 'Inventory'}
+                        subtitle={item.status === 'sold' ? 'Marketplace' : 'Portfolio'}
                         timestampISO={new Date().toISOString()}
                         amountGBP={item.status === 'sold' ? item.market || item.buy : item.buy}
                         deltaPct={item.pl && item.buy > 0 ? (item.pl / item.buy) : undefined}
