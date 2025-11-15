@@ -49,3 +49,56 @@ export type MonthlyPnL = {
   expenses: number;
   net_profit: number;
 };
+
+/**
+ * EnrichedLineItem - V3 data type for InventoryTableV3
+ * WHY: Unified interface for inventory display with all computed values
+ */
+export type EnrichedLineItem = {
+  id: string;
+  brand: string;
+  model: string;
+  colorway?: string | null;
+  sku: string;
+  size_uk?: number | string | null;
+
+  // Image resolved through fallback chain
+  image: { src: string; alt: string };
+
+  // Purchase info
+  purchaseDate?: string | null;
+  qty: number;
+  invested: number;       // total cost (purchase_price + tax + shipping)
+  avgCost: number;        // invested / qty
+
+  // Market data
+  market: {
+    price?: number | null;
+    currency?: 'GBP' | 'EUR' | 'USD' | null;
+    provider?: 'stockx' | 'alias' | 'ebay' | 'seed' | null;
+    updatedAt?: string | null;
+    spark30d: Array<{ date: string; price: number | null }>;
+  };
+
+  // Instant Sell data (highest bid)
+  instantSell: {
+    gross: number | null;      // highestBid (raw)
+    net: number | null;        // after fees
+    currency?: 'GBP' | 'EUR' | 'USD' | null;
+    provider?: 'stockx' | null;
+    updatedAt?: string | null;
+    feePct: number;            // seller fee percentage
+  };
+
+  // Computed P/L
+  total: number;          // market.price * qty
+  pl: number | null;      // total - invested
+  performancePct: number | null;  // pl / invested * 100
+
+  // Links
+  links: { productUrl?: string | null };
+
+  // Status
+  status: 'active' | 'listed' | 'worn' | 'sold' | 'archived';
+  category?: string;
+};
