@@ -21,6 +21,23 @@ export function useInventoryV3() {
     try {
       setLoading(true)
 
+      // 0. Get user's base currency preference
+      const { data: { user } } = await supabase.auth.getUser()
+      const userId = user?.id
+
+      let userCurrency: 'GBP' | 'EUR' | 'USD' = 'GBP' // Default
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('base_currency')
+          .eq('id', userId)
+          .single()
+
+        userCurrency = (profile?.base_currency as 'GBP' | 'EUR' | 'USD') || 'GBP'
+      }
+
+      console.log('[useInventoryV3] User currency:', userCurrency)
+
       // 1. Fetch inventory items
       const { data: inventoryData, error: inventoryError } = await supabase
         .from('Inventory')
@@ -125,13 +142,50 @@ export function useInventoryV3() {
         // Get market price
         const priceKey = `${item.sku}:${item.size_uk || ''}`
         const stockxPrice = stockxPriceMap.get(priceKey)
-        const marketPrice = stockxPrice?.last_sale || stockxPrice?.lowest_ask || item.market_value || null
+
+        // CURRENCY HANDLING:
+        // Primary path: Provider already gave us prices in user's currency (GBP for this account)
+        // Backup path: Only use FX conversion when stored currency !== user currency
+        const rawMarketPrice = stockxPrice?.last_sale || stockxPrice?.lowest_ask || item.market_value || null
         const marketCurrency = stockxPrice?.currency as 'GBP' | 'EUR' | 'USD' | null | undefined
+
+        let marketPrice = rawMarketPrice
+        let highestBid = stockxPrice?.highest_bid || null
+
+        // Only convert if currencies don't match
+        if (rawMarketPrice && marketCurrency && marketCurrency !== userCurrency) {
+          // Use hardcoded FX rate for now (TODO: fetch from fx_rates table)
+          const fxRates: Record<string, Record<string, number>> = {
+            'USD': { 'GBP': 0.79, 'EUR': 0.92 },
+            'EUR': { 'GBP': 0.86, 'USD': 1.09 },
+            'GBP': { 'USD': 1.27, 'EUR': 1.16 }
+          }
+
+          const rate = fxRates[marketCurrency]?.[userCurrency] || 1.0
+
+          console.log(`[useInventoryV3] Currency conversion for ${item.sku}:`, {
+            rawPrice: rawMarketPrice,
+            rawCurrency: marketCurrency,
+            userCurrency,
+            rate,
+            convertedPrice: rawMarketPrice * rate
+          })
+
+          marketPrice = rawMarketPrice * rate
+          if (highestBid) {
+            highestBid = highestBid * rate
+          }
+        } else if (marketCurrency) {
+          console.log(`[useInventoryV3] No conversion needed for ${item.sku}:`, {
+            price: rawMarketPrice,
+            currency: marketCurrency,
+            userCurrency,
+            match: marketCurrency === userCurrency
+          })
+        }
+
         const marketProvider = stockxPrice ? 'stockx' : (item.market_source || null)
         const marketUpdatedAt = stockxPrice?.as_of || item.market_price_updated_at || null
-
-        // Get instant sell data (highest bid)
-        const highestBid = stockxPrice?.highest_bid || null
 
         // Get sparkline data
         const spark30d = sparklineMap.get(priceKey) || []
@@ -152,11 +206,21 @@ export function useInventoryV3() {
         const invested = (item.purchase_price || 0) + (item.tax || 0) + (item.shipping || 0)
         const avgCost = invested / qty
 
-        const total = marketPrice ? marketPrice * qty : 0
-        const pl = marketPrice ? total - invested : null
+        // BUG FIX #1 & #2: Total should fallback to custom_market_value or invested
+        // Priority: 1) market price, 2) custom value, 3) invested amount (minimum)
+        const total = marketPrice
+          ? marketPrice * qty
+          : item.custom_market_value
+            ? item.custom_market_value * qty
+            : invested
+
+        // BUG FIX #1: P/L should use custom_market_value when no market price
+        // Calculate P/L based on whatever value we're using for total
+        const currentValue = marketPrice || item.custom_market_value || invested
+        const pl = currentValue !== invested ? currentValue - invested : null
         const performancePct = pl !== null && invested > 0 ? (pl / invested) * 100 : null
 
-        // Compute instant sell net payout
+        // Compute instant sell net payout (already converted to user currency)
         const instantSellGross = highestBid
         const instantSellNet = highestBid ? Math.round(highestBid * (1 - STOCKX_SELLER_FEE_PCT) * 100) / 100 : null
 
@@ -177,7 +241,7 @@ export function useInventoryV3() {
           avgCost,
           market: {
             price: marketPrice,
-            currency: marketCurrency,
+            currency: userCurrency, // All prices converted to user currency
             provider: marketProvider as any,
             updatedAt: marketUpdatedAt,
             spark30d,
@@ -185,7 +249,7 @@ export function useInventoryV3() {
           instantSell: {
             gross: instantSellGross,
             net: instantSellNet,
-            currency: marketCurrency,
+            currency: userCurrency, // All prices converted to user currency
             provider: highestBid ? 'stockx' : null,
             updatedAt: highestBid ? marketUpdatedAt : null,
             feePct: STOCKX_SELLER_FEE_PCT,

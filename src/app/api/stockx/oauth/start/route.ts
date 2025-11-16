@@ -59,12 +59,20 @@ export async function GET(request: NextRequest) {
 
     // Store PKCE verifier and state in session/cookie
     // Note: In production, store these securely (Redis, encrypted cookie, etc.)
+    // Request all necessary scopes for catalog and marketplace access
+    const scopes = [
+      'offline_access',    // Refresh token
+      'openid',           // User identity
+      'catalog.read',     // Read catalog/product data
+      'marketplace.read', // Read marketplace/pricing data
+    ].join(' ')
+
     const response = NextResponse.redirect(
       `${STOCKX_OAUTH_AUTHORIZE_URL}?` +
       `response_type=code` +
       `&client_id=${encodeURIComponent(STOCKX_CLIENT_ID)}` +
       `&redirect_uri=${encodeURIComponent(STOCKX_REDIRECT_URI)}` +
-      `&scope=${encodeURIComponent('offline_access openid')}` +
+      `&scope=${encodeURIComponent(scopes)}` +
       `&audience=gateway.stockx.com` +
       `&state=${state}` +
       `&code_challenge=${codeChallenge}` +
