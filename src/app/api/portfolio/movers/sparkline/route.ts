@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Server-side Supabase client
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: { persistSession: false }
-  }
-)
-
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +20,15 @@ interface SparklinePoint {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Create Supabase client inside handler (not at module level)
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: { persistSession: false }
+      }
+    )
+
     // Get authenticated user
     const { data: { session } } = await supabaseAdmin.auth.getSession()
     const userId = session?.user?.id
