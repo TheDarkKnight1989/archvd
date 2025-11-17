@@ -99,6 +99,7 @@ export interface GoatBuyBarData {
     highestBid: number;
     lastSale: number;
     salesCount: number;
+    salesLast72h?: number;
     askCount: number;
     bidCount: number;
   }>;

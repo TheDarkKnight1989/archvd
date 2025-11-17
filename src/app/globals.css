@@ -1,10 +1,12 @@
 /* archvd Boutique Design System */
-@import "tailwindcss";
 
-/* Font imports */
+/* Font imports - MUST come before Tailwind */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 /* Neue Haas Display alternative - using DM Sans which has similar geometric properties */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+/* Tailwind CSS */
+@import "tailwindcss";
 
 /* Boutique Theme Tokens - Light Mode (Default) */
 :root {

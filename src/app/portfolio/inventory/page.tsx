@@ -16,6 +16,9 @@ import { cn } from '@/lib/utils/cn'
 import { AddItemModal } from '@/components/modals/AddItemModal'
 import { MarkAsSoldModal } from '@/components/modals/MarkAsSoldModal'
 import { AddToWatchlistPicker } from '@/components/AddToWatchlistPicker'
+import { ListOnStockXModal } from '@/components/stockx/ListOnStockXModal'
+import { RepriceListingModal } from '@/components/stockx/RepriceListingModal'
+import { useListingOperations } from '@/hooks/useStockxListings'
 import type { SortingState } from '@tanstack/react-table'
 
 // Matrix V2 Phase 3 Components
@@ -67,8 +70,6 @@ export default function PortfolioPage() {
     { key: 'category', label: 'Category', visible: true },
     { key: 'purchase_date', label: 'Purchase Date', visible: true },
     { key: 'buy', label: 'Buy £', visible: true },
-    { key: 'tax', label: 'Tax £', visible: false }, // Hidden by default
-    { key: 'shipping', label: 'Ship £', visible: false }, // Hidden by default
     { key: 'total', label: 'Total £', visible: true },
     { key: 'market', label: 'Market £', visible: true },
     { key: 'gain_loss_pct', label: '% Gain/Loss', visible: true },
@@ -85,6 +86,15 @@ export default function PortfolioPage() {
   const [itemToSell, setItemToSell] = useState<EnrichedLineItem | null>(null)
   const [watchlistPickerOpen, setWatchlistPickerOpen] = useState(false)
   const [selectedItemForWatchlist, setSelectedItemForWatchlist] = useState<EnrichedLineItem | null>(null)
+
+  // StockX modal state
+  const [listOnStockXModalOpen, setListOnStockXModalOpen] = useState(false)
+  const [itemToList, setItemToList] = useState<any | null>(null)
+  const [repriceModalOpen, setRepriceModalOpen] = useState(false)
+  const [listingToReprice, setListingToReprice] = useState<any | null>(null)
+
+  // StockX operations
+  const { deactivateListing, activateListing, deleteListing } = useListingOperations()
 
   // Update URL params
   const updateParams = (updates: Partial<TableParams>) => {
@@ -259,6 +269,75 @@ export default function PortfolioPage() {
   const handleAddToWatchlist = (item: EnrichedLineItem) => {
     setSelectedItemForWatchlist(item)
     setWatchlistPickerOpen(true)
+  }
+
+  // StockX action handlers
+  const handleListOnStockX = (item: EnrichedLineItem) => {
+    setItemToList(item)
+    setListOnStockXModalOpen(true)
+  }
+
+  const handleRepriceListing = (item: EnrichedLineItem) => {
+    // Convert EnrichedLineItem to format expected by modal
+    setListingToReprice({
+      stockx_listing_id: (item as any).stockx_listing_id,
+      ask_price: (item as any).stockx_ask_price || item.market.price || 0,
+      market_lowest_ask: item.market.price,
+      product_name: `${item.brand} ${item.model}`,
+      sku: item.sku,
+    })
+    setRepriceModalOpen(true)
+  }
+
+  const handleDeactivateListing = async (item: EnrichedLineItem) => {
+    const listingId = (item as any).stockx_listing_id
+    if (listingId) {
+      await deactivateListing(listingId)
+      refetch()
+    }
+  }
+
+  const handleReactivateListing = async (item: EnrichedLineItem) => {
+    const listingId = (item as any).stockx_listing_id
+    if (listingId) {
+      await activateListing(listingId)
+      refetch()
+    }
+  }
+
+  const handleDeleteListing = async (item: EnrichedLineItem) => {
+    const listingId = (item as any).stockx_listing_id
+    if (listingId && confirm('Are you sure you want to delete this listing?')) {
+      await deleteListing(listingId)
+      refetch()
+    }
+  }
+
+  const handleDeleteItem = async (item: EnrichedLineItem) => {
+    const itemName = `${item.brand} ${item.model} (${item.sku})`
+    if (!confirm(`Are you sure you want to permanently delete "${itemName}"?\n\nThis will remove the item and all associated data (expenses, listings, etc.). This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/items/${item.id}/delete`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to delete item')
+      }
+
+      // Refetch inventory data
+      refetch()
+
+      // Show success message
+      console.log('Item deleted successfully:', itemName)
+    } catch (error: any) {
+      console.error('Failed to delete item:', error)
+      alert(`Failed to delete item: ${error.message}`)
+    }
   }
 
   // Active filter count
@@ -482,6 +561,12 @@ export default function PortfolioPage() {
         onAddExpense={handleAddExpense}
         onAddToWatchlist={handleAddToWatchlist}
         onAddItem={() => setAddItemModalOpen(true)}
+        onDelete={handleDeleteItem}
+        onListOnStockX={handleListOnStockX}
+        onRepriceListing={handleRepriceListing}
+        onDeactivateListing={handleDeactivateListing}
+        onReactivateListing={handleReactivateListing}
+        onDeleteListing={handleDeleteListing}
       />
 
       {/* Add Item Modal */}
@@ -538,6 +623,54 @@ export default function PortfolioPage() {
           onOpenChange={setWatchlistPickerOpen}
           sku={selectedItemForWatchlist.sku}
           defaultSize={selectedItemForWatchlist.size_uk?.toString() || undefined}
+        />
+      )}
+
+      {/* List on StockX Modal */}
+      {itemToList && (
+        <ListOnStockXModal
+          open={listOnStockXModalOpen}
+          onClose={() => {
+            setListOnStockXModalOpen(false)
+            setItemToList(null)
+          }}
+          onSuccess={() => {
+            refetch()
+            setListOnStockXModalOpen(false)
+            setItemToList(null)
+          }}
+          item={{
+            id: itemToList.id,
+            sku: itemToList.sku,
+            brand: itemToList.brand,
+            model: itemToList.model,
+            size_uk: itemToList.size_uk?.toString(),
+            purchase_price: itemToList.invested || itemToList.avgCost || 0,
+            tax: 0,
+            shipping: 0,
+            market_price: itemToList.market.price,
+            market_last_sale: itemToList.market.lastSale,
+            market_lowest_ask: itemToList.market.lowestAsk,
+            market_highest_bid: itemToList.instantSell.gross,
+          }}
+        />
+      )}
+
+      {/* Reprice Listing Modal */}
+      {listingToReprice && (
+        <RepriceListingModal
+          open={repriceModalOpen}
+          onClose={() => {
+            setRepriceModalOpen(false)
+            setListingToReprice(null)
+          }}
+          onSuccess={() => {
+            refetch()
+            setRepriceModalOpen(false)
+            setListingToReprice(null)
+          }}
+          listing={listingToReprice}
+          invested={(itemToList?.invested || itemToList?.avgCost || 0)}
         />
       )}
     </div>

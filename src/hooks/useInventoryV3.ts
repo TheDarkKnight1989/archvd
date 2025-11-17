@@ -67,13 +67,49 @@ export function useInventoryV3() {
         console.warn('[useInventoryV3] Failed to fetch market products:', marketProductsError)
       }
 
-      // 4. Fetch latest market prices from stockx_latest_prices
+      // 4. Fetch inventory → StockX mappings (includes listing ID if item is listed)
+      const { data: stockxMappings, error: stockxMappingsError} = await supabase
+        .from('inventory_market_links')
+        .select('item_id, stockx_product_id, stockx_variant_id, stockx_listing_id')
+
+      if (stockxMappingsError) {
+        console.warn('[useInventoryV3] Failed to fetch StockX mappings:', stockxMappingsError)
+      }
+
+      // 4b. Fetch StockX listing details for items that have listings
+      const listingIds = stockxMappings
+        ?.filter(m => m.stockx_listing_id)
+        .map(m => m.stockx_listing_id)
+        .filter(Boolean) || []
+
+      const { data: stockxListings, error: stockxListingsError } = await supabase
+        .from('stockx_listings')
+        .select('id, stockx_listing_id, amount, currency_code, status, expires_at')
+        .in('id', listingIds.length > 0 ? listingIds : ['__none__'])
+
+      if (stockxListingsError) {
+        console.warn('[useInventoryV3] Failed to fetch StockX listings:', stockxListingsError)
+      }
+
+      // 5. Fetch StockX market prices from stockx_market_latest (materialized view)
+      // Build list of (product_id, variant_id, currency) to query
+      const stockxQueries = new Set<string>()
+      if (stockxMappings) {
+        stockxMappings.forEach(mapping => {
+          // Query all 3 currencies for each product/variant
+          ;['USD', 'GBP', 'EUR'].forEach(currency => {
+            stockxQueries.add(`${mapping.stockx_product_id}:${mapping.stockx_variant_id}:${currency}`)
+          })
+        })
+      }
+
+      // Fetch StockX market prices
       const { data: stockxPrices, error: stockxPricesError } = await supabase
-        .from('stockx_latest_prices')
-        .select('sku, size, currency, lowest_ask, highest_bid, last_sale, as_of')
+        .from('stockx_market_latest')
+        .select('stockx_product_id, stockx_variant_id, currency_code, last_sale_price, lowest_ask, highest_bid, snapshot_at')
 
       if (stockxPricesError) {
-        console.warn('[useInventoryV3] Failed to fetch StockX prices:', stockxPricesError)
+        console.warn('[useInventoryV3] Failed to fetch StockX market prices:', stockxPricesError)
       }
 
       // 5. Fetch 30-day sparkline data from market_price_daily_medians
@@ -105,10 +141,17 @@ export function useInventoryV3() {
         }
       }
 
+      const stockxMappingMap = new Map<string, any>()
+      if (stockxMappings) {
+        for (const mapping of stockxMappings) {
+          stockxMappingMap.set(mapping.item_id, mapping)
+        }
+      }
+
       const stockxPriceMap = new Map<string, any>()
       if (stockxPrices) {
         for (const price of stockxPrices) {
-          const key = `${price.sku}:${price.size || ''}`
+          const key = `${price.stockx_product_id}:${price.stockx_variant_id}:${price.currency_code}`
           stockxPriceMap.set(key, price)
         }
       }
@@ -127,6 +170,13 @@ export function useInventoryV3() {
         }
       }
 
+      const stockxListingMap = new Map<string, any>()
+      if (stockxListings) {
+        for (const listing of stockxListings) {
+          stockxListingMap.set(listing.id, listing)
+        }
+      }
+
       // 6. Compose EnrichedLineItem[]
       const enrichedItems: EnrichedLineItem[] = (inventoryData || []).map((item: any) => {
         // Get market link
@@ -139,21 +189,50 @@ export function useInventoryV3() {
         const model = item.model || marketProduct?.model || item.sku
         const colorway = item.colorway || marketProduct?.colorway || null
 
-        // Get market price
-        const priceKey = `${item.sku}:${item.size_uk || ''}`
-        const stockxPrice = stockxPriceMap.get(priceKey)
+        // Get StockX mapping for this inventory item
+        const stockxMapping = stockxMappingMap.get(item.id)
 
-        // CURRENCY HANDLING:
-        // Primary path: Provider already gave us prices in user's currency (GBP for this account)
-        // Backup path: Only use FX conversion when stored currency !== user currency
-        const rawMarketPrice = stockxPrice?.last_sale || stockxPrice?.lowest_ask || item.market_value || null
-        const marketCurrency = stockxPrice?.currency as 'GBP' | 'EUR' | 'USD' | null | undefined
+        // Get StockX market price (prefer user's currency, fallback to USD → convert)
+        let stockxPrice = null
+        let marketCurrency: 'GBP' | 'EUR' | 'USD' | null = null
+
+        if (stockxMapping) {
+          // Try to get price in user's currency first
+          const priceKeyUser = `${stockxMapping.stockx_product_id}:${stockxMapping.stockx_variant_id}:${userCurrency}`
+          stockxPrice = stockxPriceMap.get(priceKeyUser)
+
+          if (stockxPrice) {
+            marketCurrency = userCurrency
+          } else {
+            // Fallback to other currencies (prefer USD, then EUR, then GBP)
+            const fallbackCurrencies = ['USD', 'EUR', 'GBP'].filter(c => c !== userCurrency)
+            for (const currency of fallbackCurrencies) {
+              const priceKey = `${stockxMapping.stockx_product_id}:${stockxMapping.stockx_variant_id}:${currency}`
+              const fallbackPrice = stockxPriceMap.get(priceKey)
+              if (fallbackPrice) {
+                stockxPrice = fallbackPrice
+                marketCurrency = currency as 'GBP' | 'EUR' | 'USD'
+                break
+              }
+            }
+          }
+        }
+
+        // Extract individual market data fields
+        const rawLastSale = stockxPrice?.last_sale_price || null
+        const rawLowestAsk = stockxPrice?.lowest_ask || null
+        const rawHighestBid = stockxPrice?.highest_bid || null
+
+        // Market value logic: last_sale_price → lowest_ask → highest_bid → fallback to item.market_value
+        const rawMarketPrice = rawLastSale || rawLowestAsk || rawHighestBid || item.market_value || null
 
         let marketPrice = rawMarketPrice
-        let highestBid = stockxPrice?.highest_bid || null
+        let lastSale = rawLastSale
+        let lowestAsk = rawLowestAsk
+        let highestBid = rawHighestBid
 
-        // Only convert if currencies don't match
-        if (rawMarketPrice && marketCurrency && marketCurrency !== userCurrency) {
+        // CURRENCY CONVERSION: Only convert if currencies don't match
+        if (marketCurrency && marketCurrency !== userCurrency) {
           // Use hardcoded FX rate for now (TODO: fetch from fx_rates table)
           const fxRates: Record<string, Record<string, number>> = {
             'USD': { 'GBP': 0.79, 'EUR': 0.92 },
@@ -168,15 +247,16 @@ export function useInventoryV3() {
             rawCurrency: marketCurrency,
             userCurrency,
             rate,
-            convertedPrice: rawMarketPrice * rate
+            convertedPrice: rawMarketPrice ? rawMarketPrice * rate : null
           })
 
-          marketPrice = rawMarketPrice * rate
-          if (highestBid) {
-            highestBid = highestBid * rate
-          }
+          // Convert all market data fields
+          if (marketPrice) marketPrice = marketPrice * rate
+          if (lastSale) lastSale = lastSale * rate
+          if (lowestAsk) lowestAsk = lowestAsk * rate
+          if (highestBid) highestBid = highestBid * rate
         } else if (marketCurrency) {
-          console.log(`[useInventoryV3] No conversion needed for ${item.sku}:`, {
+          console.log(`[useInventoryV3] Using StockX price for ${item.sku}:`, {
             price: rawMarketPrice,
             currency: marketCurrency,
             userCurrency,
@@ -185,10 +265,11 @@ export function useInventoryV3() {
         }
 
         const marketProvider = stockxPrice ? 'stockx' : (item.market_source || null)
-        const marketUpdatedAt = stockxPrice?.as_of || item.market_price_updated_at || null
+        const marketUpdatedAt = stockxPrice?.snapshot_at || item.market_price_updated_at || null
 
-        // Get sparkline data
-        const spark30d = sparklineMap.get(priceKey) || []
+        // Get sparkline data (legacy key format for market_price_daily_medians)
+        const sparklineKey = `${item.sku}:${item.size_uk || ''}`
+        const spark30d = sparklineMap.get(sparklineKey) || []
 
         // Resolve image using fallback chain
         const imageResolved = getProductImage({
@@ -224,6 +305,28 @@ export function useInventoryV3() {
         const instantSellGross = highestBid
         const instantSellNet = highestBid ? Math.round(highestBid * (1 - STOCKX_SELLER_FEE_PCT) * 100) / 100 : null
 
+        // Build StockX data
+        const stockxData: EnrichedLineItem['stockx'] = (() => {
+          if (!stockxMapping) {
+            return { mapped: false }
+          }
+
+          // Item is mapped to StockX
+          const listing = stockxMapping.stockx_listing_id
+            ? stockxListingMap.get(stockxMapping.stockx_listing_id)
+            : null
+
+          return {
+            mapped: true,
+            productId: stockxMapping.stockx_product_id,
+            variantId: stockxMapping.stockx_variant_id,
+            listingId: listing?.stockx_listing_id || null,
+            listingStatus: listing?.status || null,
+            askPrice: listing?.amount ? listing.amount / 100 : null, // Convert cents to dollars
+            expiresAt: listing?.expires_at || null,
+          }
+        })()
+
         return {
           id: item.id,
           brand,
@@ -241,6 +344,8 @@ export function useInventoryV3() {
           avgCost,
           market: {
             price: marketPrice,
+            lastSale,
+            lowestAsk,
             currency: userCurrency, // All prices converted to user currency
             provider: marketProvider as any,
             updatedAt: marketUpdatedAt,
@@ -262,6 +367,7 @@ export function useInventoryV3() {
           },
           status: item.status,
           category: item.category,
+          stockx: stockxData,
         }
       })
 

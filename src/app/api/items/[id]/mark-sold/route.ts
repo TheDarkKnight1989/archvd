@@ -117,12 +117,22 @@ export async function POST(
 
     // Update item to sold status with FX snapshot
     // The trg_inventory_mark_sold trigger will auto-create sales record
+    //
+    // IMPORTANT: We need to set BOTH sale_price (original currency) AND sale_amount_base (GBP)
+    // - sold_price: The actual sale price in the original currency (what user entered)
+    // - sale_price: Alias for sold_price (backwards compatibility)
+    // - sales_fee: Platform fees + shipping costs (all fees associated with the sale)
+    // - sale_amount_base: The sale price converted to user's base currency (GBP)
+    const totalFees = (fees || 0) + (shipping || 0) // Combine fees + shipping
+
     const { data: updatedItem, error: updateError } = await supabase
       .from('Inventory')
       .update({
         status: 'sold',
+        sold_price: sold_price, // Original sale price in sale_currency
+        sale_price: sold_price, // Also set for backwards compatibility
         platform: platform,
-        sales_fee: fees,
+        sales_fee: totalFees, // Total fees including shipping
         notes: notes || null,
         // FX snapshot fields for sale
         sale_date: sold_date,

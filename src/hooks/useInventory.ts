@@ -41,6 +41,20 @@ export type InventoryItem = {
   notes?: string | null
   created_at: string
   updated_at?: string | null
+
+  // Enriched fields (added during data fetching/hydration)
+  image_url?: string | null
+  market_source?: string | null
+  market_currency?: 'GBP' | 'EUR' | 'USD' | null
+  alias_mapping_status?: 'mapped' | 'unmatched' | 'unmapped' | null
+  alias_product_sku?: string | null
+  alias_product_id?: string | null
+  stockx_mapping_status?: 'mapped' | 'unmapped' | null
+  stockx_product_sku?: string | null
+  stockx_lowest_ask?: number | null
+  stockx_highest_bid?: number | null
+  stockx_last_sale?: number | null
+  stockx_price_as_of?: string | null
 }
 
 export function useInventory() {

@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { fullLookup } from '@/lib/pricing';
 import type { AggregatedPrice } from '@/lib/pricing/types';
 import type { Category } from '@/lib/portfolio/types';
+import { getCatalogService } from '@/lib/services/stockx/catalog';
+import { isStockxMockMode } from '@/lib/config/stockx';
 
 // Simple in-memory rate limiter (per-process)
 const rateLimitMap = new Map<string, number>();
@@ -98,6 +100,61 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 2.5. NEW: Search StockX V2 catalog if not found locally
+    let productFromStockX = null;
+    let stockxProductId = null;
+    let stockxVariantId = null;
+
+    if (!productFromCatalog && !productFromCache && !isStockxMockMode()) {
+      try {
+        console.log(`[Quick Lookup] Searching StockX V2 catalog for SKU: ${sku}`);
+        const catalogService = getCatalogService();
+        const results = await catalogService.searchProducts(sku, 1);
+
+        if (results.length > 0) {
+          const stockxProduct = results[0];
+          console.log(`[Quick Lookup] StockX V2 catalog hit: ${stockxProduct.title}`);
+
+          // Save product to database
+          const { productId } = await catalogService.saveToDatabase(stockxProduct);
+          stockxProductId = productId;
+
+          // Map to our product format
+          productFromStockX = {
+            sku: stockxProduct.styleId,
+            brand: stockxProduct.brand,
+            name: stockxProduct.title,
+            colorway: stockxProduct.colorway || null,
+            image_url: stockxProduct.imageUrl || stockxProduct.thumbUrl || null,
+          };
+
+          // Cache in catalog_cache for faster future lookups
+          await supabase
+            .from('catalog_cache')
+            .upsert(
+              {
+                sku: stockxProduct.styleId,
+                brand: stockxProduct.brand,
+                model: stockxProduct.title,
+                colorway: stockxProduct.colorway,
+                image_url: stockxProduct.imageUrl || stockxProduct.thumbUrl,
+                source: 'stockx_v2',
+                confidence: 95,
+                updated_at: new Date().toISOString(),
+              },
+              {
+                onConflict: 'sku',
+              }
+            );
+
+          console.log(`[Quick Lookup] Cached StockX V2 product for SKU: ${sku}`);
+        }
+      } catch (error) {
+        console.error('[Quick Lookup] StockX V2 search error:', error);
+        // Continue with existing flow if StockX fails
+      }
+    }
+
     // 3. Check product_market_prices for latest market price
     const { data: marketPrice } = await supabase
       .from('product_market_prices')
@@ -116,8 +173,8 @@ export async function GET(request: NextRequest) {
       result = await fullLookup(sku, category);
     }
 
-    // Use catalog data first, then cache, then lookup result
-    const product = productFromCatalog || productFromCache || result.product || null;
+    // Use catalog data first, then cache, then StockX, then lookup result
+    const product = productFromCatalog || productFromCache || productFromStockX || result.product || null;
 
     // Build aggregated price from market_prices table or external lookup
     let aggregatedPrice: AggregatedPrice | null = null;

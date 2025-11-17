@@ -25,6 +25,13 @@ export interface InventoryTableV3Props {
   onAddExpense?: (item: EnrichedLineItem) => void
   onAddToWatchlist?: (item: EnrichedLineItem) => void
   onAddItem?: () => void
+  onDelete?: (item: EnrichedLineItem) => void
+  // StockX actions
+  onListOnStockX?: (item: EnrichedLineItem) => void
+  onRepriceListing?: (item: EnrichedLineItem) => void
+  onDeactivateListing?: (item: EnrichedLineItem) => void
+  onReactivateListing?: (item: EnrichedLineItem) => void
+  onDeleteListing?: (item: EnrichedLineItem) => void
 }
 
 /**
@@ -53,6 +60,12 @@ export function InventoryTableV3({
   onAddExpense,
   onAddToWatchlist,
   onAddItem,
+  onDelete,
+  onListOnStockX,
+  onRepriceListing,
+  onDeactivateListing,
+  onReactivateListing,
+  onDeleteListing,
 }: InventoryTableV3Props) {
   const { format } = useCurrency()
   const [sortBy, setSortBy] = useState<string | null>(null)
@@ -189,6 +202,32 @@ export function InventoryTableV3({
             onMarkSold={() => onMarkSold?.(item)}
             onAddExpense={() => onAddExpense?.(item)}
             onAddToWatchlist={() => onAddToWatchlist?.(item)}
+            onDelete={() => onDelete?.(item)}
+            onListOnStockX={
+              onListOnStockX && !item.stockx?.listingId
+                ? () => onListOnStockX(item)
+                : undefined
+            }
+            onRepriceListing={
+              onRepriceListing && item.stockx?.listingStatus === 'ACTIVE'
+                ? () => onRepriceListing(item)
+                : undefined
+            }
+            onDeactivateListing={
+              onDeactivateListing && item.stockx?.listingStatus === 'ACTIVE'
+                ? () => onDeactivateListing(item)
+                : undefined
+            }
+            onReactivateListing={
+              onReactivateListing && item.stockx?.listingStatus === 'INACTIVE'
+                ? () => onReactivateListing(item)
+                : undefined
+            }
+            onDeleteListing={
+              onDeleteListing && item.stockx?.listingId
+                ? () => onDeleteListing(item)
+                : undefined
+            }
           />
         ))}
       </div>
@@ -329,6 +368,32 @@ export function InventoryTableV3({
                       onMarkSold={() => onMarkSold?.(item)}
                       onAddExpense={() => onAddExpense?.(item)}
                       onAddToWatchlist={() => onAddToWatchlist?.(item)}
+                      onDelete={() => onDelete?.(item)}
+                      onListOnStockX={
+                        onListOnStockX && !item.stockx?.listingId
+                          ? () => onListOnStockX(item)
+                          : undefined
+                      }
+                      onRepriceListing={
+                        onRepriceListing && item.stockx?.listingStatus === 'ACTIVE'
+                          ? () => onRepriceListing(item)
+                          : undefined
+                      }
+                      onDeactivateListing={
+                        onDeactivateListing && item.stockx?.listingStatus === 'ACTIVE'
+                          ? () => onDeactivateListing(item)
+                          : undefined
+                      }
+                      onReactivateListing={
+                        onReactivateListing && item.stockx?.listingStatus === 'INACTIVE'
+                          ? () => onReactivateListing(item)
+                          : undefined
+                      }
+                      onDeleteListing={
+                        onDeleteListing && item.stockx?.listingId
+                          ? () => onDeleteListing(item)
+                          : undefined
+                      }
                     />
                   </td>
                 </tr>
@@ -351,6 +416,12 @@ function MobileInventoryCard({
   onMarkSold,
   onAddExpense,
   onAddToWatchlist,
+  onDelete,
+  onListOnStockX,
+  onRepriceListing,
+  onDeactivateListing,
+  onReactivateListing,
+  onDeleteListing,
 }: {
   item: EnrichedLineItem
   onClick?: () => void
@@ -358,6 +429,12 @@ function MobileInventoryCard({
   onMarkSold?: () => void
   onAddExpense?: () => void
   onAddToWatchlist?: () => void
+  onDelete?: () => void
+  onListOnStockX?: () => void
+  onRepriceListing?: () => void
+  onDeactivateListing?: () => void
+  onReactivateListing?: () => void
+  onDeleteListing?: () => void
 }) {
   const { format } = useCurrency()
 
@@ -411,6 +488,12 @@ function MobileInventoryCard({
           onMarkSold={onMarkSold}
           onAddExpense={onAddExpense}
           onAddToWatchlist={onAddToWatchlist}
+          onDelete={onDelete}
+          onListOnStockX={onListOnStockX}
+          onRepriceListing={onRepriceListing}
+          onDeactivateListing={onDeactivateListing}
+          onReactivateListing={onReactivateListing}
+          onDeleteListing={onDeleteListing}
         />
       </div>
     </div>

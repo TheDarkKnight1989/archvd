@@ -1,380 +1,262 @@
 /**
- * StockX Sync Listings
- * Fetches user's StockX listings and maps to inventory
- * POST /api/stockx/sync/listings
+ * StockX Listings Sync Worker
+ * GET /api/stockx/sync/listings
+ *
+ * Fetches all user listings from StockX and syncs them to the database
+ * Updates listing status, prices, expiry, and metadata
+ * Corrects mismatched statuses and identifies missing listings
+ *
+ * This should be called:
+ * - Periodically via cron (e.g., every 15 minutes)
+ * - After any listing operation completes
+ * - On user demand (refresh listings)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { getStockxClient } from '@/lib/services/stockx/client';
-import { logger } from '@/lib/logger';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { StockxListingsService } from '@/lib/services/stockx/listings'
+import { isStockxMockMode } from '@/lib/config/stockx'
+import { logger } from '@/lib/logger'
 
-export async function POST(request: NextRequest) {
-  const startTime = Date.now();
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300 // 5 minutes for sync
+
+type SyncStats = {
+  totalListings: number
+  updated: number
+  created: number
+  statusChanged: number
+  priceChanged: number
+  expiryChanged: number
+  errors: number
+}
+
+export async function GET(request: NextRequest) {
+  const startTime = Date.now()
 
   try {
-    // Check if StockX is enabled
-    if (process.env.NEXT_PUBLIC_STOCKX_ENABLE !== 'true') {
-      return NextResponse.json(
-        { error: 'StockX integration is not enabled' },
-        { status: 400 }
-      );
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verify user is authenticated
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('[Listings Sync] Starting sync for user:', user.id)
 
-    if (authError || !user) {
+    if (isStockxMockMode()) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+        {
+          success: false,
+          message: 'StockX is in mock mode',
+          stats: {
+            totalListings: 0,
+            updated: 0,
+            created: 0,
+            statusChanged: 0,
+            priceChanged: 0,
+            expiryChanged: 0,
+            errors: 0,
+          },
+        },
+        { status: 503 }
+      )
     }
 
-    // Check if user has connected StockX account
-    const { data: account, error: accountError } = await supabase
-      .from('stockx_accounts')
-      .select('user_id')
+    const stats: SyncStats = {
+      totalListings: 0,
+      updated: 0,
+      created: 0,
+      statusChanged: 0,
+      priceChanged: 0,
+      expiryChanged: 0,
+      errors: 0,
+    }
+
+    // 1. Fetch all user listings from StockX (client is user-specific via auth)
+    const stockxListings = await StockxListingsService.getListings()
+    stats.totalListings = stockxListings.length
+
+    console.log(`[Listings Sync] Found ${stockxListings.length} listings on StockX`)
+
+    // 2. Fetch all existing listings from database
+    const { data: dbListings } = await supabase
+      .from('stockx_listings')
+      .select('*')
       .eq('user_id', user.id)
-      .single();
 
-    if (accountError || !account) {
-      return NextResponse.json(
-        { error: 'StockX account not connected. Please connect your account first.' },
-        { status: 401 }
-      );
-    }
+    const dbListingsMap = new Map(
+      dbListings?.map((listing) => [listing.stockx_listing_id, listing]) || []
+    )
 
-    // Get user-specific StockX client (will auto-load and refresh tokens)
-    const client = getStockxClient(user.id);
+    // 3. Process each StockX listing
+    for (const stockxListing of stockxListings) {
+      try {
+        const existingListing = dbListingsMap.get(stockxListing.id)
 
-    logger.info('[StockX Sync Listings] Starting sync', {
-      userId: user.id,
-      endpoint: '/v2/selling/listings?pageSize=100',
-    });
-
-    // Fetch user's listings from StockX (v2 API)
-    const response = await client.request('/v2/selling/listings?pageSize=100');
-
-    logger.info('[StockX Sync Listings] Response received', {
-      userId: user.id,
-      hasResponse: !!response,
-      responseKeys: response ? Object.keys(response) : [],
-      listingsIsArray: Array.isArray(response?.listings),
-      listingsCount: response?.listings?.length || 0,
-      sampleData: response ? JSON.stringify(response).substring(0, 500) : null,
-    });
-
-    if (!response || !Array.isArray(response.listings)) {
-      logger.warn('[StockX Sync Listings] No listings returned', {
-        userId: user.id,
-        response: response ? JSON.stringify(response).substring(0, 1000) : null,
-      });
-      return NextResponse.json({
-        success: true,
-        fetched: 0,
-        created: 0,
-        upsertedProducts: 0,
-        duration_ms: Date.now() - startTime,
-        message: 'No active listings found on StockX',
-      });
-    }
-
-    const listings = response.listings;
-    let fetchedCount = listings.length;
-    let mappedCount = 0;
-    let upsertedProducts = 0;
-
-    // Check if user has any inventory items at all
-    const { data: userInventoryCheck, error: inventoryCheckError } = await supabase
-      .from('Inventory')
-      .select('id, sku, size, status')
-      .eq('user_id', user.id)
-      .limit(10);
-
-    logger.info('[StockX Sync Listings] User inventory check', {
-      userId: user.id,
-      inventoryCount: userInventoryCheck?.length || 0,
-      sampleInventory: userInventoryCheck?.map(i => ({ sku: i.sku, size: i.size, status: i.status })) || [],
-      hasError: !!inventoryCheckError,
-    });
-
-    // Process listings
-    for (const listing of listings) {
-      // StockX API v2 structure
-      const {
-        listingId: stockx_listing_id,
-        product,
-        variant,
-        amount: asking_price_amount,
-        currencyCode: currency = 'USD',
-        status: listingStatus,
-      } = listing;
-
-      // Extract SKU from product.styleId (StockX v2 format)
-      const productSku = product?.styleId;
-      const size = variant?.variantValue;
-
-      // Skip listings without SKU or size
-      if (!productSku || !size) {
-        logger.warn('[StockX Sync Listings] Skipping listing without SKU or size', {
-          listingId: stockx_listing_id,
-          hasSku: !!productSku,
-          hasSize: !!size,
-          productStyleId: product?.styleId,
-          variantValue: variant?.variantValue,
-        });
-        continue;
-      }
-
-      // Upsert product catalog if we have product details
-      if (product && product.productName) {
-        // Generate slug from SKU
-        const slug = productSku.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-        const { error: productError } = await supabase
-          .from('stockx_products')
-          .upsert(
-            {
-              sku: productSku,
-              slug: slug,
-              name: product.productName,
-              brand: 'Unknown', // StockX v2 API doesn't provide brand in listings response
-              model: null,
-              colorway: null,
-              release_date: null,
-              retail_price: null,
-              image_url: null,
-              meta: {
-                product_id: product.productId,
-                retail_currency: currency,
-                category: 'sneaker',
-              },
-              updated_at: new Date().toISOString(),
-            },
-            {
-              onConflict: 'sku',
-              ignoreDuplicates: false,
-            }
-          );
-
-        if (productError) {
-          logger.error('[StockX Sync Listings] Product upsert error', {
-            sku: productSku,
-            error: productError.message,
-          });
-        } else {
-          upsertedProducts++;
-        }
-      }
-
-      // Create or update Inventory item from StockX listing
-      // First check if we already have an inventory item linked to this StockX listing
-      const { data: existingLink } = await supabase
-        .from('inventory_market_links')
-        .select('inventory_id, Inventory!inner(*)')
-        .eq('provider', 'stockx')
-        .eq('provider_listing_id', stockx_listing_id)
-        .eq('Inventory.user_id', user.id)
-        .single();
-
-      let inventoryItemId: string;
-
-      if (existingLink) {
-        // Update existing inventory item
-        inventoryItemId = existingLink.inventory_id;
-
-        const { error: updateError } = await supabase
-          .from('Inventory')
-          .update({
-            sku: productSku,
-            style_id: productSku,
-            size: size,
-            size_uk: size,
-            status: listingStatus === 'ACTIVE' || listingStatus === 'LISTED' ? 'listed' : 'active',
-            notes: `Imported from StockX: ${product.productName} (${stockx_listing_id})`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', inventoryItemId);
-
-        if (updateError) {
-          logger.error('[StockX Sync Listings] Inventory update error', {
-            inventoryItemId,
-            error: updateError.message,
-          });
-        } else {
-          mappedCount++;
-        }
-      } else {
-        // Create new inventory item
-        const { data: newItem, error: insertError } = await supabase
-          .from('Inventory')
-          .insert({
+        if (!existingListing) {
+          // Create new listing in database (discovered via sync)
+          const { error: insertError } = await supabase.from('stockx_listings').insert({
             user_id: user.id,
-            sku: productSku,
-            brand: 'Unknown', // Will be enriched later
-            model: null,
-            colorway: null,
-            style_id: productSku,
-            size: size,
-            size_uk: size,
-            size_alt: null,
-            category: 'sneaker',
-            condition: 'new',
-            purchase_price: 0,
-            tax: null,
-            shipping: null,
-            place_of_purchase: 'StockX',
-            purchase_date: null,
-            order_number: null,
-            tags: ['stockx-import'],
-            custom_market_value: null,
-            notes: `Imported from StockX: ${product.productName} (${stockx_listing_id})`,
-            status: 'listed',
+            stockx_listing_id: stockxListing.id,
+            stockx_product_id: stockxListing.productId,
+            stockx_variant_id: stockxListing.variantId,
+            ask_price: stockxListing.amount,
+            currency: stockxListing.currency,
+            quantity: stockxListing.quantity,
+            status: stockxListing.status,
+            expires_at: stockxListing.expiresAt,
+            created_at_stockx: stockxListing.createdAt,
+            updated_at_stockx: stockxListing.updatedAt,
+            metadata: stockxListing.metadata || {},
           })
-          .select('id')
-          .single();
 
-        if (insertError || !newItem) {
-          logger.error('[StockX Sync Listings] Inventory insert error', {
-            sku: productSku,
-            size,
-            error: insertError?.message,
-            code: insertError?.code,
-            details: insertError?.details,
-            hint: insertError?.hint,
-            fullError: JSON.stringify(insertError),
-          });
-          continue;
-        }
-
-        inventoryItemId = newItem.id;
-
-        // Create inventory_market_link
-        const { error: linkError } = await supabase
-          .from('inventory_market_links')
-          .insert({
-            inventory_id: inventoryItemId,
-            provider: 'stockx',
-            provider_product_sku: productSku,
-            provider_listing_id: stockx_listing_id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-
-        if (linkError) {
-          logger.error('[StockX Sync Listings] Link creation error', {
-            inventoryItemId,
-            error: linkError.message,
-            code: linkError.code,
-            details: linkError.details,
-            hint: linkError.hint,
-            fullError: JSON.stringify(linkError),
-          });
+          if (insertError) {
+            console.error('[Listings Sync] Error inserting new listing:', insertError)
+            stats.errors++
+          } else {
+            stats.created++
+            console.log('[Listings Sync] Created new listing:', stockxListing.id)
+          }
         } else {
-          mappedCount++;
-        }
-      }
+          // Update existing listing if anything changed
+          const updates: any = {
+            updated_at: new Date().toISOString(),
+            updated_at_stockx: stockxListing.updatedAt,
+          }
 
-      // Log first few attempts
-      if (listings.indexOf(listing) < 3) {
-        logger.info('[StockX Sync Listings] Processing listing', {
-          listingIndex: listings.indexOf(listing),
-          productSku,
-          size,
-          productName: product.productName,
-          action: existingLink ? 'updated' : 'created',
-          inventoryItemId,
-        });
+          let hasChanges = false
+
+          // Check for status changes
+          if (existingListing.status !== stockxListing.status) {
+            updates.status = stockxListing.status
+            stats.statusChanged++
+            hasChanges = true
+            console.log(
+              `[Listings Sync] Status changed for ${stockxListing.id}: ${existingListing.status} → ${stockxListing.status}`
+            )
+          }
+
+          // Check for price changes
+          if (existingListing.ask_price !== stockxListing.amount) {
+            updates.ask_price = stockxListing.amount
+            stats.priceChanged++
+            hasChanges = true
+            console.log(
+              `[Listings Sync] Price changed for ${stockxListing.id}: ${existingListing.ask_price} → ${stockxListing.amount}`
+            )
+          }
+
+          // Check for expiry changes
+          if (existingListing.expires_at !== stockxListing.expiresAt) {
+            updates.expires_at = stockxListing.expiresAt
+            stats.expiryChanged++
+            hasChanges = true
+          }
+
+          // Update currency if changed
+          if (existingListing.currency !== stockxListing.currency) {
+            updates.currency = stockxListing.currency
+            hasChanges = true
+          }
+
+          // Update quantity if changed
+          if (existingListing.quantity !== stockxListing.quantity) {
+            updates.quantity = stockxListing.quantity
+            hasChanges = true
+          }
+
+          // Update metadata if changed
+          if (JSON.stringify(existingListing.metadata) !== JSON.stringify(stockxListing.metadata)) {
+            updates.metadata = stockxListing.metadata || {}
+            hasChanges = true
+          }
+
+          if (hasChanges) {
+            const { error: updateError } = await supabase
+              .from('stockx_listings')
+              .update(updates)
+              .eq('stockx_listing_id', stockxListing.id)
+
+            if (updateError) {
+              console.error('[Listings Sync] Error updating listing:', updateError)
+              stats.errors++
+            } else {
+              stats.updated++
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('[Listings Sync] Error processing listing:', error)
+        stats.errors++
       }
     }
 
-    const duration = Date.now() - startTime;
+    // 4. Check for listings in DB that are no longer on StockX (orphaned)
+    const stockxListingIds = new Set(stockxListings.map((l) => l.id))
+    const orphanedListings = dbListings?.filter(
+      (dbListing) =>
+        !stockxListingIds.has(dbListing.stockx_listing_id) &&
+        dbListing.status !== 'DELETED' &&
+        dbListing.status !== 'MATCHED'
+    )
 
-    logger.info('[StockX Sync Listings] Sync complete', {
-      userId: user.id,
-      fetched: fetchedCount,
-      created: mappedCount,
-      upsertedProducts,
-      userInventoryCount: userInventoryCheck?.length || 0,
-      sampleStockxSkus: listings.slice(0, 5).map((l: any) => ({
-        sku: l.product?.styleId,
-        size: l.variant?.variantValue,
-        productName: l.product?.productName,
-      })),
-      userInventorySample: userInventoryCheck?.slice(0, 5).map(i => ({ sku: i.sku, size: i.size })) || [],
-    });
+    if (orphanedListings && orphanedListings.length > 0) {
+      console.log(`[Listings Sync] Found ${orphanedListings.length} orphaned listings`)
+
+      for (const orphaned of orphanedListings) {
+        // Mark as deleted in our DB (no longer exists on StockX)
+        await supabase
+          .from('stockx_listings')
+          .update({
+            status: 'DELETED',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stockx_listing_id', orphaned.stockx_listing_id)
+
+        stats.statusChanged++
+        stats.updated++
+
+        console.log('[Listings Sync] Marked orphaned listing as deleted:', orphaned.stockx_listing_id)
+      }
+    }
+
+    const duration = Date.now() - startTime
 
     logger.apiRequest(
       '/api/stockx/sync/listings',
-      { userId: user.id },
+      { user_id: user.id },
       duration,
-      {
-        fetched: fetchedCount,
-        created: mappedCount,
-        upsertedProducts,
-      }
-    );
+      stats
+    )
+
+    console.log('[Listings Sync] Completed in', duration, 'ms:', stats)
 
     return NextResponse.json({
       success: true,
-      fetched: fetchedCount,
-      created: mappedCount, // Changed from "mapped" to "created" for clarity
-      upsertedProducts,
-      duration_ms: duration,
-      message: `Synced ${fetchedCount} StockX listings, created/updated ${mappedCount} inventory items`,
-    });
-
+      message: 'Listings synced successfully',
+      stats,
+      durationMs: duration,
+    })
   } catch (error: any) {
-    const duration = Date.now() - startTime;
+    const duration = Date.now() - startTime
 
-    // Handle 429 rate limiting
-    if (error.message?.includes('429')) {
-      logger.warn('[StockX Sync Listings] Rate limited', {
-        duration,
-        error: error.message,
-      });
-
-      return NextResponse.json(
-        {
-          error: 'Rate limited by StockX. Please try again later.',
-          retry_after: 60, // seconds
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': '60',
-          },
-        }
-      );
-    }
-
-    // Handle 401 authentication errors
-    if (error.message?.includes('401')) {
-      logger.error('[StockX Sync Listings] Authentication failed', {
-        message: error.message,
-        duration,
-      });
-
-      return NextResponse.json(
-        {
-          error: 'StockX authentication failed',
-          details: 'Your StockX access token may have expired. Please try disconnecting and reconnecting your StockX account.',
-        },
-        { status: 401 }
-      );
-    }
-
-    logger.error('[StockX Sync Listings] Error', {
+    logger.error('[Listings Sync] Error', {
       message: error.message,
       stack: error.stack,
-      duration,
-    });
+      durationMs: duration,
+    })
 
     return NextResponse.json(
-      { error: 'Failed to sync StockX listings', details: error.message },
+      {
+        success: false,
+        error: 'Internal server error',
+        details: error.message,
+      },
       { status: 500 }
-    );
+    )
   }
 }

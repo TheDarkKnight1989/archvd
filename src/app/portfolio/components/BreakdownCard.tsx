@@ -58,6 +58,46 @@ export function BreakdownCard({ title, items, loading }: BreakdownCardProps) {
     )
   }
 
+  // Normalize percentages to ensure they sum to 100%
+  const normalizedItems = (() => {
+    if (items.length === 0) return items
+
+    // Calculate raw percentages sum
+    const rawSum = items.reduce((sum, item) => sum + item.pct, 0)
+
+    // If sum is already very close to 100, just use raw percentages
+    if (Math.abs(rawSum - 100) < 0.01) {
+      return items
+    }
+
+    // Normalize to 100%
+    const factor = 100 / rawSum
+    const normalized = items.map((item, idx) => ({
+      ...item,
+      normalizedPct: item.pct * factor
+    }))
+
+    // Round all percentages
+    const rounded = normalized.map(item => ({
+      ...item,
+      displayPct: Math.round(item.normalizedPct * 10) / 10 // Round to 1 decimal
+    }))
+
+    // Calculate the rounding error
+    const roundedSum = rounded.reduce((sum, item) => sum + item.displayPct, 0)
+    const error = 100 - roundedSum
+
+    // Add the error to the largest item
+    if (Math.abs(error) > 0.01) {
+      const largestIdx = rounded.reduce((maxIdx, item, idx, arr) =>
+        item.value > arr[maxIdx].value ? idx : maxIdx
+      , 0)
+      rounded[largestIdx].displayPct += error
+    }
+
+    return rounded
+  })()
+
   return (
     <Card elevation="soft">
       <CardHeader>
@@ -65,10 +105,9 @@ export function BreakdownCard({ title, items, loading }: BreakdownCardProps) {
       </CardHeader>
       <CardContent>
         <ul className="space-y-4">
-          {items.map((item, idx) => {
-            // Clamp percentage to 0-100 range
-            const clampedPct = Math.max(0, Math.min(100, item.pct))
-            const displayPct = clampedPct.toFixed(1)
+          {normalizedItems.map((item, idx) => {
+            const displayPct = (item as any).displayPct?.toFixed(1) || item.pct.toFixed(1)
+            const barWidth = Math.max(0, Math.min(100, (item as any).normalizedPct || item.pct))
 
             return (
               <li key={idx} className="space-y-2">
@@ -82,7 +121,7 @@ export function BreakdownCard({ title, items, loading }: BreakdownCardProps) {
                 <div className="h-2 rounded-full bg-soft overflow-hidden">
                   <div
                     className="h-2 rounded-full bg-accent transition-all duration-200 ease-out"
-                    style={{ width: `${clampedPct}%` }}
+                    style={{ width: `${barWidth}%` }}
                   />
                 </div>
               </li>

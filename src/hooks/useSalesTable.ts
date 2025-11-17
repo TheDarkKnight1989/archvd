@@ -9,10 +9,13 @@ export interface SalesItem {
   sku: string
   brand?: string | null
   model?: string | null
+  colorway?: string | null
   size_uk?: string | null
+  size?: string | null
   condition?: 'New' | 'Used' | 'Worn' | 'Defect' | null
   category?: string | null
   purchase_price: number
+  purchase_total?: number | null
   purchase_date?: string | null
   tax?: number | null
   shipping?: number | null
@@ -20,7 +23,10 @@ export interface SalesItem {
   order_number?: string | null
   sold_price?: number | null
   sold_date?: string | null
+  sale_date?: string | null
+  sale_price?: number | null
   platform?: string | null
+  sales_fee?: number | null
   location?: string | null
   image_url?: string | null
   tags?: string[] | null
@@ -62,7 +68,41 @@ export function useSalesTable(params: SalesTableParams = {}) {
       setLoading(true)
       setError(null)
 
-      let query = supabase.from('sales_view').select('*', { count: 'exact' })
+      // Query Inventory table directly for sold items with all needed fields
+      // This includes purchase info, sale info, and we calculate margins client-side
+      let query = supabase
+        .from('Inventory')
+        .select(`
+          id,
+          user_id,
+          sku,
+          brand,
+          model,
+          colorway,
+          size_uk,
+          category,
+          condition,
+          image_url,
+          purchase_price,
+          tax,
+          shipping,
+          purchase_total,
+          purchase_date,
+          place_of_purchase,
+          order_number,
+          sold_price,
+          sold_date,
+          platform,
+          sales_fee,
+          notes,
+          location,
+          tags,
+          custom_market_value,
+          status,
+          created_at,
+          updated_at
+        `, { count: 'exact' })
+        .eq('status', 'sold')
 
       // Search filter (SKU, brand, model)
       if (params.search) {
@@ -111,7 +151,42 @@ export function useSalesTable(params: SalesTableParams = {}) {
 
       if (fetchError) throw fetchError
 
-      setItems((data as SalesItem[]) || [])
+      // Calculate margin fields for each sold item
+      const enrichedData = (data || []).map((item: any) => {
+        // Calculate cost basis: purchase_price + tax + shipping
+        const costBasis = item.purchase_total || (
+          item.purchase_price +
+          (item.tax || 0) +
+          (item.shipping || 0)
+        )
+
+        // Use sold_price (the actual field from mark-sold API)
+        const salePrice = item.sold_price || item.sale_price || 0
+        const fees = item.sales_fee || 0
+
+        // Calculate margin: sale_price - cost_basis - fees
+        const margin_gbp = salePrice - costBasis - fees
+
+        // Calculate margin percentage: (margin / cost_basis) * 100
+        const margin_percent = costBasis > 0 ? (margin_gbp / costBasis) * 100 : null
+
+        // For StockX sales, extract commission from sales_fee if needed
+        const isStockX = item.platform?.toLowerCase() === 'stockx'
+        const commission = isStockX ? fees : null
+        const net_payout = isStockX ? (salePrice - fees) : null
+
+        return {
+          ...item,
+          // Add size alias for backwards compatibility
+          size: item.size_uk,
+          margin_gbp,
+          margin_percent,
+          commission,
+          net_payout,
+        } as SalesItem
+      })
+
+      setItems(enrichedData)
       setTotal(count || 0)
     } catch (err: any) {
       console.error('Sales fetch error:', err)

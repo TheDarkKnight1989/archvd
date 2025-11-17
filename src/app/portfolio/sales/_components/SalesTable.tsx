@@ -34,7 +34,7 @@ export function SalesTable({
   sorting,
   onSortingChange,
 }: SalesTableProps) {
-  const { convert, format } = useCurrency()
+  const { convert, format, symbol, currency } = useCurrency()
 
   // Define columns
   const columns = useMemo(
@@ -66,16 +66,17 @@ export function SalesTable({
 
       columnHelper.accessor('purchase_price', {
         id: 'purchase_price',
-        header: () => <div className="text-right">Buy £</div>,
+        header: () => <div className="text-right">Buy {symbol()}</div>,
         cell: (info) => {
           const price = info.getValue()
           const tax = info.row.original.tax || 0
           const shipping = info.row.original.shipping || 0
           const total = price + tax + shipping
+          const converted = convert(total, 'GBP')
 
           return (
             <div className="text-right mono">
-              <PlainMoneyCell value={total} />
+              <PlainMoneyCell value={converted} currency={currency} />
             </div>
           )
         },
@@ -84,18 +85,23 @@ export function SalesTable({
 
       columnHelper.accessor('sold_price', {
         id: 'sold_price',
-        header: () => <div className="text-right">Sale £</div>,
-        cell: (info) => (
-          <div className="text-right mono">
-            <PlainMoneyCell value={info.getValue()} />
-          </div>
-        ),
+        header: () => <div className="text-right">Sale {symbol()}</div>,
+        cell: (info) => {
+          const value = info.getValue()
+          const converted = convert(value || 0, 'GBP')
+
+          return (
+            <div className="text-right mono">
+              <PlainMoneyCell value={converted} currency={currency} />
+            </div>
+          )
+        },
         enableSorting: true,
       }),
 
       columnHelper.accessor('commission', {
         id: 'commission',
-        header: () => <div className="text-right">Fees £</div>,
+        header: () => <div className="text-right">Fees {symbol()}</div>,
         cell: (info) => {
           const commission = info.getValue()
           const item = info.row.original
@@ -106,9 +112,11 @@ export function SalesTable({
             return <div className="text-right text-dim">—</div>
           }
 
+          const converted = convert(commission, 'GBP')
+
           return (
             <div className="text-right mono">
-              <PlainMoneyCell value={commission} />
+              <PlainMoneyCell value={converted} currency={currency} />
             </div>
           )
         },
@@ -117,7 +125,7 @@ export function SalesTable({
 
       columnHelper.accessor('net_payout', {
         id: 'net_payout',
-        header: () => <div className="text-right">Net £</div>,
+        header: () => <div className="text-right">Net {symbol()}</div>,
         cell: (info) => {
           const netPayout = info.getValue()
           const item = info.row.original
@@ -128,9 +136,11 @@ export function SalesTable({
             return <div className="text-right text-dim">—</div>
           }
 
+          const converted = convert(netPayout, 'GBP')
+
           return (
             <div className="text-right mono">
-              <PlainMoneyCell value={netPayout} />
+              <PlainMoneyCell value={converted} currency={currency} />
             </div>
           )
         },
@@ -139,12 +149,17 @@ export function SalesTable({
 
       columnHelper.accessor('margin_gbp', {
         id: 'margin_gbp',
-        header: () => <div className="text-right">Realised Profit £</div>,
-        cell: (info) => (
-          <div className="text-right mono">
-            <MoneyCell value={info.getValue()} showArrow />
-          </div>
-        ),
+        header: () => <div className="text-right">Realised Profit {symbol()}</div>,
+        cell: (info) => {
+          const value = info.getValue()
+          const converted = convert(value || 0, 'GBP')
+
+          return (
+            <div className="text-right mono">
+              <MoneyCell value={converted} showArrow currency={currency} />
+            </div>
+          )
+        },
         enableSorting: true,
       }),
 
@@ -203,7 +218,7 @@ export function SalesTable({
         enableSorting: false,
       }),
     ],
-    [convert, format]
+    [convert, format, symbol, currency]
   )
 
   const table = useReactTable({

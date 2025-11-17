@@ -90,6 +90,25 @@ export async function POST(req: Request) {
       }
     }
 
+    // Create inventory_market_links entry for manual items
+    // This tracks the mapping status and enables market price lookups
+    if (data.sku && data.size_uk) {
+      const { error: linkError } = await supabase
+        .from('inventory_market_links')
+        .insert({
+          inventory_id: data.id,
+          provider: 'manual', // Mark as manually added
+          provider_product_sku: data.sku, // Use the SKU as provider SKU for now
+          match_confidence: 0.0, // 0 = unverified, will be updated after market data fetch
+          inventory_purchase_price: data.purchase_price,
+        })
+
+      if (linkError) {
+        console.error('[Add Item] Market link creation error:', linkError)
+        // Don't fail the request if link creation fails, just log the error
+      }
+    }
+
     // WHY: Enqueue market data fetch for this item (priority 150 = hot, user just added)
     // Never call provider APIs directly from UI - always use queue to respect rate limits
     if (data.sku && data.size_uk) {

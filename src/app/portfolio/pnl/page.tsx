@@ -23,12 +23,14 @@ import {
   formatDate as formatDateYMD,
 } from '@/lib/date/range'
 import useRequireAuth from '@/hooks/useRequireAuth'
+import { useCurrency } from '@/hooks/useCurrency'
 import { cn } from '@/lib/utils/cn'
 
 const PRESETS: DateRangePreset[] = ['this-month', 'last-30', 'last-90', 'ytd', 'custom']
 
 export default function PnLPage() {
   const { user, loading: authLoading } = useRequireAuth()
+  const { convert, format, symbol, currency } = useCurrency()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -330,26 +332,26 @@ export default function PnLPage() {
         <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
           <div className="label-uppercase text-muted mb-1">Revenue</div>
           <div className="text-2xl font-bold text-fg font-mono">
-            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.revenue)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : format(convert(kpis.revenue, 'GBP'))}
           </div>
           <div className="text-xs text-dim mt-1">{kpis.numSales} sales</div>
         </div>
         <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
           <div className="label-uppercase text-muted mb-1">COGS</div>
           <div className="text-2xl font-bold text-fg font-mono">
-            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.cogs)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : format(convert(kpis.cogs, 'GBP'))}
           </div>
         </div>
         <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
           <div className="label-uppercase text-muted mb-1">Gross Profit</div>
           <div className="text-2xl font-bold text-accent font-mono">
-            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.grossProfit)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : format(convert(kpis.grossProfit, 'GBP'))}
           </div>
         </div>
         <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
           <div className="label-uppercase text-muted mb-1">Expenses</div>
           <div className="text-2xl font-bold text-fg font-mono">
-            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.expenses)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : format(convert(kpis.expenses, 'GBP'))}
           </div>
         </div>
         <div className="bg-elev-2 border border-border rounded-xl p-4 shadow-soft">
@@ -357,7 +359,7 @@ export default function PnLPage() {
           <div className={`text-2xl font-bold font-mono inline-flex items-center gap-2 ${kpis.netProfit >= 0 ? 'profit-text' : 'loss-text'}`}>
             {kpis.netProfit > 0 && <TrendingUp className="h-6 w-6" />}
             {kpis.netProfit < 0 && <TrendingDown className="h-6 w-6" />}
-            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : formatCurrency(kpis.netProfit)}
+            {pnlItemsRaw.loading || pnlExpensesRaw.loading ? '...' : format(convert(kpis.netProfit, 'GBP'))}
           </div>
         </div>
       </div>
@@ -372,11 +374,11 @@ export default function PnLPage() {
             <TableRow>
               <TableHead>Sold Date</TableHead>
               <TableHead>Item</TableHead>
-              <TableHead align="right">Purchase £</TableHead>
-              <TableHead align="right">Sold £</TableHead>
-              <TableHead align="right">Margin £</TableHead>
+              <TableHead align="right">Purchase {symbol()}</TableHead>
+              <TableHead align="right">Sold {symbol()}</TableHead>
+              <TableHead align="right">Margin {symbol()}</TableHead>
               <TableHead align="right">Margin %</TableHead>
-              <TableHead align="right">VAT Due £</TableHead>
+              <TableHead align="right">VAT Due {symbol()}</TableHead>
               <TableHead>Platform</TableHead>
             </TableRow>
           </TableHeader>
@@ -418,19 +420,19 @@ export default function PnLPage() {
                       />
                     </TableCell>
                     <TableCell align="right" mono>
-                      <PlainMoneyCell value={item.buyPrice} />
+                      <PlainMoneyCell value={convert(item.buyPrice || 0, 'GBP')} currency={currency} />
                     </TableCell>
                     <TableCell align="right" mono>
-                      <PlainMoneyCell value={item.salePrice} />
+                      <PlainMoneyCell value={convert(item.salePrice || 0, 'GBP')} currency={currency} />
                     </TableCell>
                     <TableCell align="right" mono>
-                      <MoneyCell value={item.margin} showArrow />
+                      <MoneyCell value={convert(item.margin || 0, 'GBP')} showArrow currency={currency} />
                     </TableCell>
                     <TableCell align="right" mono>
                       <PercentCell value={marginPct} />
                     </TableCell>
                     <TableCell align="right" mono>
-                      <div className="text-sm text-accent font-medium">{formatCurrency(item.vatDue)}</div>
+                      <div className="text-sm text-accent font-medium">{format(convert(item.vatDue || 0, 'GBP'))}</div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-muted">{item.platform || '—'}</div>
@@ -450,25 +452,25 @@ export default function PnLPage() {
           <div>
             <div className="text-xs text-muted uppercase tracking-wide mb-1">Total Sales</div>
             <div className="text-xl font-bold text-fg">
-              {pnlItemsRaw.loading ? '...' : formatCurrency(vatSummary.totalSales)}
+              {pnlItemsRaw.loading ? '...' : format(convert(vatSummary.totalSales, 'GBP'))}
             </div>
           </div>
           <div>
             <div className="text-xs text-muted uppercase tracking-wide mb-1">Total Margin</div>
             <div className="text-xl font-bold text-fg">
-              {pnlItemsRaw.loading ? '...' : formatCurrency(vatSummary.totalMargin)}
+              {pnlItemsRaw.loading ? '...' : format(convert(vatSummary.totalMargin, 'GBP'))}
             </div>
           </div>
           <div>
             <div className="text-xs text-muted uppercase tracking-wide mb-1">Taxable Margin</div>
             <div className="text-xl font-bold text-fg">
-              {pnlItemsRaw.loading ? '...' : formatCurrency(vatSummary.taxableMargin)}
+              {pnlItemsRaw.loading ? '...' : format(convert(vatSummary.taxableMargin, 'GBP'))}
             </div>
           </div>
           <div>
             <div className="text-xs text-muted uppercase tracking-wide mb-1">VAT Due</div>
             <div className="text-xl font-bold text-accent">
-              {pnlItemsRaw.loading ? '...' : formatCurrency(vatSummary.vatDue)}
+              {pnlItemsRaw.loading ? '...' : format(convert(vatSummary.vatDue, 'GBP'))}
             </div>
           </div>
         </div>
@@ -485,7 +487,7 @@ export default function PnLPage() {
               <TableHead>Date</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead align="right">Amount £</TableHead>
+              <TableHead align="right">Amount {symbol()}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -514,7 +516,7 @@ export default function PnLPage() {
                     <div className="text-sm text-muted">{expense.category}</div>
                   </TableCell>
                   <TableCell align="right" mono>
-                    <div className="text-sm text-fg font-medium">{formatCurrency(expense.amount)}</div>
+                    <div className="text-sm text-fg font-medium">{format(convert(expense.amount || 0, 'GBP'))}</div>
                   </TableCell>
                 </TableRow>
               ))

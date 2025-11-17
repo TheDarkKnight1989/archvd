@@ -72,6 +72,37 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // In debug mode, also fetch disabled sources to show why they're skipped
+    if (debugMode) {
+      const { data: disabledSources } = await supabase
+        .from('release_sources_whitelist')
+        .select('*')
+        .eq('enabled', false)
+
+      if (disabledSources && disabledSources.length > 0) {
+        console.log(`[Releases Worker] Skipping ${disabledSources.length} disabled source(s)`)
+        for (const disabled of disabledSources) {
+          console.log(`[Releases Worker] - ${disabled.source_name}: disabled (source requires JS-rendered JSON feed)`)
+
+          debugInfo.push({
+            domain: disabled.source_name,
+            status: 0, // 0 indicates skipped/disabled
+            htmlLength: 0,
+            strategy: 'html-fallback' as ExtractionStrategy,
+            parsedCount: 0,
+            sampleTitles: [],
+            warnings: ['Source is disabled in whitelist'],
+            errors: [],
+            reasons: [
+              'Source disabled: requires JS-rendered JSON feed',
+              'Page has no __NEXT_DATA__, JSON-LD, or embedded JSON available',
+              'Cannot reliably extract launch data until structured data is provided'
+            ],
+          })
+        }
+      }
+    }
+
     // Process each source
     for (const source of sources) {
       try {

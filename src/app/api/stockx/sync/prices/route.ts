@@ -1,208 +1,74 @@
 /**
- * StockX Sync Prices
- * Fetches latest market prices for owned SKUs and sizes
+ * StockX V2 Sync Prices
+ * Syncs market data for all tracked products in inventory and watchlist
+ * Uses product-level market data endpoint (all variants at once) for efficiency
  * POST /api/stockx/sync/prices
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { getStockxClient } from '@/lib/services/stockx/client';
-import { logger } from '@/lib/logger';
+import { StockxMarketV2Service } from '@/lib/services/stockx/market';
+import { isStockxMockMode } from '@/lib/config/stockx';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Check if StockX is enabled
-    if (process.env.NEXT_PUBLIC_STOCKX_ENABLE !== 'true') {
+    console.log('[StockX V2 Sync] Starting price sync');
+
+    // Check if StockX is in mock mode
+    if (isStockxMockMode()) {
       return NextResponse.json(
-        { error: 'StockX integration is not enabled' },
-        { status: 400 }
+        {
+          success: false,
+          error: 'StockX is in mock mode. Real API calls are disabled.',
+        },
+        { status: 503 }
       );
     }
 
-    // Verify user is authenticated
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Optional: Verify authorization (add your auth check here)
+    // const authHeader = request.headers.get('authorization');
+    // if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user has connected StockX account
-    const { data: account, error: accountError } = await supabase
-      .from('stockx_accounts')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (accountError || !account) {
-      return NextResponse.json(
-        { error: 'StockX account not connected. Please connect your account first.' },
-        { status: 401 }
-      );
-    }
-
-    // Get user-specific StockX client
-    const client = getStockxClient(user.id);
-
-    // Fetch distinct (SKU, size) pairs from user's inventory
-    const { data: inventoryItems, error: inventoryError } = await supabase
-      .from('Inventory')
-      .select('sku, size')
-      .eq('user_id', user.id)
-      .eq('category', 'sneaker')
-      .in('status', ['active', 'listed', 'worn']);
-
-    if (inventoryError || !inventoryItems || inventoryItems.length === 0) {
-      logger.warn('[StockX Sync Prices] No inventory items found', { userId: user.id });
-      return NextResponse.json({
-        success: true,
-        processed: 0,
-        upserted: 0,
-        skipped: 0,
-        duration_ms: Date.now() - startTime,
-      });
-    }
-
-    // Get unique (sku, size) combinations
-    const uniquePairs = new Map<string, { sku: string; size: string }>();
-    inventoryItems.forEach((item) => {
-      const key = `${item.sku}:${item.size}`;
-      if (!uniquePairs.has(key)) {
-        uniquePairs.set(key, { sku: item.sku, size: item.size });
-      }
-    });
-
-    const pairs = Array.from(uniquePairs.values());
-    let processedCount = 0;
-    let upsertedCount = 0;
-    let skippedCount = 0;
-
-    // Fetch prices for each (SKU, size) pair
-    for (const { sku, size } of pairs) {
-      try {
-        // Note: v2 API endpoint for product/market data - may need adjustment
-        // Using /v2/products/{sku} based on typical REST patterns
-        const marketData = await client.request(
-          `/v2/products/${encodeURIComponent(sku)}?size=${encodeURIComponent(size)}`,
-          {
-            method: 'GET',
-          }
-        );
-
-        processedCount++;
-
-        if (!marketData) {
-          skippedCount++;
-          continue;
-        }
-
-        // Extract market pricing data from response
-        // Response structure may vary - adjust based on actual API response
-        const {
-          lowest_ask,
-          highest_bid,
-          last_sale,
-          currency = 'USD',
-          as_of,
-        } = marketData.market_data || marketData;
-
-        // Upsert into stockx_market_prices
-        const { error: priceError } = await supabase
-          .from('stockx_market_prices')
-          .insert({
-            sku,
-            size,
-            currency,
-            lowest_ask,
-            highest_bid,
-            last_sale,
-            as_of: as_of || new Date().toISOString(),
-            source: 'stockx',
-          });
-
-        if (priceError) {
-          logger.error('[StockX Sync Prices] Failed to insert price', {
-            error: priceError.message,
-            sku,
-            size,
-          });
-          skippedCount++;
-        } else {
-          upsertedCount++;
-        }
-
-        // Small delay to avoid rate limiting (100ms between requests)
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-      } catch (error: any) {
-        logger.warn('[StockX Sync Prices] Failed to fetch price', {
-          sku,
-          size,
-          error: error.message,
-        });
-        skippedCount++;
-      }
-    }
+    // Run the V2 sync - uses product-level market data endpoint (all variants at once!)
+    const result = await StockxMarketV2Service.syncAllMarketData();
 
     const duration = Date.now() - startTime;
 
-    logger.apiRequest(
-      '/api/stockx/sync/prices',
-      { userId: user.id },
-      duration,
-      {
-        processed: processedCount,
-        upserted: upsertedCount,
-        skipped: skippedCount,
-      }
-    );
+    console.log('[StockX V2 Sync] Completed:', result);
 
     return NextResponse.json({
       success: true,
-      processed: processedCount,
-      upserted: upsertedCount,
-      skipped: skippedCount,
+      productsProcessed: result.productsProcessed,
+      snapshotsCreated: result.snapshotsCreated,
+      errors: result.errors,
       duration_ms: duration,
+      timestamp: new Date().toISOString(),
     });
 
   } catch (error: any) {
     const duration = Date.now() - startTime;
 
-    // Handle 429 rate limiting
-    if (error.message?.includes('429')) {
-      logger.warn('[StockX Sync Prices] Rate limited', {
-        duration,
-        error: error.message,
-      });
-
-      return NextResponse.json(
-        {
-          error: 'Rate limited by StockX. Please try again later.',
-          retry_after: 60,
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': '60',
-          },
-        }
-      );
-    }
-
-    logger.error('[StockX Sync Prices] Error', {
-      message: error.message,
-      stack: error.stack,
-      duration,
-    });
+    console.error('[StockX V2 Sync] Error:', error);
 
     return NextResponse.json(
-      { error: 'Failed to sync StockX prices', details: error.message },
+      {
+        success: false,
+        error: 'Internal server error',
+        details: error.message,
+        duration_ms: duration,
+      },
       { status: 500 }
     );
   }
+}
+
+// Also support GET for manual testing
+export async function GET(request: NextRequest) {
+  return POST(request);
 }

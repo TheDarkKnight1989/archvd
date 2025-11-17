@@ -15,6 +15,7 @@ import { WatchlistCombobox } from '@/components/forms/WatchlistCombobox'
 import { Toast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils/cn'
 import { listWatchlists } from '@/lib/supabase/items'
+import { useCurrency } from '@/hooks/useCurrency'
 import { Loader2 } from 'lucide-react'
 
 // Form validation schema
@@ -103,6 +104,7 @@ const inputClassName = cn(
 const labelClassName = "font-display text-muted uppercase tracking-wide text-xs mb-2 block font-medium"
 
 export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProps) {
+  const { symbol, format } = useCurrency()
   const [formData, setFormData] = useState<FormData>({
     name: '',
     styleId: '',
@@ -135,6 +137,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     source: string
     timestamp: string
   } | null>(null)
+  const [marketLookupError, setMarketLookupError] = useState<string | null>(null)
 
   // Load watchlists from database
   useEffect(() => {
@@ -169,6 +172,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
 
     setIsLoadingMarket(true)
     setMarketPreview(null)
+    setMarketLookupError(null)
 
     try {
       // Call real pricing API
@@ -176,7 +180,12 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
       const response = await fetch(`/api/pricing/quick?sku=${encodeURIComponent(sku)}&category=${category}`)
 
       if (!response.ok) {
-        throw new Error('Failed to fetch pricing data')
+        if (response.status === 429) {
+          setMarketLookupError('Rate limit exceeded. Please wait before retrying.')
+        } else {
+          setMarketLookupError('Unable to fetch pricing data')
+        }
+        return
       }
 
       const data = await response.json()
@@ -201,10 +210,12 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
           source: data.sources_used?.[0] || 'Unknown',
           timestamp: data.price.timestamp,
         })
+      } else if (!data.product && !data.price) {
+        setMarketLookupError('No data available for this SKU')
       }
     } catch (error) {
       console.error('Market lookup failed:', error)
-      // Don't block submit on API failure - just log it
+      setMarketLookupError('Unable to connect to pricing service')
     } finally {
       setIsLoadingMarket(false)
     }
@@ -399,17 +410,23 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                       />
                       <div className="h-4 mt-1">
                         {isLoadingMarket && (
-                          <p className="text-xs text-accent">Looking up details...</p>
+                          <p className="text-xs text-accent flex items-center gap-1.5">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>Looking up details...</span>
+                          </p>
                         )}
                         {!isLoadingMarket && marketPreview && (
                           <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
                             <span className="text-accent">Market:</span>
-                            <span className="font-mono font-semibold">£{marketPreview.price.toFixed(2)}</span>
+                            <span className="font-mono font-semibold">{symbol()}{marketPreview.price.toFixed(2)}</span>
                             <span className="text-dim">•</span>
                             <span className="capitalize">{marketPreview.source}</span>
                             <span className="text-dim">•</span>
                             <span>{formatRelativeTime(marketPreview.timestamp)}</span>
                           </p>
+                        )}
+                        {!isLoadingMarket && marketLookupError && (
+                          <p className="text-xs text-dim">{marketLookupError}</p>
                         )}
                       </div>
                     </div>

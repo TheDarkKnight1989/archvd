@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/service'
 import { sleep } from '@/lib/sleep'
 import { upsertMarketPriceIfStale, upsertProductCatalog } from '@/lib/market/upsert'
 import { nowUtc } from '@/lib/time'
+import { getStockxClient } from '@/lib/services/stockx/client'
 
 export interface StockXJob {
   id: string
@@ -46,16 +47,13 @@ export async function processStockXBatch(
 
   console.log(`[StockX Worker ${runId}] Processing ${jobs.length} jobs`)
 
-  // Get StockX credentials (use first user's account for now)
-  // TODO: Support multi-user accounts
-  const { data: account } = await supabase
-    .from('stockx_accounts')
-    .select('access_token')
-    .limit(1)
-    .single()
-
-  if (!account?.access_token) {
-    console.error(`[StockX Worker ${runId}] No StockX account found`)
+  // Initialize StockX client (uses client credentials flow, no OAuth required)
+  let stockxClient
+  try {
+    stockxClient = getStockxClient()
+    console.log(`[StockX Worker ${runId}] StockX client initialized`)
+  } catch (error: any) {
+    console.error(`[StockX Worker ${runId}] Failed to initialize StockX client:`, error.message)
 
     // Mark all jobs as failed
     for (const job of jobs) {
@@ -64,36 +62,12 @@ export async function processStockXBatch(
         .update({
           status: 'failed',
           completed_at: nowUtc(),
-          error_message: 'No StockX account configured',
+          error_message: `StockX client initialization failed: ${error.message}`,
         })
         .eq('id', job.id)
 
       result.failed++
-      result.details.push({ jobId: job.id, status: 'failed', message: 'No StockX account' })
-    }
-
-    return result
-  }
-
-  const accessToken = account.access_token
-  const apiKey = process.env.STOCKX_API_KEY
-
-  if (!apiKey) {
-    console.error(`[StockX Worker ${runId}] No STOCKX_API_KEY configured`)
-
-    // Mark all jobs as failed
-    for (const job of jobs) {
-      await supabase
-        .from('market_jobs')
-        .update({
-          status: 'failed',
-          completed_at: nowUtc(),
-          error_message: 'No API key configured',
-        })
-        .eq('id', job.id)
-
-      result.failed++
-      result.details.push({ jobId: job.id, status: 'failed', message: 'No API key' })
+      result.details.push({ jobId: job.id, status: 'failed', message: 'Client init failed' })
     }
 
     return result
@@ -122,57 +96,51 @@ export async function processStockXBatch(
       console.log(`[StockX Worker ${runId}] Using currency: ${currencyCode}`)
 
       // 1. Search for product
-      const searchUrl = `https://api.stockx.com/v2/catalog/search?query=${encodeURIComponent(job.sku)}`
-      const searchRes = await fetch(searchUrl, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'x-api-key': apiKey,
-          'Accept': 'application/json',
-        },
-      })
+      let searchData
+      try {
+        searchData = await stockxClient.request<any>(
+          `/v2/catalog/search?query=${encodeURIComponent(job.sku)}`
+        )
+      } catch (error: any) {
+        // Check if it's a rate limit error
+        if (error.message?.includes('429')) {
+          console.log(`[StockX Worker ${runId}] Rate limited, deferring remaining jobs`)
 
-      if (searchRes.status === 429) {
-        console.log(`[StockX Worker ${runId}] Rate limited, deferring remaining jobs`)
-
-        // Defer this job and all remaining
-        await supabase
-          .from('market_jobs')
-          .update({
-            status: 'deferred',
-            completed_at: nowUtc(),
-          })
-          .eq('id', job.id)
-
-        result.deferred++
-        result.details.push({ jobId: job.id, status: 'deferred', message: 'Rate limited' })
-
-        // Defer remaining jobs
-        const remaining = jobs.slice(jobs.indexOf(job) + 1)
-        for (const remainingJob of remaining) {
+          // Defer this job and all remaining
           await supabase
             .from('market_jobs')
-            .update({ status: 'pending', started_at: null })
-            .eq('id', remainingJob.id)
+            .update({
+              status: 'deferred',
+              completed_at: nowUtc(),
+            })
+            .eq('id', job.id)
 
           result.deferred++
-          result.details.push({ jobId: remainingJob.id, status: 'deferred', message: 'Batch rate limited' })
+          result.details.push({ jobId: job.id, status: 'deferred', message: 'Rate limited' })
+
+          // Defer remaining jobs
+          const remaining = jobs.slice(jobs.indexOf(job) + 1)
+          for (const remainingJob of remaining) {
+            await supabase
+              .from('market_jobs')
+              .update({ status: 'pending', started_at: null })
+              .eq('id', remainingJob.id)
+
+            result.deferred++
+            result.details.push({ jobId: remainingJob.id, status: 'deferred', message: 'Batch rate limited' })
+          }
+
+          break
         }
-
-        break
+        throw new Error(`Search failed: ${error.message}`)
       }
-
-      if (!searchRes.ok) {
-        throw new Error(`Search failed: ${searchRes.status}`)
-      }
-
-      const searchData = await searchRes.json()
 
       if (!searchData.products || searchData.products.length === 0) {
         throw new Error('Product not found')
       }
 
       const product = searchData.products[0]
-      const productId = product.id
+      const productId = product.productId || product.id
 
       // WHY: Cache product metadata (brand, model, colorway) to ensure UI always has fallback data
       // Extract from StockX product data structure
@@ -195,74 +163,63 @@ export async function processStockXBatch(
         await sleep(DELAY_MS)
 
         // 2. Get variants to find variantId for this size
-        const variantsUrl = `https://api.stockx.com/v2/catalog/products/${productId}/variants`
-        const variantsRes = await fetch(variantsUrl, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'x-api-key': apiKey,
-            'Accept': 'application/json',
-          },
-        })
+        let variantsData
+        try {
+          variantsData = await stockxClient.request<any>(
+            `/v2/catalog/products/${productId}/variants`
+          )
+        } catch (error: any) {
+          if (error.message?.includes('429')) {
+            await supabase
+              .from('market_jobs')
+              .update({ status: 'deferred', completed_at: nowUtc() })
+              .eq('id', job.id)
 
-        if (variantsRes.status === 429) {
-          await supabase
-            .from('market_jobs')
-            .update({ status: 'deferred', completed_at: nowUtc() })
-            .eq('id', job.id)
-
-          result.deferred++
-          result.details.push({ jobId: job.id, status: 'deferred', message: 'Rate limited on variants' })
-          continue
+            result.deferred++
+            result.details.push({ jobId: job.id, status: 'deferred', message: 'Rate limited on variants' })
+            continue
+          }
+          throw new Error(`Variants failed: ${error.message}`)
         }
+        // StockX v2 API returns variants as a direct array, not wrapped
+        const variants = Array.isArray(variantsData) ? variantsData : (variantsData.variants || [])
 
-        if (!variantsRes.ok) {
-          throw new Error(`Variants failed: ${variantsRes.status}`)
-        }
-
-        const variantsData = await variantsRes.json()
-        const variant = variantsData.variants?.find((v: any) =>
-          String(v.sizeAllTypes?.us) === job.size ||
-          String(v.sizeAllTypes?.uk) === job.size ||
-          String(v.sizeAllTypes?.eu) === job.size
+        // Match size using variantValue field
+        const variant = variants.find((v: any) =>
+          String(v.variantValue) === job.size ||
+          String(v.sizeChart?.defaultConversion?.size) === job.size
         )
 
         if (!variant) {
           throw new Error(`Size ${job.size} not found`)
         }
 
-        const variantId = variant.id
+        const variantId = variant.variantId || variant.id
 
         await sleep(DELAY_MS)
 
         // 3. Get market data for variant with user's currency
-        const marketUrl = `https://api.stockx.com/v2/catalog/products/${productId}/variants/${variantId}/market-data?currencyCode=${currencyCode}`
-        const marketRes = await fetch(marketUrl, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'x-api-key': apiKey,
-            'Accept': 'application/json',
-          },
-        })
+        let marketData
+        try {
+          marketData = await stockxClient.request<any>(
+            `/v2/catalog/products/${productId}/variants/${variantId}/market-data?currencyCode=${currencyCode}`
+          )
+        } catch (error: any) {
+          if (error.message?.includes('429')) {
+            await supabase
+              .from('market_jobs')
+              .update({ status: 'deferred', completed_at: nowUtc() })
+              .eq('id', job.id)
 
-        if (marketRes.status === 429) {
-          await supabase
-            .from('market_jobs')
-            .update({ status: 'deferred', completed_at: nowUtc() })
-            .eq('id', job.id)
-
-          result.deferred++
-          result.details.push({ jobId: job.id, status: 'deferred', message: 'Rate limited on market data' })
-          continue
+            result.deferred++
+            result.details.push({ jobId: job.id, status: 'deferred', message: 'Rate limited on market data' })
+            continue
+          }
+          throw new Error(`Market data failed: ${error.message}`)
         }
-
-        if (!marketRes.ok) {
-          throw new Error(`Market data failed: ${marketRes.status}`)
-        }
-
-        const marketData = await marketRes.json()
 
         // Upsert market price with user's currency
-        await upsertMarketPriceIfStale({
+        const priceData = {
           provider: 'stockx',
           sku: job.sku, // Fixed: use 'sku' not 'product_sku'
           size: job.size,
@@ -271,10 +228,24 @@ export async function processStockXBatch(
           last_sale: marketData.lastSaleAmount ? parseFloat(marketData.lastSaleAmount) : undefined,
           currency: currencyCode,
           as_of: nowUtc(), // Fixed: add required as_of timestamp
-        })
+        }
 
+        await upsertMarketPriceIfStale(priceData)
+
+        // Debug logging for currency handling (DEV only)
         const symbol = currencyCode === 'GBP' ? '£' : currencyCode === 'EUR' ? '€' : '$'
         console.log(`[StockX Worker ${runId}] ✓ ${job.sku}:${job.size} - ${symbol}${marketData.lastSaleAmount || marketData.lowestAskAmount} (${currencyCode})`)
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[StockX Worker ${runId}] Currency Debug:`, {
+            sku: job.sku,
+            source: 'stockx',
+            price: priceData.last_sale || priceData.lowest_ask,
+            currency: currencyCode,
+            userCurrency: currencyCode,
+            requestedCurrency: currencyCode
+          })
+        }
       }
 
       // Mark job as done

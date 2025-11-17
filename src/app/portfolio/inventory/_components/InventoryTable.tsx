@@ -21,6 +21,7 @@ import { RowActions } from './RowActions'
 import { InventoryCard, InventoryCardSkeleton } from './InventoryCard'
 import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
 import { AliasMapIndicator } from '@/components/AliasMapIndicator'
+import { ListingStatusBadge } from '@/components/stockx/ListingStatusBadge'
 import type { EnrichedInventoryItem } from '@/hooks/usePortfolioInventory'
 
 const columnHelper = createColumnHelper<EnrichedInventoryItem>()
@@ -126,30 +127,39 @@ export function InventoryTable({
         cell: (info) => {
           const status = info.getValue()
           const item = info.row.original
+          const hasListing = item.stockx_listing_status
 
           return (
-            <div className="flex justify-center group relative">
-              {status === 'mapped' && (
-                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full money-pos-tint border border-profit/30">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="w-3 h-3"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-              )}
+            <div className="flex flex-col items-center gap-1.5 group relative">
+              {/* Mapping status indicator */}
+              <div className="flex justify-center">
+                {status === 'mapped' && (
+                  <div className="inline-flex items-center justify-center w-5 h-5 rounded-full money-pos-tint border border-profit/30">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="w-3 h-3"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                )}
 
-              {status === 'unmapped' && (
-                <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-soft text-dim border border-border">
-                  <span className="text-xs">—</span>
-                </div>
+                {status === 'unmapped' && (
+                  <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-soft text-dim border border-border">
+                    <span className="text-xs">—</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Listing status badge */}
+              {hasListing && item.stockx_listing_status && (
+                <ListingStatusBadge status={item.stockx_listing_status} />
               )}
 
               {/* Tooltip */}
@@ -159,6 +169,11 @@ export function InventoryTable({
                     <div className="text-2xs text-fg">
                       Mapped to StockX
                       <div className="text-dim mono mt-0.5">{item.stockx_product_sku}</div>
+                      {hasListing && item.stockx_ask_price && (
+                        <div className="mt-1 pt-1 border-t border-border">
+                          <div className="text-dim">Listed at £{item.stockx_ask_price}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -258,40 +273,98 @@ export function InventoryTable({
 
       columnHelper.accessor('market_value', {
         id: 'market',
-        header: () => <div className="text-right">Market £</div>,
+        header: () => <div className="text-right">Market</div>,
         cell: (info) => {
-          const value = info.getValue()
-          const source = info.row.original.market_source
           const item = info.row.original
-
-          // StockX provenance
+          const source = item.market_source
           const isStockX = source === 'stockx'
-          const stockxAsOf = item.stockx_price_as_of
-          const provenanceText = isStockX && stockxAsOf
-            ? `StockX • as of ${new Date(stockxAsOf).toLocaleString()}`
-            : source !== '-' ? source : null
+
+          // Get bid/ask from StockX
+          const ask = item.stockx_lowest_ask
+          const bid = item.stockx_highest_bid
+          const asOf = item.stockx_price_as_of
+
+          // No market data
+          if (!ask && !bid) {
+            return (
+              <div className="text-right">
+                <span className="text-xs text-dim italic" title="Market price not yet available">
+                  No live price yet
+                </span>
+              </div>
+            )
+          }
+
+          const spread = ask && bid ? ask - bid : null
+          const spreadPct = ask && bid ? ((spread! / bid) * 100).toFixed(1) : null
 
           return (
-            <div className="text-right group relative mono">
-              <PlainMoneyCell value={value ? convert(value, 'GBP') : null} />
+            <div className="text-right group relative">
+              {/* Bid/Ask Display */}
+              <div className="space-y-0.5">
+                {ask && (
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span className="text-2xs text-dim uppercase tracking-wider">Ask</span>
+                    <span className="text-sm font-semibold text-orange-600 dark:text-orange-400 mono tabular-nums">
+                      £{ask.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {bid && (
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span className="text-2xs text-dim uppercase tracking-wider">Bid</span>
+                    <span className="text-sm font-semibold text-green-600 dark:text-green-400 mono tabular-nums">
+                      £{bid.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Spread indicator */}
+              {spread && spreadPct && (
+                <div className="mt-1 text-2xs text-dim mono">
+                  Spread: £{spread.toFixed(0)} ({spreadPct}%)
+                </div>
+              )}
 
               {/* Source badge */}
-              {source !== '-' && value && (
-                <div className="flex items-center justify-end gap-1 mt-0.5">
-                  {isStockX && (
-                    <div className="inline-flex items-center justify-center w-4 h-4 rounded money-pos-tint text-[9px] font-bold border border-profit/30">
-                      Sx
-                    </div>
-                  )}
+              {isStockX && (
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  <div className="inline-flex items-center justify-center w-4 h-4 rounded money-pos-tint text-[9px] font-bold border border-profit/30">
+                    Sx
+                  </div>
                   <div className="text-2xs text-dim mono">{source}</div>
                 </div>
               )}
 
-              {/* Provenance tooltip */}
-              {provenanceText && (
+              {/* Detailed tooltip on hover */}
+              {asOf && (
                 <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block z-50">
-                  <div className="bg-surface border border-border rounded-lg px-2.5 py-1.5 shadow-medium whitespace-nowrap">
-                    <div className="text-2xs text-fg">{provenanceText}</div>
+                  <div className="bg-surface border border-border rounded-lg px-3 py-2 shadow-medium whitespace-nowrap min-w-[200px]">
+                    <div className="text-xs font-semibold text-fg mb-1.5">Market Data</div>
+                    <div className="space-y-1 text-2xs">
+                      {ask && (
+                        <div className="flex justify-between gap-4">
+                          <span className="text-dim">Lowest Ask:</span>
+                          <span className="text-orange-600 dark:text-orange-400 font-mono font-semibold">£{ask.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {bid && (
+                        <div className="flex justify-between gap-4">
+                          <span className="text-dim">Highest Bid:</span>
+                          <span className="text-green-600 dark:text-green-400 font-mono font-semibold">£{bid.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {spread && (
+                        <div className="flex justify-between gap-4 pt-1 border-t border-border">
+                          <span className="text-dim">Spread:</span>
+                          <span className="font-mono">£{spread.toFixed(0)} ({spreadPct}%)</span>
+                        </div>
+                      )}
+                      <div className="pt-1 border-t border-border text-dim">
+                        StockX • {new Date(asOf).toLocaleString()}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

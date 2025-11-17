@@ -81,9 +81,15 @@ export function ItemsTable({ rows, loading, error }: ItemsTableProps) {
     if (!dateString) return 'cached'
     const now = new Date()
     const date = new Date(dateString)
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffDays === 0) return 'today'
-    if (diffDays === 1) return 'yesterday'
+    const diffMs = now.getTime() - date.getTime()
+    const diffSecs = Math.floor(diffMs / 1000)
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffSecs < 60) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
     if (diffDays < 7) return `${diffDays}d ago`
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   }

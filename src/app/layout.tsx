@@ -26,7 +26,13 @@ const cinzel = Cinzel({
 export const metadata: Metadata = {
   title: 'archvd.io',
   description: 'Premium sneaker inventory management',
-  themeColor: '#050807',
+};
+
+export const viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F5F3EE' },
+    { media: '(prefers-color-scheme: dark)', color: '#050807' }
+  ],
 };
 
 export default function RootLayout({
@@ -37,7 +43,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#050807" media="(prefers-color-scheme: dark)" />
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${inter.variable} ${jetmono.variable} ${cinzel.variable} font-sans min-h-screen bg-bg text-fg`}>

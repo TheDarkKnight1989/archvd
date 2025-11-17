@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch user's orders/sales from StockX (v2 API)
     const response = await client.request(
-      `/v2/selling/orders/history?pageSize=100`,
+      `/v2/selling/orders?status=HISTORICAL&pageSize=100`,
       {
         method: 'GET',
       }

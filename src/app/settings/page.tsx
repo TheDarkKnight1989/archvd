@@ -866,7 +866,7 @@ export default function SettingsPage() {
               <div className="bg-elev-2 gradient-elev rounded-2xl border border-border shadow-soft p-6 space-y-6">
                 <div>
                   <h2 className="text-lg font-semibold text-fg mb-1">Import Data</h2>
-                  <p className="text-sm text-dim">Upload CSV or XLSX files to bulk import your inventory</p>
+                  <p className="text-sm text-dim">Upload CSV or XLSX files to bulk import your portfolio</p>
                 </div>
 
                 {/* Drop Zone */}

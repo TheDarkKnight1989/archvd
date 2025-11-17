@@ -74,6 +74,8 @@ export type EnrichedLineItem = {
   // Market data
   market: {
     price?: number | null;
+    lastSale?: number | null;
+    lowestAsk?: number | null;
     currency?: 'GBP' | 'EUR' | 'USD' | null;
     provider?: 'stockx' | 'alias' | 'ebay' | 'seed' | null;
     updatedAt?: string | null;
@@ -101,4 +103,15 @@ export type EnrichedLineItem = {
   // Status
   status: 'active' | 'listed' | 'worn' | 'sold' | 'archived';
   category?: string;
+
+  // StockX mapping & listing data
+  stockx?: {
+    mapped: boolean;                    // Has StockX mapping in inventory_market_links
+    productId?: string | null;          // stockx_product_id
+    variantId?: string | null;          // stockx_variant_id
+    listingId?: string | null;          // stockx_listing_id (if listed)
+    listingStatus?: 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'CANCELLED' | 'SOLD' | null;
+    askPrice?: number | null;           // Current ask price
+    expiresAt?: string | null;          // Listing expiry
+  };
 };

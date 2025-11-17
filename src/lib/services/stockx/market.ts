@@ -260,3 +260,198 @@ export async function batchGetMarketPrices(
   const results = await Promise.all(promises)
   return results.filter((r): r is StockxMarketPrice => r !== null)
 }
+
+// ============================================================================
+// V2 Market Data Sync Service
+// ============================================================================
+
+import { createClient } from '@/lib/supabase/server'
+import type { StockxMarketSnapshot } from '@/lib/stockx/types'
+
+interface StockxV2MarketDataResponse {
+  productId: string
+  currencyCode: string
+  variants: Array<{
+    variantId: string
+    size: string
+    lastSale?: number
+    lowestAsk?: number
+    highestBid?: number
+    salesLast72Hours?: number
+    totalVolume?: number
+    averagePrice?: number
+    volatility?: number
+    pricePremium?: number
+  }>
+}
+
+export class StockxMarketV2Service {
+  /**
+   * Get V2 market data for a product (all variants at once)
+   */
+  static async getProductMarketData(
+    productId: string,
+    currency: string = 'USD'
+  ): Promise<StockxV2MarketDataResponse | null> {
+    if (isStockxMockMode()) {
+      console.log('[StockX V2 Market] Mock mode - skipping')
+      return null
+    }
+
+    console.log('[StockX V2 Market] Fetching:', { productId, currency })
+
+    try {
+      const client = getStockxClient()
+      const response = await client.request<StockxV2MarketDataResponse>(
+        `/v2/catalog/products/${productId}/market-data?currency=${currency}`
+      )
+
+      console.log('[StockX V2 Market] Got data:', {
+        productId,
+        variants: response.variants?.length || 0,
+      })
+
+      return response
+    } catch (error) {
+      console.error('[StockX V2 Market] Error:', error)
+      return null
+    }
+  }
+
+  /**
+   * Sync market data for all tracked products in inventory and watchlist
+   */
+  static async syncAllMarketData(): Promise<{
+    productsProcessed: number
+    snapshotsCreated: number
+    errors: number
+  }> {
+    console.log('[StockX V2 Market] Starting full sync')
+    const startTime = Date.now()
+
+    const supabase = await createClient()
+
+    // Get all unique StockX product IDs from inventory and watchlist
+    const { data: inventoryLinks } = await supabase
+      .from('inventory_market_links')
+      .select('stockx_product_id')
+      .not('stockx_product_id', 'is', null)
+
+    const { data: watchlistLinks } = await supabase
+      .from('watchlist_market_links')
+      .select('stockx_product_id')
+      .not('stockx_product_id', 'is', null)
+
+    // Combine and deduplicate
+    const allProductIds = new Set<string>()
+    inventoryLinks?.forEach((link) => allProductIds.add(link.stockx_product_id))
+    watchlistLinks?.forEach((link) => allProductIds.add(link.stockx_product_id))
+
+    if (allProductIds.size === 0) {
+      console.log('[StockX V2 Market] No products to sync')
+      return { productsProcessed: 0, snapshotsCreated: 0, errors: 0 }
+    }
+
+    console.log('[StockX V2 Market] Products to sync:', allProductIds.size)
+
+    let productsProcessed = 0
+    let snapshotsCreated = 0
+    let errors = 0
+
+    // Support multiple currencies
+    const currencies = ['USD', 'GBP', 'EUR']
+
+    for (const productId of allProductIds) {
+      for (const currency of currencies) {
+        try {
+          // Fetch market data for all variants of this product at once
+          const marketData = await this.getProductMarketData(productId, currency)
+
+          if (!marketData || !marketData.variants || marketData.variants.length === 0) {
+            continue
+          }
+
+          // Get our internal product UUID
+          const { data: stockxProduct } = await supabase
+            .from('stockx_products')
+            .select('id')
+            .eq('stockx_product_id', productId)
+            .single()
+
+          if (!stockxProduct) {
+            console.warn('[StockX V2 Market] Product not in DB:', productId)
+            continue
+          }
+
+          // Insert snapshots for each variant
+          for (const variantData of marketData.variants) {
+            // Get our internal variant UUID
+            const { data: stockxVariant } = await supabase
+              .from('stockx_variants')
+              .select('id')
+              .eq('stockx_variant_id', variantData.variantId)
+              .single()
+
+            if (!stockxVariant) {
+              continue
+            }
+
+            // Insert snapshot
+            const snapshot: Omit<StockxMarketSnapshot, 'id' | 'created_at'> = {
+              stockx_product_id: productId,
+              stockx_variant_id: variantData.variantId,
+              product_id: stockxProduct.id,
+              variant_id: stockxVariant.id,
+              currency_code: currency,
+              last_sale_price: variantData.lastSale,
+              sales_last_72_hours: variantData.salesLast72Hours,
+              total_sales_volume: variantData.totalVolume,
+              lowest_ask: variantData.lowestAsk,
+              highest_bid: variantData.highestBid,
+              average_deadstock_price: variantData.averagePrice,
+              volatility: variantData.volatility,
+              price_premium: variantData.pricePremium,
+              snapshot_at: new Date().toISOString(),
+            }
+
+            const { error } = await supabase.from('stockx_market_snapshots').insert(snapshot)
+
+            if (!error) {
+              snapshotsCreated++
+            } else {
+              console.error('[StockX V2 Market] Insert error:', error)
+              errors++
+            }
+          }
+
+          productsProcessed++
+
+          // Rate limit: 100ms between product requests
+          await new Promise((resolve) => setTimeout(resolve, 100))
+        } catch (error) {
+          console.error('[StockX V2 Market] Product error:', productId, error)
+          errors++
+        }
+      }
+    }
+
+    // Refresh materialized view
+    try {
+      console.log('[StockX V2 Market] Refreshing materialized view...')
+      await supabase.rpc('refresh_stockx_market_latest')
+      console.log('[StockX V2 Market] View refreshed')
+    } catch (error) {
+      console.error('[StockX V2 Market] View refresh error:', error)
+    }
+
+    const duration = Date.now() - startTime
+    console.log('[StockX V2 Market] Sync complete:', {
+      productsProcessed,
+      snapshotsCreated,
+      errors,
+      durationMs: duration,
+    })
+
+    return { productsProcessed, snapshotsCreated, errors }
+  }
+}

@@ -122,12 +122,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(emptyResponse)
     }
 
-    // 2. Fetch market links for these inventory items
+    // 2. Fetch market links for these inventory items (updated for StockX V2)
     const inventoryIds = inventory.map((i) => i.id)
     const { data: marketLinks, error: linksError } = await supabase
       .from('inventory_market_links')
-      .select('inventory_id, provider_product_sku')
-      .in('inventory_id', inventoryIds)
+      .select('item_id, provider_product_sku, stockx_product_id, stockx_variant_id')
+      .in('item_id', inventoryIds)
 
     if (linksError) {
       logger.warn('[Portfolio Overview] Error fetching market links', {
@@ -135,10 +135,20 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build map: inventory_id -> market SKU
+    // Build maps: inventory_id -> market SKU, inventory_id -> StockX IDs
     const inventoryToMarketSku = new Map<string, string>()
+    const inventoryToStockxIds = new Map<string, { productId: string; variantId: string }>()
+
     marketLinks?.forEach((link) => {
-      inventoryToMarketSku.set(link.inventory_id, link.provider_product_sku)
+      if (link.provider_product_sku) {
+        inventoryToMarketSku.set(link.item_id, link.provider_product_sku)
+      }
+      if (link.stockx_product_id && link.stockx_variant_id) {
+        inventoryToStockxIds.set(link.item_id, {
+          productId: link.stockx_product_id,
+          variantId: link.stockx_variant_id,
+        })
+      }
     })
 
     // 3. Get all market SKUs + sizes to query for prices
@@ -155,7 +165,26 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 4. Fetch latest prices from latest_market_prices (provider preference built-in)
+    // 4. Fetch StockX market prices first (highest priority)
+    const { data: stockxPrices, error: stockxPricesError } = await supabase
+      .from('stockx_market_latest')
+      .select('stockx_product_id, stockx_variant_id, currency_code, last_sale_price, lowest_ask, highest_bid, snapshot_at')
+      .eq('currency_code', currency)
+
+    if (stockxPricesError) {
+      logger.warn('[Portfolio Overview] Error fetching StockX prices', {
+        message: stockxPricesError.message,
+      })
+    }
+
+    // Build StockX price map
+    const stockxPriceMap = new Map<string, any>()
+    stockxPrices?.forEach((price) => {
+      const key = `${price.stockx_product_id}:${price.stockx_variant_id}`
+      stockxPriceMap.set(key, price)
+    })
+
+    // 5. Fetch latest prices from latest_market_prices (fallback for non-StockX items)
     const priceMap = new Map<string, any>()
     if (marketQueries.length > 0) {
       // Query latest_market_prices for all SKU+size combinations
@@ -185,7 +214,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 5. Calculate KPIs
+    // 6. Calculate KPIs (prefer StockX → fallback to other providers)
     let totalEstimatedValue = 0
     let totalInvested = 0
     const providers = new Set<string>()
@@ -197,6 +226,32 @@ export async function GET(request: NextRequest) {
         item.purchase_total || item.purchase_price + (item.tax || 0) + (item.shipping || 0)
       totalInvested += invested
 
+      // Priority 1: Check for StockX mapping
+      const stockxIds = inventoryToStockxIds.get(item.id)
+      if (stockxIds) {
+        const stockxKey = `${stockxIds.productId}:${stockxIds.variantId}`
+        const stockxPrice = stockxPriceMap.get(stockxKey)
+
+        if (stockxPrice) {
+          // Market value logic: last_sale_price → lowest_ask → highest_bid
+          const price = stockxPrice.last_sale_price || stockxPrice.lowest_ask || stockxPrice.highest_bid
+
+          if (price) {
+            totalEstimatedValue += price
+            providers.add('stockx')
+
+            if (stockxPrice.snapshot_at) {
+              const priceDate = new Date(stockxPrice.snapshot_at)
+              if (!latestPriceTimestamp || priceDate > latestPriceTimestamp) {
+                latestPriceTimestamp = priceDate
+              }
+            }
+            return // Found StockX price, skip fallback
+          }
+        }
+      }
+
+      // Priority 2: Fallback to other market providers
       const marketSku = inventoryToMarketSku.get(item.id)
       if (!marketSku) {
         missingPrices.push({
@@ -271,15 +326,34 @@ export async function GET(request: NextRequest) {
       unrealisedPLDelta7d = unrealisedPL7d !== 0 ? (delta / Math.abs(unrealisedPL7d)) * 100 : null
     }
 
-    // 8. Calculate category breakdown
+    // 8. Calculate category breakdown (prefer StockX → fallback to other providers)
     const categoryMap = new Map<string, number>()
     inventory.forEach((item) => {
       const category = item.category || 'uncategorized'
+
+      // Priority 1: Check for StockX price
+      const stockxIds = inventoryToStockxIds.get(item.id)
+      let value = 0
+
+      if (stockxIds) {
+        const stockxKey = `${stockxIds.productId}:${stockxIds.variantId}`
+        const stockxPrice = stockxPriceMap.get(stockxKey)
+        if (stockxPrice) {
+          const price = stockxPrice.last_sale_price || stockxPrice.lowest_ask || stockxPrice.highest_bid
+          if (price) {
+            value = price
+            categoryMap.set(category, (categoryMap.get(category) || 0) + value)
+            return
+          }
+        }
+      }
+
+      // Priority 2: Fallback to other market providers
       const marketSku = inventoryToMarketSku.get(item.id)
       const size = item.size_uk || item.size || null
       const priceKey = `${marketSku}:${size || 'null'}`
       const priceData = marketSku ? priceMap.get(priceKey) : null
-      const value = priceData?.price || item.purchase_total || item.purchase_price || 0
+      value = priceData?.price || item.purchase_total || item.purchase_price || 0
       categoryMap.set(category, (categoryMap.get(category) || 0) + value)
     })
 

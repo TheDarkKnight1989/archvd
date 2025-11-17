@@ -144,14 +144,21 @@ export function PortfolioOverview({ onOpenQuickAdd, onRefreshPrices, isRefreshin
   const delta7dPositive = (kpis.unrealisedPLDelta7d ?? 0) >= 0
 
   // Format timestamp for provenance
-  const pricesAsOfDate = new Date(meta.pricesAsOf)
-  const pricesAsOfFormatted = pricesAsOfDate.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const formatRelativeTime = (isoString: string) => {
+    const date = new Date(isoString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffSecs = Math.floor(diffMs / 1000)
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffSecs < 60) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  }
 
   return (
     <div className="space-y-6 mb-8">
@@ -262,10 +269,10 @@ export function PortfolioOverview({ onOpenQuickAdd, onRefreshPrices, isRefreshin
           </p>
         </Card>
 
-        {/* ROI % */}
+        {/* Performance % */}
         <Card className="p-6 bg-elev-2 border-border/40 hover:border-border transition-colors">
           <span className="label-up mb-3 block">
-            ROI %
+            Performance %
           </span>
           <p className={cn(
             "heading mono kpi-number mb-2",
@@ -274,7 +281,7 @@ export function PortfolioOverview({ onOpenQuickAdd, onRefreshPrices, isRefreshin
             {roiPositive ? '+' : ''}{kpis.roi.toFixed(2)}%
           </p>
           <p className="kbd text-[10px]">
-            Return on investment
+            Unrealised performance
           </p>
         </Card>
       </div>
