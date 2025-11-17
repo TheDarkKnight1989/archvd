@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     const { data: existingMapping } = await supabase
       .from('inventory_market_links')
       .select('id')
-      .eq('item_id', itemId)
+      .eq('inventory_id', itemId)
       .eq('provider', 'stockx')
       .maybeSingle()
 
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       const { error: insertError } = await supabase
         .from('inventory_market_links')
         .insert({
-          item_id: itemId,
+          inventory_id: itemId,
           provider: 'stockx',
           stockx_product_id: stockxProductId,
           stockx_variant_id: stockxVariantId,
