@@ -70,7 +70,7 @@ export function useInventoryV3() {
       // 4. Fetch inventory → StockX mappings (includes listing ID if item is listed)
       const { data: stockxMappings, error: stockxMappingsError} = await supabase
         .from('inventory_market_links')
-        .select('inventory_id, stockx_product_id, stockx_variant_id, stockx_listing_id')
+        .select('item_id, stockx_product_id, stockx_variant_id, stockx_listing_id')
 
       if (stockxMappingsError) {
         console.warn('[useInventoryV3] Failed to fetch StockX mappings:', stockxMappingsError)
@@ -144,7 +144,7 @@ export function useInventoryV3() {
       const stockxMappingMap = new Map<string, any>()
       if (stockxMappings) {
         for (const mapping of stockxMappings) {
-          stockxMappingMap.set(mapping.inventory_id, mapping)
+          stockxMappingMap.set(mapping.item_id, mapping)
         }
       }
 
