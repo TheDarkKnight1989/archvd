@@ -118,9 +118,9 @@ export function useInventoryV3() {
 
       const { data: sparklineData, error: sparklineError } = await supabase
         .from('market_price_daily_medians')
-        .select('sku, size, price_date, median_price')
-        .gte('price_date', thirtyDaysAgo.toISOString().split('T')[0])
-        .order('price_date', { ascending: true })
+        .select('sku, size_uk, day, median')
+        .gte('day', thirtyDaysAgo.toISOString().split('T')[0])
+        .order('day', { ascending: true })
 
       if (sparklineError) {
         console.warn('[useInventoryV3] Failed to fetch sparkline data:', sparklineError)
@@ -159,13 +159,13 @@ export function useInventoryV3() {
       const sparklineMap = new Map<string, Array<{ date: string; price: number | null }>>()
       if (sparklineData) {
         for (const point of sparklineData) {
-          const key = `${point.sku}:${point.size || ''}`
+          const key = `${point.sku}:${point.size_uk || ''}`
           if (!sparklineMap.has(key)) {
             sparklineMap.set(key, [])
           }
           sparklineMap.get(key)!.push({
-            date: point.price_date,
-            price: point.median_price,
+            date: point.day,
+            price: point.median,
           })
         }
       }
