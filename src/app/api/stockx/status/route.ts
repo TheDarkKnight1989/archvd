@@ -60,22 +60,21 @@ export async function GET(request: NextRequest) {
       .select('as_of')
       .order('as_of', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const { data: lastSaleSync } = await supabase
       .from('stockx_sales')
       .select('created_at')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const { data: lastListingsSync } = await supabase
       .from('inventory_market_links')
       .select('updated_at')
-      .eq('provider', 'stockx')
       .order('updated_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     return NextResponse.json({
       connected: true,
