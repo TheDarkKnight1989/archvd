@@ -409,11 +409,10 @@ export function useItemsTable(userId: string | undefined, params: TableParams = 
 
         if (fetchError) throw fetchError;
 
-        // Fetch StockX market links
+        // Fetch StockX market links (all links are StockX-only, no provider column)
         const { data: stockxLinks } = await supabase
           .from('inventory_market_links')
-          .select('inventory_id, provider_product_sku')
-          .eq('provider', 'stockx');
+          .select('item_id, stockx_product_id, stockx_variant_id');
 
         // Fetch StockX latest prices
         const { data: stockxPrices } = await supabase
@@ -424,8 +423,9 @@ export function useItemsTable(userId: string | undefined, params: TableParams = 
         const stockxLinkMap = new Map<string, any>();
         if (stockxLinks) {
           for (const link of stockxLinks) {
-            stockxLinkMap.set(link.inventory_id, {
-              product_sku: link.provider_product_sku,
+            stockxLinkMap.set(link.item_id, {
+              product_id: link.stockx_product_id,
+              variant_id: link.stockx_variant_id,
             });
           }
         }

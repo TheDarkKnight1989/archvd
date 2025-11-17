@@ -63,11 +63,21 @@ async function testAccessToken(accessToken) {
   console.log('\n🧪 Testing access token with StockX API...')
 
   try {
+    const headers = {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    }
+
+    // Add x-api-key header if available (required for StockX v2 API)
+    if (process.env.STOCKX_API_KEY) {
+      headers['x-api-key'] = process.env.STOCKX_API_KEY
+      console.log('   Using x-api-key:', `${process.env.STOCKX_API_KEY.slice(0, 8)}...${process.env.STOCKX_API_KEY.slice(-4)}`)
+    } else {
+      console.log('   ⚠️  STOCKX_API_KEY not set - this may cause 403 errors with v2 API')
+    }
+
     const response = await fetch('https://api.stockx.com/v2/users/me', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
     })
 
     console.log('   Status:', response.status, response.statusText)

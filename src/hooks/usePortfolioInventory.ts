@@ -95,10 +95,10 @@ export function usePortfolioInventory() {
       const aliasLinks = marketLinks?.filter(link => link.provider === 'alias')
 
       // Fetch StockX mapping status from inventory_market_links
+      // Note: All links in this table are StockX-only (no provider column)
       const { data: stockxLinks, error: stockxError } = await supabase
         .from('inventory_market_links')
-        .select('inventory_id, provider_product_sku, stockx_listing_id')
-        .eq('provider', 'stockx')
+        .select('item_id, stockx_product_id, stockx_variant_id, stockx_listing_id')
 
       if (stockxError) {
         console.warn('[usePortfolioInventory] Failed to fetch StockX links:', stockxError)
@@ -163,8 +163,9 @@ export function usePortfolioInventory() {
       const stockxLinkMap = new Map<string, any>()
       if (stockxLinks) {
         for (const link of stockxLinks) {
-          stockxLinkMap.set(link.inventory_id, {
-            product_sku: link.provider_product_sku,
+          stockxLinkMap.set(link.item_id, {
+            product_id: link.stockx_product_id,
+            variant_id: link.stockx_variant_id,
             listing_id: link.stockx_listing_id,
           })
         }

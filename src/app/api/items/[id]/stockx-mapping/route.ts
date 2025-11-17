@@ -20,7 +20,6 @@ export async function GET(
       .from('inventory_market_links')
       .select('stockx_product_id, stockx_variant_id')
       .eq('item_id', id)
-      .eq('provider', 'stockx')
       .maybeSingle()
 
     if (error) {
