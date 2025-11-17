@@ -47,25 +47,9 @@ export function useInventoryV3() {
 
       if (inventoryError) throw inventoryError
 
-      // 2. Fetch market links to get provider product SKUs
-      const { data: marketLinks, error: marketLinksError } = await supabase
-        .from('inventory_market_links')
-        .select('inventory_id, provider, provider_product_sku')
-
-      if (marketLinksError) {
-        console.warn('[useInventoryV3] Failed to fetch market links:', marketLinksError)
-      }
-
-      // 3. Fetch market products for brand/model/image
-      const marketSkus = marketLinks?.map(link => link.provider_product_sku).filter(Boolean) || []
-      const { data: marketProducts, error: marketProductsError } = await supabase
-        .from('market_products')
-        .select('sku, brand, model, colorway, image_url, provider')
-        .in('sku', marketSkus.length > 0 ? marketSkus : ['__none__'])
-
-      if (marketProductsError) {
-        console.warn('[useInventoryV3] Failed to fetch market products:', marketProductsError)
-      }
+      // NOTE: Removed broken market_products query
+      // Database schema doesn't have 'provider' or 'provider_product_sku' columns
+      // Brand/model data comes from Inventory table directly
 
       // 4. Fetch inventory → StockX mappings (includes listing ID if item is listed)
       const { data: stockxMappings, error: stockxMappingsError} = await supabase
@@ -82,10 +66,18 @@ export function useInventoryV3() {
         .map(m => m.stockx_listing_id)
         .filter(Boolean) || []
 
-      const { data: stockxListings, error: stockxListingsError } = await supabase
-        .from('stockx_listings')
-        .select('id, stockx_listing_id, amount, currency_code, status, expires_at')
-        .in('id', listingIds.length > 0 ? listingIds : ['__none__'])
+      // Only query if we have listing IDs (avoids UUID error with __none__)
+      let stockxListings: any[] = []
+      let stockxListingsError = null
+
+      if (listingIds.length > 0) {
+        const result = await supabase
+          .from('stockx_listings')
+          .select('id, stockx_listing_id, amount, currency_code, status, expires_at')
+          .in('id', listingIds)
+        stockxListings = result.data || []
+        stockxListingsError = result.error
+      }
 
       if (stockxListingsError) {
         console.warn('[useInventoryV3] Failed to fetch StockX listings:', stockxListingsError)
@@ -126,20 +118,7 @@ export function useInventoryV3() {
         console.warn('[useInventoryV3] Failed to fetch sparkline data:', sparklineError)
       }
 
-      // Build maps for joining
-      const marketLinkMap = new Map<string, any>()
-      if (marketLinks) {
-        for (const link of marketLinks) {
-          marketLinkMap.set(link.inventory_id, link)
-        }
-      }
-
-      const marketProductMap = new Map<string, any>()
-      if (marketProducts) {
-        for (const product of marketProducts) {
-          marketProductMap.set(product.sku, product)
-        }
-      }
+      // Build maps for joining (removed market links/products - not in schema)
 
       const stockxMappingMap = new Map<string, any>()
       if (stockxMappings) {
@@ -179,15 +158,10 @@ export function useInventoryV3() {
 
       // 6. Compose EnrichedLineItem[]
       const enrichedItems: EnrichedLineItem[] = (inventoryData || []).map((item: any) => {
-        // Get market link
-        const marketLink = marketLinkMap.get(item.id)
-        const marketSku = marketLink?.provider_product_sku
-        const marketProduct = marketSku ? marketProductMap.get(marketSku) : null
-
-        // Hydrate brand/model/colorway from market_products if missing
-        const brand = item.brand || marketProduct?.brand || 'Unknown'
-        const model = item.model || marketProduct?.model || item.sku
-        const colorway = item.colorway || marketProduct?.colorway || null
+        // Use data directly from Inventory table (no market_products join)
+        const brand = item.brand || 'Unknown'
+        const model = item.model || item.sku
+        const colorway = item.colorway || null
 
         // Get StockX mapping for this inventory item
         const stockxMapping = stockxMappingMap.get(item.id)
@@ -273,7 +247,7 @@ export function useInventoryV3() {
 
         // Resolve image using fallback chain
         const imageResolved = getProductImage({
-          marketImageUrl: marketProduct?.image_url,
+          marketImageUrl: null, // No market_products table
           inventoryImageUrl: item.image_url,
           provider: marketProvider as any,
           brand,
