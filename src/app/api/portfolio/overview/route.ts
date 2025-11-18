@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
     const inventoryIds = inventory.map((i) => i.id)
     const { data: marketLinks, error: linksError } = await supabase
       .from('inventory_market_links')
-      .select('item_id, provider_product_sku, stockx_product_id, stockx_variant_id')
+      .select('item_id, stockx_product_id, stockx_variant_id')
       .in('item_id', inventoryIds)
 
     if (linksError) {
@@ -135,14 +135,10 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build maps: inventory_id -> market SKU, inventory_id -> StockX IDs
-    const inventoryToMarketSku = new Map<string, string>()
+    // Build map: inventory_id -> StockX IDs
     const inventoryToStockxIds = new Map<string, { productId: string; variantId: string }>()
 
     marketLinks?.forEach((link) => {
-      if (link.provider_product_sku) {
-        inventoryToMarketSku.set(link.item_id, link.provider_product_sku)
-      }
       if (link.stockx_product_id && link.stockx_variant_id) {
         inventoryToStockxIds.set(link.item_id, {
           productId: link.stockx_product_id,
@@ -151,17 +147,19 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // 3. Get all market SKUs + sizes to query for prices
+    // 3. Build inventory items with SKUs (use item's own SKU for price lookup)
+    const inventoryMap = new Map(inventory.map((item) => [item.id, item]))
+
+    // Get all market SKUs + sizes to query for prices (fallback for items without StockX)
     const marketQueries: { sku: string; size: string | null }[] = []
     inventory.forEach((item) => {
-      const marketSku = inventoryToMarketSku.get(item.id)
-      if (marketSku) {
+      if (item.sku) {
         let size = item.size_uk || item.size || null
         // Parse UK prefix if present (e.g., "UK8" → "8")
         if (size && typeof size === 'string' && size.toUpperCase().startsWith('UK')) {
           size = size.substring(2).trim()
         }
-        marketQueries.push({ sku: marketSku, size })
+        marketQueries.push({ sku: item.sku, size })
       }
     })
 
@@ -252,13 +250,12 @@ export async function GET(request: NextRequest) {
       }
 
       // Priority 2: Fallback to other market providers
-      const marketSku = inventoryToMarketSku.get(item.id)
-      if (!marketSku) {
+      if (!item.sku) {
         missingPrices.push({
           id: item.id,
           sku: item.sku,
           size: item.size_uk || item.size,
-          reason: 'No market mapping',
+          reason: 'No SKU',
         })
         return
       }
@@ -268,7 +265,7 @@ export async function GET(request: NextRequest) {
       if (size && typeof size === 'string' && size.toUpperCase().startsWith('UK')) {
         size = size.substring(2).trim()
       }
-      const priceKey = `${marketSku}:${size || 'null'}`
+      const priceKey = `${item.sku}:${size || 'null'}`
       const priceData = priceMap.get(priceKey)
 
       if (!priceData) {
@@ -349,10 +346,9 @@ export async function GET(request: NextRequest) {
       }
 
       // Priority 2: Fallback to other market providers
-      const marketSku = inventoryToMarketSku.get(item.id)
       const size = item.size_uk || item.size || null
-      const priceKey = `${marketSku}:${size || 'null'}`
-      const priceData = marketSku ? priceMap.get(priceKey) : null
+      const priceKey = `${item.sku}:${size || 'null'}`
+      const priceData = item.sku ? priceMap.get(priceKey) : null
       value = priceData?.price || item.purchase_total || item.purchase_price || 0
       categoryMap.set(category, (categoryMap.get(category) || 0) + value)
     })

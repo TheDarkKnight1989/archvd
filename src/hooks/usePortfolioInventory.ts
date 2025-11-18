@@ -71,29 +71,6 @@ export function usePortfolioInventory() {
 
       if (inventoryError) throw inventoryError
 
-      // Fetch ALL market links (not just Alias) to hydrate product data
-      const { data: marketLinks, error: marketLinksError } = await supabase
-        .from('inventory_market_links')
-        .select('inventory_id, provider, provider_product_id, provider_product_sku')
-
-      if (marketLinksError) {
-        console.warn('[usePortfolioInventory] Failed to fetch market links:', marketLinksError)
-      }
-
-      // Fetch market products to hydrate brand/model/image
-      const marketProductSkus = marketLinks?.map(link => link.provider_product_sku).filter(Boolean) || []
-      const { data: marketProducts, error: marketProductsError } = await supabase
-        .from('market_products')
-        .select('sku, brand, model, colorway, image_url, provider')
-        .in('sku', marketProductSkus.length > 0 ? marketProductSkus : ['__none__'])
-
-      if (marketProductsError) {
-        console.warn('[usePortfolioInventory] Failed to fetch market products:', marketProductsError)
-      }
-
-      // Fetch Alias mapping status from inventory_market_links (legacy)
-      const aliasLinks = marketLinks?.filter(link => link.provider === 'alias')
-
       // Fetch StockX mapping status from inventory_market_links
       // Note: All links in this table are StockX-only (no provider column)
       const { data: stockxLinks, error: stockxError } = await supabase
@@ -146,17 +123,6 @@ export function usePortfolioInventory() {
 
       if (stockxPricesError) {
         console.warn('[usePortfolioInventory] Failed to fetch StockX prices:', stockxPricesError)
-      }
-
-      // Build maps for alias data
-      const aliasLinkMap = new Map<string, any>()
-      if (aliasLinks) {
-        for (const link of aliasLinks) {
-          aliasLinkMap.set(link.inventory_id, {
-            product_id: link.provider_product_id,
-            product_sku: link.provider_product_sku,
-          })
-        }
       }
 
       // Build maps for StockX data
@@ -237,45 +203,12 @@ export function usePortfolioInventory() {
         }
       }
 
-      // Build map of market products by SKU for hydration
-      const marketProductMap = new Map<string, any>()
-      if (marketProducts) {
-        for (const product of marketProducts) {
-          marketProductMap.set(product.sku, product)
-        }
-      }
-
-      // Build map of inventory_id -> market product SKU for linking
-      const inventoryToMarketMap = new Map<string, string>()
-      if (marketLinks) {
-        for (const link of marketLinks) {
-          inventoryToMarketMap.set(link.inventory_id, link.provider_product_sku)
-        }
-      }
-
-      // Merge Pokémon market values and Alias status into inventory items
+      // Merge StockX data into inventory items
       const mergedItems = (inventoryData || []).map((item: InventoryItem) => {
         let enrichedItem = { ...item }
 
-        // HYDRATION: Fill missing brand/model/image from market_products if available
-        const marketSku = inventoryToMarketMap.get(item.id)
-        const marketProduct = marketSku ? marketProductMap.get(marketSku) : null
-
-        if (marketProduct) {
-          // Only hydrate if the field is missing or empty
-          if (!enrichedItem.brand) {
-            enrichedItem.brand = marketProduct.brand
-          }
-          if (!enrichedItem.model) {
-            enrichedItem.model = marketProduct.model
-          }
-          if (!enrichedItem.colorway) {
-            enrichedItem.colorway = marketProduct.colorway
-          }
-          if (!enrichedItem.image_url) {
-            enrichedItem.image_url = marketProduct.image_url
-          }
-        }
+        // Skip market product hydration - no longer using market_products table
+        // StockX data will be enriched separately if needed
 
         // Add Pokémon pricing if applicable
         if (item.category === 'pokemon') {
@@ -291,38 +224,13 @@ export function usePortfolioInventory() {
           }
         }
 
-        // Add Alias mapping status
-        const aliasLink = aliasLinkMap.get(item.id)
-        if (aliasLink) {
-          enrichedItem = {
-            ...enrichedItem,
-            alias_mapping_status: 'mapped' as const,
-            alias_product_id: aliasLink.product_id,
-            alias_product_sku: aliasLink.product_sku,
-          }
-        } else if (unmatchedSet.has(item.id)) {
-          enrichedItem = {
-            ...enrichedItem,
-            alias_mapping_status: 'unmatched' as const,
-            alias_product_id: null,
-            alias_product_sku: null,
-          }
-        } else {
-          enrichedItem = {
-            ...enrichedItem,
-            alias_mapping_status: 'unmapped' as const,
-            alias_product_id: null,
-            alias_product_sku: null,
-          }
-        }
-
         // Add StockX mapping status and pricing
         const stockxLink = stockxLinkMap.get(item.id)
         if (stockxLink) {
           // Normalize size for lookup: strip "UK" prefix if present
           // StockX API returns US sizes, but inventory might have "UK9", "UK10", etc.
           const normalizedSize = item.size?.replace(/^UK/i, '') || item.size
-          const priceKey = `${stockxLink.product_sku}:${normalizedSize}`
+          const priceKey = `${item.sku}:${normalizedSize}`
           const stockxPrice = stockxPriceMap.get(priceKey)
 
           // Get listing data if exists
@@ -332,7 +240,7 @@ export function usePortfolioInventory() {
           enrichedItem = {
             ...enrichedItem,
             stockx_mapping_status: 'mapped' as const,
-            stockx_product_sku: stockxLink.product_sku,
+            stockx_product_sku: item.sku,
             stockx_lowest_ask: stockxPrice?.lowest_ask || null,
             stockx_highest_bid: stockxPrice?.highest_bid || null,
             stockx_last_sale: stockxPrice?.last_sale || null,
