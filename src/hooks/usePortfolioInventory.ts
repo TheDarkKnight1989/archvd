@@ -83,10 +83,18 @@ export function usePortfolioInventory() {
 
       // Fetch StockX listings for items that have them
       const listingIds = stockxLinks?.filter(link => link.stockx_listing_id).map(link => link.stockx_listing_id) || []
-      const { data: stockxListings, error: stockxListingsError } = await supabase
-        .from('stockx_listings')
-        .select('id, stockx_listing_id, ask_price, currency, status, expires_at')
-        .in('id', listingIds.length > 0 ? listingIds : ['__none__'])
+
+      let stockxListings: any[] = []
+      let stockxListingsError = null
+
+      if (listingIds.length > 0) {
+        const result = await supabase
+          .from('stockx_listings')
+          .select('id, stockx_listing_id, amount, currency_code, status, expires_at')
+          .in('id', listingIds)
+        stockxListings = result.data || []
+        stockxListingsError = result.error
+      }
 
       if (stockxListingsError) {
         console.warn('[usePortfolioInventory] Failed to fetch StockX listings:', stockxListingsError)
@@ -94,11 +102,19 @@ export function usePortfolioInventory() {
 
       // Fetch pending operations for active listings
       const activeListingIds = stockxListings?.filter(l => l.status !== 'COMPLETED' && l.status !== 'DELETED').map(l => l.stockx_listing_id) || []
-      const { data: pendingJobs, error: pendingJobsError } = await supabase
-        .from('stockx_batch_jobs')
-        .select('id, target_listing_id, job_type, status, error_message')
-        .in('target_listing_id', activeListingIds.length > 0 ? activeListingIds : ['__none__'])
-        .in('status', ['PENDING', 'IN_PROGRESS'])
+
+      let pendingJobs: any[] = []
+      let pendingJobsError = null
+
+      if (activeListingIds.length > 0) {
+        const result = await supabase
+          .from('stockx_batch_job_items')
+          .select('id, stockx_listing_id, batch_job_id, status, error_message')
+          .in('stockx_listing_id', activeListingIds)
+          .in('status', ['PENDING'])
+        pendingJobs = result.data || []
+        pendingJobsError = result.error
+      }
 
       if (pendingJobsError) {
         console.warn('[usePortfolioInventory] Failed to fetch pending jobs:', pendingJobsError)
@@ -248,7 +264,7 @@ export function usePortfolioInventory() {
             // Add listing data
             stockx_listing_id: listing?.stockx_listing_id || null,
             stockx_listing_status: listing?.status || null,
-            stockx_ask_price: listing?.ask_price || null,
+            stockx_ask_price: listing?.amount ? listing.amount / 100 : null,
             stockx_listing_expires_at: listing?.expires_at || null,
             stockx_listing_pending_operation: pendingJob || null,
           }
