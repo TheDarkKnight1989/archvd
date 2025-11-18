@@ -118,6 +118,8 @@ function convertCurrency(amountUsd: number, targetCurrency: string): number {
 // API Handler
 // ============================================================================
 
+export const maxDuration = 10 // 10 second timeout for search with enrichment
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
@@ -182,8 +184,36 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Real API - search products
-    const searchResult = await searchProducts(query, { page, limit })
+    // Real API - search products (with timeout and fallback)
+    let searchResult
+    try {
+      searchResult = await Promise.race([
+        searchProducts(query, { page, limit }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Search timeout after 8s')), 8000)
+        )
+      ])
+    } catch (error: any) {
+      console.error('[API /stockx/search] Search failed, falling back to mock data:', error.message)
+
+      // Fallback to mock data on error
+      const filtered = MOCK_SEARCH_RESULTS.filter(
+        (r) =>
+          r.name.toLowerCase().includes(query.toLowerCase()) ||
+          r.sku.toLowerCase().includes(query.toLowerCase()) ||
+          r.brand.toLowerCase().includes(query.toLowerCase())
+      )
+
+      return NextResponse.json({
+        results: filtered,
+        total: filtered.length,
+        page,
+        limit,
+        duration_ms: Date.now() - startTime,
+        fallback: true,
+        error: error.message,
+      })
+    }
 
     // Enrich each product with pricing data
     const enrichedResults: EnrichedSearchResult[] = await Promise.all(
