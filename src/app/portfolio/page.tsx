@@ -108,12 +108,24 @@ export default function DashboardPage() {
     async function fetchOverview() {
       setOverviewLoading(true)
       try {
-        const res = await fetch(`/api/portfolio/overview?currency=${currency}`)
+        const res = await fetch(`/api/portfolio/overview?currency=${currency}`, {
+          signal: AbortSignal.timeout(8000) // 8 second timeout
+        })
         if (!res.ok) throw new Error('Failed to fetch overview')
         const data = await res.json()
         setOverviewData(data)
       } catch (error) {
         console.error('[Dashboard] Error fetching overview:', error)
+        // Set empty data so page doesn't stay loading forever
+        setOverviewData({
+          totalValue: 0,
+          totalInvested: 0,
+          totalProfit: 0,
+          roi: 0,
+          itemCount: 0,
+          categoryBreakdown: [],
+          missingPrices: []
+        })
       } finally {
         setOverviewLoading(false)
       }
