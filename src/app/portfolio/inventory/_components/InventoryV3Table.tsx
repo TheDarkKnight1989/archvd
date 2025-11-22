@@ -11,7 +11,7 @@
  * 4. Unrealised P/L - pl field
  * 5. Purchase Price - invested (purchase_price + tax + shipping)
  * 6. Market Value - market.price
- * 7. Listing Price - stockx.askPrice (if listed)
+ * 7. Listed Price - stockx.askPrice (if listed)
  * 8. Highest Bid (with platform badge) - stockx.highestBid + PlatformBadge
  * 9. Performance % - performancePct
  * 10. Platform Listed (with badges) - platform if listed
@@ -290,7 +290,7 @@ export function InventoryV3Table({
       // 7. Listing Price (if listed)
       columnHelper.display({
         id: 'listing_price',
-        header: () => <div className="text-right">Ask {symbol()}</div>,
+        header: () => <div className="text-right">Listed {symbol()}</div>,
         cell: (info) => {
           const item = info.row.original
           const askPrice = item.stockx?.askPrice
