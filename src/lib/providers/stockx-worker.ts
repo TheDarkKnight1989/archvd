@@ -843,7 +843,6 @@ export async function syncAllInventoryItemsFromStockx(params: {
       .from('inventory_market_links')
       .select('item_id, stockx_product_id')
       .in('item_id', inventoryItems.map(i => i.id))
-      .eq('provider', 'stockx')
 
     if (mappings) {
       mappings.forEach(m => {
@@ -867,7 +866,6 @@ export async function syncAllInventoryItemsFromStockx(params: {
       .from('inventory_market_links')
       .select('item_id, stockx_product_id')
       .in('item_id', inventoryItems.map(i => i.id))
-      .eq('provider', 'stockx')
 
     if (mappings) {
       mappings.forEach(m => {

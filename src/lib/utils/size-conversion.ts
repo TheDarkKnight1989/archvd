@@ -65,6 +65,13 @@ const NIKE_WOMENS_US_TO_UK: Record<number, number> = {
 
 /**
  * Nike/Jordan GS (Grade School) Size Chart (US → UK)
+ *
+ * NOTE: UK 6 appears TWICE in GS sizing:
+ * - US 6.5 = UK 6 (EU 39)
+ * - US 7 = UK 6 (EU 40)
+ *
+ * When mapping UK 6 GS sizes, BOTH variants should be shown in UI
+ * so the user can select the correct EU size.
  */
 const NIKE_GS_US_TO_UK: Record<number, number> = {
   3.5: 3,
@@ -73,8 +80,8 @@ const NIKE_GS_US_TO_UK: Record<number, number> = {
   5: 4.5,
   5.5: 5,
   6: 5.5,
-  6.5: 6,
-  7: 6,
+  6.5: 6,    // UK 6 (EU 39)
+  7: 6,      // UK 6 (EU 40) - DUPLICATE UK SIZE!
 }
 
 /**
@@ -248,6 +255,10 @@ export function convertUsToUk(
 
 /**
  * Convert UK size to US size (reverse lookup)
+ * Returns the FIRST match found
+ *
+ * NOTE: For GS UK 6, this will only return US 6.5
+ * Use `getAllUsSizesForUk()` to get both US 6.5 and US 7
  */
 export function convertUkToUs(
   ukSize: number,
@@ -264,6 +275,30 @@ export function convertUkToUs(
   }
 
   return null
+}
+
+/**
+ * Get ALL US sizes that map to a UK size
+ * Handles duplicate UK sizes (e.g., GS UK 6 → both US 6.5 and US 7)
+ *
+ * This should be used in UI to show all size options when mapping
+ */
+export function getAllUsSizesForUk(
+  ukSize: number,
+  brand: Brand,
+  gender: Gender
+): number[] {
+  const chart = getSizeChart(brand, gender)
+  const matches: number[] = []
+
+  // Find ALL US sizes that map to this UK size
+  for (const [us, uk] of Object.entries(chart)) {
+    if (uk === ukSize) {
+      matches.push(parseFloat(us))
+    }
+  }
+
+  return matches.sort((a, b) => a - b)
 }
 
 /**
