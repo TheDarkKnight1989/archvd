@@ -560,8 +560,17 @@ export default function PortfolioPage() {
       <SyncToolbar
         lastSyncedAt={items[0]?.stockx?.lastSyncSuccessAt}
         onSyncNow={async () => {
-          const response = await fetch('/api/stockx/sync/prices', {
+          // FIX: Call /api/stockx/sync/inventory to actually fetch fresh market data from StockX
+          // (not /api/stockx/sync/prices which only refreshes a materialized view)
+          const response = await fetch('/api/stockx/sync/inventory', {
             method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              mode: 'mapped-only', // Sync items with existing StockX mappings
+              limit: 100,           // Process up to 100 items
+            }),
           })
 
           if (!response.ok) {

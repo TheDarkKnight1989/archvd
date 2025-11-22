@@ -1,7 +1,17 @@
 /**
- * StockX V2 Sync Prices
- * Syncs market data for all tracked products in inventory and watchlist
- * Uses product-level market data endpoint (all variants at once) for efficiency
+ * StockX V2 Sync Prices - Materialized View Refresh
+ *
+ * IMPORTANT: This endpoint ONLY refreshes the stockx_market_latest materialized view.
+ * It does NOT fetch new market data from the StockX API.
+ *
+ * For actual market data sync (fetching fresh prices from StockX), use:
+ * - /api/stockx/sync/inventory (recommended for UI sync buttons)
+ * - /api/stockx/sync/item (for single item sync)
+ *
+ * This endpoint is primarily for:
+ * - Cron jobs that run after market data has been fetched
+ * - Manual view refresh when data is already in stockx_market_snapshots
+ *
  * POST /api/stockx/sync/prices
  */
 
