@@ -317,13 +317,19 @@ export function InventoryV3Table({
         header: () => <div className="text-right">Highest Bid</div>,
         cell: (info) => {
           const item = info.row.original
-          const highestBid = item.stockx?.highestBid
+
+          // Use instantSell which has currency info, or fallback to stockx.highestBid
+          const highestBid = item.instantSell?.gross ?? item.stockx?.highestBid
+          const sourceCurrency = item.instantSell?.currency
 
           if (!highestBid) {
             return <div className="text-right text-dim">—</div>
           }
 
-          const converted = convert(highestBid, 'USD')
+          // Only convert if source currency differs from display currency
+          const converted = sourceCurrency && sourceCurrency !== currency
+            ? convert(highestBid, sourceCurrency)
+            : highestBid
 
           return (
             <div className="flex items-center justify-end gap-2">
