@@ -204,22 +204,22 @@ export function InventoryTableV3({
             onAddToWatchlist={() => onAddToWatchlist?.(item)}
             onDelete={() => onDelete?.(item)}
             onListOnStockX={
-              onListOnStockX && !item.stockx?.listingId
+              onListOnStockX && item.stockx?.mapped && !item.stockx?.listingId
                 ? () => onListOnStockX(item)
                 : undefined
             }
             onRepriceListing={
-              onRepriceListing && item.stockx?.listingStatus === 'ACTIVE'
+              onRepriceListing && item.stockx?.listingId && item.stockx?.listingStatus === 'ACTIVE'
                 ? () => onRepriceListing(item)
                 : undefined
             }
             onDeactivateListing={
-              onDeactivateListing && item.stockx?.listingStatus === 'ACTIVE'
+              onDeactivateListing && item.stockx?.listingId && item.stockx?.listingStatus === 'ACTIVE'
                 ? () => onDeactivateListing(item)
                 : undefined
             }
             onReactivateListing={
-              onReactivateListing && item.stockx?.listingStatus === 'INACTIVE'
+              onReactivateListing && item.stockx?.listingId && item.stockx?.listingStatus === 'INACTIVE'
                 ? () => onReactivateListing(item)
                 : undefined
             }
@@ -310,6 +310,8 @@ export function InventoryTableV3({
                       currency={item.market.currency}
                       provider={item.market.provider}
                       updatedAt={item.market.updatedAt}
+                      mappingStatus={item.stockx?.mappingStatus}
+                      mappingError={item.stockx?.lastSyncError}
                     />
                   </td>
 
@@ -370,22 +372,22 @@ export function InventoryTableV3({
                       onAddToWatchlist={() => onAddToWatchlist?.(item)}
                       onDelete={() => onDelete?.(item)}
                       onListOnStockX={
-                        onListOnStockX && !item.stockx?.listingId
+                        onListOnStockX && item.stockx?.mapped && !item.stockx?.listingId
                           ? () => onListOnStockX(item)
                           : undefined
                       }
                       onRepriceListing={
-                        onRepriceListing && item.stockx?.listingStatus === 'ACTIVE'
+                        onRepriceListing && item.stockx?.listingId && item.stockx?.listingStatus === 'ACTIVE'
                           ? () => onRepriceListing(item)
                           : undefined
                       }
                       onDeactivateListing={
-                        onDeactivateListing && item.stockx?.listingStatus === 'ACTIVE'
+                        onDeactivateListing && item.stockx?.listingId && item.stockx?.listingStatus === 'ACTIVE'
                           ? () => onDeactivateListing(item)
                           : undefined
                       }
                       onReactivateListing={
-                        onReactivateListing && item.stockx?.listingStatus === 'INACTIVE'
+                        onReactivateListing && item.stockx?.listingId && item.stockx?.listingStatus === 'INACTIVE'
                           ? () => onReactivateListing(item)
                           : undefined
                       }

@@ -27,18 +27,14 @@ interface MarkAsSoldModalProps {
   onSuccess?: () => void
 }
 
+// Platform options matching database constraint and validation schema
 const PLATFORMS = [
-  'StockX',
-  'GOAT',
-  'eBay',
-  'Depop',
-  'Vinted',
-  'Grailed',
-  'Facebook',
-  'Instagram',
-  'In-Person',
-  'Other',
-]
+  { value: 'stockx', label: 'StockX' },
+  { value: 'goat', label: 'GOAT' },
+  { value: 'ebay', label: 'eBay' },
+  { value: 'private', label: 'Private Sale' },
+  { value: 'other', label: 'Other' },
+] as const
 
 export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsSoldModalProps) {
   const router = useRouter()
@@ -92,7 +88,11 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to mark as sold')
+        // Show detailed error information if available
+        const errorMsg = data.details
+          ? `${data.error}: ${data.details}`
+          : data.error || 'Failed to mark as sold'
+        throw new Error(errorMsg)
       }
 
       // Show success toast with link to sales page
@@ -129,7 +129,7 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[500px] w-full">
+        <DialogContent className="max-w-[500px] w-full bg-elev-2/95 backdrop-blur-md">
           <DialogHeader>
             <DialogTitle>Mark as Sold</DialogTitle>
             <p className="text-sm text-muted mt-1">
@@ -184,8 +184,8 @@ export function MarkAsSoldModal({ open, onOpenChange, item, onSuccess }: MarkAsS
                 </SelectTrigger>
                 <SelectContent>
                   {PLATFORMS.map((platform) => (
-                    <SelectItem key={platform} value={platform}>
-                      {platform}
+                    <SelectItem key={platform.value} value={platform.value}>
+                      {platform.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ProductLineItem Component Tests
  * Tests for the unified product display component

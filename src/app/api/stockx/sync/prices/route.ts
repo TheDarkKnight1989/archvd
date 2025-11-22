@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { StockxMarketV2Service } from '@/lib/services/stockx/market';
+import { refreshStockxMarketLatestView } from '@/lib/providers/stockx-worker';
 import { isStockxMockMode } from '@/lib/config/stockx';
 
 export const dynamic = 'force-dynamic';
@@ -35,18 +35,15 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     // }
 
-    // Run the V2 sync - uses product-level market data endpoint (all variants at once!)
-    const result = await StockxMarketV2Service.syncAllMarketData();
+    // Run the market data refresh via worker
+    const result = await refreshStockxMarketLatestView();
 
     const duration = Date.now() - startTime;
 
     console.log('[StockX V2 Sync] Completed:', result);
 
     return NextResponse.json({
-      success: true,
-      productsProcessed: result.productsProcessed,
-      snapshotsCreated: result.snapshotsCreated,
-      errors: result.errors,
+      ...result,
       duration_ms: duration,
       timestamp: new Date().toISOString(),
     });

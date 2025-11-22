@@ -87,6 +87,8 @@ export default function SettingsPage() {
 
   // Cache tab state
   const [lastRefresh, setLastRefresh] = useState<string>(new Date().toISOString())
+  const [hydratingCatalog, setHydratingCatalog] = useState(false)
+  const [catalogHydrationResult, setCatalogHydrationResult] = useState<string | null>(null)
 
   // Import tab state
   const [isDragging, setIsDragging] = useState(false)
@@ -149,6 +151,31 @@ export default function SettingsPage() {
     await new Promise((resolve) => setTimeout(resolve, 1500))
     setLastRefresh(new Date().toISOString())
     // TODO: Call refresh API
+  }
+
+  const handleHydrateCatalog = async () => {
+    setHydratingCatalog(true)
+    setCatalogHydrationResult(null)
+
+    try {
+      const response = await fetch('/api/stockx/backfill/catalog', {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setCatalogHydrationResult(
+          `✅ Hydrated ${data.hydratedProducts} products (${data.links} mappings, ${data.errors || 0} errors)`
+        )
+      } else {
+        setCatalogHydrationResult(`❌ Error: ${data.error || 'Failed to hydrate catalog'}`)
+      }
+    } catch (error: any) {
+      setCatalogHydrationResult(`❌ Error: ${error.message}`)
+    } finally {
+      setHydratingCatalog(false)
+    }
   }
 
   const handleClearCache = async () => {
@@ -411,6 +438,27 @@ export default function SettingsPage() {
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Re-sync Data
+                    </Button>
+                  </div>
+
+                  {/* StockX Catalog Hydration */}
+                  <div className="flex items-center justify-between pb-4 border-b border-border/40">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-fg">StockX Product Images</h3>
+                      <p className="text-xs text-dim mt-1">
+                        Fetch missing product images and metadata from StockX
+                      </p>
+                      {catalogHydrationResult && (
+                        <p className="text-xs mt-2 font-mono text-fg">{catalogHydrationResult}</p>
+                      )}
+                    </div>
+                    <Button
+                      onClick={handleHydrateCatalog}
+                      disabled={hydratingCatalog}
+                      className="bg-blue-500 text-white hover:bg-blue-600"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {hydratingCatalog ? 'Hydrating...' : 'Hydrate Catalog'}
                     </Button>
                   </div>
 

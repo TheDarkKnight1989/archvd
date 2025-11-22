@@ -26,6 +26,12 @@ export interface ReportMetrics {
   totalSpend: number
   netProfit: number
 
+  // Additional metrics
+  avgProfitPerSale?: number
+  conversionRate?: number
+  totalFees?: number
+  avgHoldingPeriod?: number
+
   // Period info
   dateRange: { from: string; to: string }
   currency: Currency

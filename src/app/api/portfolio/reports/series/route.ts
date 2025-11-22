@@ -173,9 +173,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to SeriesPoint[]
-    const points: SeriesPoint[] = (snapshots || []).map((snapshot) => ({
+    const points: SeriesPoint[] = (snapshots || []).map((snapshot: any) => ({
       date: snapshot.date,
-      value: parseFloat(snapshot[columnName as keyof typeof snapshot] as string) || 0,
+      value: parseFloat(snapshot[columnName] as string) || 0,
     }))
 
     const response: SeriesResponse = {

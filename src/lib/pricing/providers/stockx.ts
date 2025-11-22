@@ -23,9 +23,11 @@ export async function lookupBySKU(sku: string, currency: string = 'USD'): Promis
     const client = getStockxClient()
 
     // Step 1: Search for product by SKU using official v2 catalog API
-    const searchResponse = await client.request<any>(
-      `/v2/catalog/search?query=${encodeURIComponent(sku)}`
-    )
+    let searchUrl = `/v2/catalog/search?query=${encodeURIComponent(sku)}`
+    if (currency) {
+      searchUrl += `&currencyCode=${currency}`
+    }
+    const searchResponse = await client.request<any>(searchUrl)
 
     if (!searchResponse?.products || searchResponse.products.length === 0) {
       console.log(`[StockX] No products found for SKU: ${sku}`)
@@ -54,10 +56,29 @@ export async function lookupBySKU(sku: string, currency: string = 'USD'): Promis
         `/v2/catalog/products/${product.productId}/market-data?currencyCode=${currency}`
       )
 
-      // Get average market price across all sizes (or use specific size if needed)
-      const lowestAsk = marketResponse.lowestAsk
-      const lastSale = marketResponse.lastSale
-      const marketPrice = lowestAsk || lastSale
+      // Market-data endpoint returns an array of variants
+      const variants = Array.isArray(marketResponse) ? marketResponse : []
+
+      if (variants.length === 0) {
+        console.log(`[StockX] No market data available for SKU: ${sku}`)
+        return { product: productInfo }
+      }
+
+      // Calculate average market price across all sizes that have data
+      // Filter out variants without pricing data
+      const validVariants = variants.filter((v: any) => v.lowestAskAmount)
+
+      if (validVariants.length === 0) {
+        console.log(`[StockX] No market price available for SKU: ${sku}`)
+        return { product: productInfo }
+      }
+
+      // Use average lowestAsk across all sizes
+      const avgLowestAsk = validVariants
+        .filter((v: any) => v.lowestAskAmount)
+        .reduce((sum: number, v: any) => sum + v.lowestAskAmount, 0) / validVariants.filter((v: any) => v.lowestAskAmount).length
+
+      const marketPrice = avgLowestAsk
 
       if (!marketPrice) {
         console.log(`[StockX] No market price available for SKU: ${sku}`)

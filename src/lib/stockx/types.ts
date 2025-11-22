@@ -3,10 +3,119 @@
  *
  * Comprehensive type definitions for all StockX v2 API entities.
  * Covers: Catalog, Listings, Orders, Market Data, and Batch Operations.
+ *
+ * Structure:
+ * - Raw types: Match exact StockX API JSON responses
+ * - Domain types: Normalized, app-friendly representations
+ * - Mappers: Convert raw → domain (in separate files)
  */
 
 // ============================================================================
-// CATALOG TYPES
+// RAW API TYPES (exact StockX response structure)
+// ============================================================================
+
+/**
+ * Raw search response from /v2/catalog/search
+ * Based on actual API observations
+ */
+export interface StockxRawSearchResponse {
+  products: StockxRawProduct[]
+  // Pagination fields may vary, these are optional
+  totalResults?: number
+  page?: number
+  pageSize?: number
+}
+
+/**
+ * Raw product from StockX API
+ * Fields match actual API response (not documentation)
+ */
+export interface StockxRawProduct {
+  productId: string  // UUID
+  styleId: string    // SKU/style code (e.g., "DC7350-100")
+  brand: string
+  productType: string
+  urlKey: string
+  title: string
+  productAttributes?: {
+    colorway?: string
+    releaseDate?: string
+    retailPrice?: number
+    retailCurrency?: string
+    gender?: string
+    category?: string
+  }
+  media?: {
+    imageUrl?: string
+    thumbUrl?: string
+    smallImageUrl?: string
+  }
+}
+
+/**
+ * Raw variant from /v2/catalog/products/{id}/variants
+ */
+export interface StockxRawVariant {
+  variantId: string
+  productId: string
+  variantValue: string  // Size display value
+  size?: string         // Alternative size field
+  gtins?: string[]
+  hidden?: boolean
+  market?: {
+    lowestAskCents?: number
+    highestBidCents?: number
+    salesLast72Hours?: number
+  }
+}
+
+/**
+ * Raw market data item from /v2/catalog/products/{id}/market-data
+ * Returns an array of these, one per variant
+ */
+export interface StockxRawMarketDataItem {
+  variantId: string
+  productId?: string
+  lowestAskAmount?: number
+  highestBidAmount?: number
+  salesLast72Hours?: number
+  totalSalesVolume?: number
+  averageDeadstockPrice?: number
+  volatility?: number
+  pricePremium?: number
+}
+
+/**
+ * Raw listing from /v2/selling/listings
+ */
+export interface StockxRawListing {
+  listingId: string
+  productId: string
+  variantId: string
+  amountCents: number  // Price in cents
+  currencyCode: string
+  status: string
+  expiresAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Raw listing creation response
+ */
+export interface StockxRawListingCreated {
+  listingId: string
+  productId: string
+  variantId: string
+  amountCents: number
+  currencyCode: string
+  status: string
+  createdAt: string
+  expiresAt?: string
+}
+
+// ============================================================================
+// DOMAIN TYPES (normalized app types)
 // ============================================================================
 
 /**
@@ -55,7 +164,6 @@ export interface StockxMarketData {
   currencyCode: string
 
   // Sales statistics
-  lastSalePrice?: number
   salesLast72Hours?: number
   totalSalesVolume?: number
 
@@ -67,12 +175,6 @@ export interface StockxMarketData {
   averageDeadstockPrice?: number
   volatility?: number
   pricePremium?: number
-
-  // Price history (last 365 days)
-  lastSalePriceByDay?: Array<{
-    date: string
-    price: number
-  }>
 }
 
 /**
@@ -348,7 +450,6 @@ export interface StockxMarketSnapshot {
   variant_id: string // Our variant UUID (FK)
   currency_code: string
 
-  last_sale_price?: number
   sales_last_72_hours?: number
   total_sales_volume?: number
   lowest_ask?: number

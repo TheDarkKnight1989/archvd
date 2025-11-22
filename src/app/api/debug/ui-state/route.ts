@@ -22,11 +22,15 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient()
 
   // Get dashboard overview (use first user as example, or aggregate)
-  const { data: overview } = await supabase
-    .rpc('get_dashboard_overview')
-    .single()
-    .then(res => ({ data: res.data }))
-    .catch(() => ({ data: null }))
+  let overview = null
+  try {
+    const { data } = await supabase
+      .rpc('get_dashboard_overview')
+      .single()
+    overview = data
+  } catch (error) {
+    // Ignore error, overview will be null
+  }
 
   // Fallback if no RPC: aggregate manually
   const { data: inventory } = await supabase

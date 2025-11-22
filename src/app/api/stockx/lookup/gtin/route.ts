@@ -70,17 +70,14 @@ export async function GET(request: NextRequest) {
 
     console.log('[GTIN Lookup] Found via StockX API:', result.product.styleId)
 
-    // Save to database
-    const { productId } = await catalogService.saveToDatabase(result.product, [result.variant])
-
-    // Also cache in catalog_cache
+    // Cache in catalog_cache for faster future lookups
     await supabase.from('catalog_cache').upsert(
       {
         sku: result.product.styleId,
         brand: result.product.brand,
-        model: result.product.title,
+        model: result.product.productName,
         colorway: result.product.colorway,
-        image_url: result.product.imageUrl || result.product.thumbUrl,
+        image_url: result.product.image,
         source: 'stockx_v2_gtin',
         confidence: 98,
         updated_at: new Date().toISOString(),
@@ -95,9 +92,9 @@ export async function GET(request: NextRequest) {
         product: {
           sku: result.product.styleId,
           brand: result.product.brand,
-          name: result.product.title,
+          name: result.product.productName,
           colorway: result.product.colorway,
-          image_url: result.product.imageUrl || result.product.thumbUrl,
+          image_url: result.product.image,
           retail_price: result.product.retailPrice,
         },
         variant: {
@@ -106,9 +103,9 @@ export async function GET(request: NextRequest) {
         },
         marketData: result.marketData
           ? {
-              lastSalePrice: result.marketData.lastSalePrice,
               lowestAsk: result.marketData.lowestAsk,
               highestBid: result.marketData.highestBid,
+              marketPrice: result.marketData.highestBid ?? result.marketData.lowestAsk ?? null,
               currency: result.marketData.currencyCode,
             }
           : null,

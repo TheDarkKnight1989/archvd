@@ -76,7 +76,7 @@ Provider: ${provider?.toUpperCase() || 'Unknown'}`
       <div
         className={cn(
           'font-mono font-medium tabular-nums text-right',
-          isStale ? 'text-muted' : 'text-fg'
+          isStale ? 'text-muted' : 'text-blue-600'
         )}
       >
         {format(gross, displayCurrency)}

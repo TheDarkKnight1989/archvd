@@ -14,13 +14,14 @@ import {
   isStockxMockMode,
 } from '@/lib/config/stockx'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@/lib/supabase/service'
 
 // ============================================================================
 // Types
 // ============================================================================
 
 export interface StockxRequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   headers?: Record<string, string>
   body?: any
   retries?: number
@@ -74,7 +75,8 @@ export class StockxClient {
     }
 
     try {
-      const supabase = await createClient()
+      // Use service client to bypass RLS when loading tokens for background workers
+      const supabase = createServiceClient()
       const { data, error } = await supabase
         .from('stockx_accounts')
         .select('access_token, refresh_token, token_type, expires_at, scope')
@@ -135,8 +137,8 @@ export class StockxClient {
       const expiresIn = data.expires_in || 3600
       const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
-      // Persist refreshed tokens to database
-      const supabase = await createClient()
+      // Persist refreshed tokens to database (use service client to bypass RLS)
+      const supabase = createServiceClient()
       await supabase
         .from('stockx_accounts')
         .update({
@@ -372,7 +374,17 @@ export class StockxClient {
             statusText: response.statusText,
             error: errorText,
           })
-          throw new Error(`StockX API error: ${response.status} ${response.statusText}`)
+
+          // Try to parse error details from response
+          let errorDetails = errorText
+          try {
+            const errorJson = JSON.parse(errorText)
+            errorDetails = errorJson.message || errorJson.error || errorJson.detail || errorText
+          } catch {
+            // If not JSON, use raw text
+          }
+
+          throw new Error(`StockX API error: ${response.status} ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`)
         }
 
         // Success

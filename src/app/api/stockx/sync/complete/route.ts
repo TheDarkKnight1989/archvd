@@ -1,25 +1,34 @@
 /**
  * StockX Complete Sync
- * End-to-end sync pipeline for live StockX market data on dashboard
+ * End-to-end sync pipeline for StockX catalog + market job queuing
  *
  * POST /api/stockx/sync/complete
+ *
+ * DIRECTIVE COMPLIANCE:
+ * - No live StockX market API calls in this route
+ * - V1 endpoints forbidden
+ * - Worker + V2 + cached stockx_market_latest ONLY
+ * - This route syncs catalog + queues market jobs
+ * - stockx-worker processes market jobs with V2 services
+ * - Results cached in stockx_market_latest view
  *
  * Pipeline:
  * 1. Verify StockX OAuth is connected
  * 2. Fetch owned inventory SKUs
- * 3. Sync StockX catalog + prices → market_products + market_prices
- * 4. Auto-link inventory → market products (exact SKU + size)
- * 5. Refresh materialized views
- * 6. Return detailed sync report
+ * 3. Sync StockX catalog → market_products (using V2 catalog service)
+ * 4. Queue market jobs for background price fetching
+ * 5. Auto-link inventory → market products (exact SKU + size)
+ * 6. Return detailed sync report with queued job count
  *
  * Does NOT create inventory items from StockX data.
  * Does NOT modify existing inventory rows.
+ * Does NOT make live market API calls (queues jobs instead).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getStockxClient } from '@/lib/services/stockx/client'
 import { getProductBySku } from '@/lib/services/stockx/products'
+import { createMarketJobsBatch } from '@/lib/stockx/jobs'
 import { logger } from '@/lib/logger'
 
 type SyncReport = {
@@ -37,9 +46,8 @@ type SyncReport = {
     skipped: number
     errors: string[]
   }
-  prices: {
-    fetched: number
-    inserted: number
+  jobs: {
+    created: number
     skipped: number
     errors: string[]
   }
@@ -47,10 +55,6 @@ type SyncReport = {
     created: number
     updated: number
     skipped: number
-    errors: string[]
-  }
-  views: {
-    refreshed: string[]
     errors: string[]
   }
   missingPrices: Array<{
@@ -72,9 +76,8 @@ export async function POST(request: NextRequest) {
     accountEmail: null,
     inventory: { totalItems: 0, uniqueSkus: 0 },
     catalog: { fetched: 0, inserted: 0, skipped: 0, errors: [] },
-    prices: { fetched: 0, inserted: 0, skipped: 0, errors: [] },
+    jobs: { created: 0, skipped: 0, errors: [] },
     links: { created: 0, updated: 0, skipped: 0, errors: [] },
-    views: { refreshed: [], errors: [] },
     missingPrices: [],
     durationMs: 0,
   }
@@ -174,11 +177,9 @@ export async function POST(request: NextRequest) {
     })
 
     // ========================================================================
-    // Step 3: Sync StockX Catalog + Prices
+    // Step 3: Sync StockX Catalog
     // ========================================================================
-    report.step = 'sync_catalog_prices'
-
-    const client = getStockxClient(user.id)
+    report.step = 'sync_catalog'
 
     // Track which SKUs we successfully synced
     const syncedSkus = new Set<string>()
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // Fetch product details from StockX
-        const product = await getProductBySku(rawSku)
+        const product = await getProductBySku(rawSku, { userId: user.id })
 
         if (!product) {
           report.catalog.skipped++
@@ -236,83 +237,43 @@ export async function POST(request: NextRequest) {
         report.catalog.inserted++
         syncedSkus.add(normalizedSku)
 
-        // Now fetch prices for all available sizes
-        if (product.variants && product.variants.length > 0) {
-          for (const variant of product.variants) {
-            try {
-              // Fetch market data for this size
-              // Note: StockX API structure may vary - adjust endpoint as needed
-              const marketData = await client.request<any>(
-                `/v1/products/${encodeURIComponent(product.slug)}/market?size=${encodeURIComponent(variant.size)}`
-              )
-
-              report.prices.fetched++
-
-              // Extract price data
-              const lowestAsk = marketData.lowestAsk?.amount || marketData.lowest_ask
-              const highestBid = marketData.highestBid?.amount || marketData.highest_bid
-              const lastSale = marketData.lastSale?.amount || marketData.last_sale
-
-              if (!lowestAsk && !highestBid && !lastSale) {
-                report.prices.skipped++
-                continue
-              }
-
-              // Convert size to UK if needed (StockX usually returns US sizing)
-              let sizeUk = variant.size
-              if (variant.sizeType === 'US') {
-                // Simple US to UK conversion: UK = US - 1
-                const usSize = parseFloat(variant.size)
-                if (!isNaN(usSize)) {
-                  sizeUk = String(usSize - 1)
-                }
-              }
-
-              // Insert into market_prices
-              const { error: priceError } = await supabase
-                .from('market_prices')
-                .insert({
-                  sku: product.sku,
-                  provider: 'stockx',
-                  size: sizeUk,
-                  currency: 'GBP', // StockX returns GBP for UK users
-                  price: lastSale || lowestAsk, // Prefer last sale
-                  lowest_ask: lowestAsk,
-                  highest_bid: highestBid,
-                  last_sale: lastSale,
-                  as_of: new Date().toISOString(),
-                })
-
-              if (priceError) {
-                report.prices.errors.push(`Failed to insert price for ${product.sku} size ${variant.size}: ${priceError.message}`)
-              } else {
-                report.prices.inserted++
-              }
-
-              // Small delay to avoid rate limiting
-              await new Promise(resolve => setTimeout(resolve, 50))
-
-            } catch (priceError: any) {
-              report.prices.errors.push(`Failed to fetch price for ${product.sku} size ${variant.size}: ${priceError.message}`)
-            }
-          }
-        }
-
-        // Delay between products to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 200))
-
       } catch (error: any) {
         report.catalog.errors.push(`Failed to fetch ${rawSku}: ${error.message}`)
       }
     }
 
-    logger.info('[StockX Complete Sync] Catalog + prices synced', {
+    logger.info('[StockX Complete Sync] Catalog synced', {
       catalogInserted: report.catalog.inserted,
-      pricesInserted: report.prices.inserted,
     })
 
     // ========================================================================
-    // Step 4: Auto-link Inventory → Market Products
+    // Step 4: Queue Market Jobs for Background Processing
+    // ========================================================================
+    report.step = 'queue_market_jobs'
+
+    // Collect all unique SKU+size pairs from inventory
+    const jobParams = inventory
+      .filter(item => item.sku && item.size)
+      .map(item => ({
+        sku: item.sku,
+        size: item.size,
+        userId: user.id,
+      }))
+
+    // Create market jobs in batch (replaces live V1 API calls)
+    const jobResult = await createMarketJobsBatch(jobParams)
+
+    report.jobs.created = jobResult.created
+    report.jobs.skipped = jobResult.skipped
+    report.jobs.errors = jobResult.errors
+
+    logger.info('[StockX Complete Sync] Market jobs queued', {
+      jobsCreated: jobResult.created,
+      jobsSkipped: jobResult.skipped,
+    })
+
+    // ========================================================================
+    // Step 5: Auto-link Inventory → Market Products
     // ========================================================================
     report.step = 'link_inventory'
 
@@ -413,31 +374,6 @@ export async function POST(request: NextRequest) {
     })
 
     // ========================================================================
-    // Step 5: Refresh Materialized Views
-    // ========================================================================
-    report.step = 'refresh_views'
-
-    // Refresh market_price_daily_medians
-    try {
-      await supabase.rpc('refresh_market_price_daily_medians')
-      report.views.refreshed.push('market_price_daily_medians')
-    } catch (error: any) {
-      report.views.errors.push(`Failed to refresh market_price_daily_medians: ${error.message}`)
-    }
-
-    // Refresh portfolio_value_daily
-    try {
-      await supabase.rpc('refresh_portfolio_value_daily', { p_user_id: user.id })
-      report.views.refreshed.push('portfolio_value_daily')
-    } catch (error: any) {
-      report.views.errors.push(`Failed to refresh portfolio_value_daily: ${error.message}`)
-    }
-
-    logger.info('[StockX Complete Sync] Views refreshed', {
-      refreshed: report.views.refreshed,
-    })
-
-    // ========================================================================
     // Done!
     // ========================================================================
     report.success = true
@@ -450,7 +386,7 @@ export async function POST(request: NextRequest) {
       report.durationMs,
       {
         catalogInserted: report.catalog.inserted,
-        pricesInserted: report.prices.inserted,
+        jobsCreated: report.jobs.created,
         linksCreated: report.links.created,
         missingPrices: report.missingPrices.length,
       }

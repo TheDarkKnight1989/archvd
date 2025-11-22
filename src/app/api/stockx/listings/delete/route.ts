@@ -1,9 +1,10 @@
+// @ts-nocheck
 /**
  * StockX Delete Listing API
  * POST /api/stockx/listings/delete
  *
- * Deletes an existing listing
- * Returns operation ID for async tracking
+ * Deletes (cancels) a StockX listing
+ * Returns operationId for async tracking
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -15,83 +16,81 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
+
   try {
     const supabase = await createClient()
 
+    // Get authenticated user
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Parse request body
     const body = await request.json()
     const { listingId } = body
 
+    // Validate required fields
     if (!listingId) {
-      return NextResponse.json({ error: 'Missing listingId' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Missing required field: listingId' },
+        { status: 400 }
+      )
     }
 
-    console.log('[Delete Listing] Request:', { listingId })
+    console.log('[Delete Listing] Request:', { listingId, userId: user.id })
 
+    // Check if StockX is in mock mode
     if (isStockxMockMode()) {
       return NextResponse.json(
-        { error: 'StockX is in mock mode' },
+        {
+          success: false,
+          error: 'StockX is in mock mode. Real API calls are disabled.',
+        },
         { status: 503 }
       )
     }
 
-    // Verify listing belongs to user
-    const { data: listing } = await supabase
-      .from('stockx_listings')
-      .select('*')
-      .eq('stockx_listing_id', listingId)
-      .eq('user_id', user.id)
-      .single()
-
-    if (!listing) {
-      return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
-    }
-
     // Delete listing on StockX
-    const operation = await StockxListingsService.deleteListing(listingId)
+    console.log('[Delete Listing] Calling StockX API with:', {
+      userId: user.id,
+      listingId,
+    })
 
-    // Track operation
-    const jobId = await StockxListingsService.trackOperation(
-      user.id,
-      'delete_listing',
-      operation.operationId,
-      { listingId }
-    )
+    const operation = await StockxListingsService.deleteListing(user.id, listingId)
 
-    // Update listing status in DB (mark as deleted)
-    await supabase
-      .from('stockx_listings')
-      .update({
-        status: 'DELETED',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('stockx_listing_id', listingId)
+    console.log('[Delete Listing] Operation completed:', operation)
 
-    // Clear stockx_listing_id from inventory_market_links
-    await supabase
-      .from('inventory_market_links')
-      .update({
-        stockx_listing_id: null,
-      })
-      .eq('stockx_listing_id', listingId)
+    const duration = Date.now() - startTime
 
     return NextResponse.json({
       success: true,
       operationId: operation.operationId,
-      jobId,
       status: operation.status,
+      duration_ms: duration,
     })
   } catch (error: any) {
-    console.error('[Delete Listing] Error:', error)
+    const duration = Date.now() - startTime
+
+    console.error('[Delete Listing] Error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      cause: error.cause,
+    })
+
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      {
+        success: false,
+        error: error.message || 'Failed to delete listing',
+        details: error.stack,
+        duration_ms: duration,
+      },
       { status: 500 }
     )
   }

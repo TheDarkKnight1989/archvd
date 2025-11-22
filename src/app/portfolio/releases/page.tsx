@@ -467,7 +467,7 @@ export default function ReleasesPage() {
                   name={release.model}
                   brand={release.brand}
                   colorway={release.colorway ?? undefined}
-                  releaseDateISO={release.release_date ?? undefined}
+                  releaseDateISO={release.release_date || ''}
                   retailers={
                     release.retailers?.map((r) => ({
                       name: r.name,

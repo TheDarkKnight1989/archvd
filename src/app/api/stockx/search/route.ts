@@ -7,8 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isStockxEnabled, isStockxMockMode } from '@/lib/config/stockx'
 import { searchProducts } from '@/lib/services/stockx/products'
-import { getSalesHistory } from '@/lib/services/stockx/market'
-import { supabase } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/server'
 
 // ============================================================================
 // Types
@@ -16,16 +15,19 @@ import { supabase } from '@/lib/supabase/client'
 
 interface EnrichedSearchResult {
   id: string
-  sku: string
-  name: string
+  styleId: string
+  title: string
   brand: string
   imageUrl: string | null
+  urlKey?: string
+  colorway?: string
   medianPrice: number | null
   currency: string
   delta7d: number | null
   sparkline7d: Array<{ date: string; value: number }>
   lastSale: number | null
   lowestAsk: number | null
+  highestBid: number | null
   asOf: string | null
 }
 
@@ -36,10 +38,12 @@ interface EnrichedSearchResult {
 const MOCK_SEARCH_RESULTS: EnrichedSearchResult[] = [
   {
     id: 'mock-stockx-001',
-    sku: 'DD1391-100',
-    name: 'Nike Dunk Low Panda (2021)',
+    styleId: 'DD1391-100',
+    title: 'Nike Dunk Low Panda (2021)',
     brand: 'Nike',
     imageUrl: 'https://images.stockx.com/images/Nike-Dunk-Low-Panda.jpg',
+    urlKey: 'nike-dunk-low-panda-2021',
+    colorway: 'White/Black',
     medianPrice: 145.50,
     currency: 'GBP',
     delta7d: 2.3,
@@ -54,14 +58,17 @@ const MOCK_SEARCH_RESULTS: EnrichedSearchResult[] = [
     ],
     lastSale: 147,
     lowestAsk: 150,
+    highestBid: 140,
     asOf: new Date().toISOString(),
   },
   {
     id: 'mock-stockx-002',
-    sku: 'DZ5485-612',
-    name: 'Air Jordan 1 High OG University Red',
+    styleId: 'DZ5485-612',
+    title: 'Air Jordan 1 High OG University Red',
     brand: 'Jordan',
     imageUrl: 'https://images.stockx.com/images/Air-Jordan-1-University-Red.jpg',
+    urlKey: 'air-jordan-1-high-og-university-red',
+    colorway: 'University Red',
     medianPrice: 185.00,
     currency: 'GBP',
     delta7d: -1.5,
@@ -76,6 +83,7 @@ const MOCK_SEARCH_RESULTS: EnrichedSearchResult[] = [
     ],
     lastSale: 185,
     lowestAsk: 190,
+    highestBid: 180,
     asOf: new Date().toISOString(),
   },
 ]
@@ -158,8 +166,8 @@ export async function GET(request: NextRequest) {
     if (isStockxMockMode()) {
       const filtered = MOCK_SEARCH_RESULTS.filter(
         (r) =>
-          r.name.toLowerCase().includes(query.toLowerCase()) ||
-          r.sku.toLowerCase().includes(query.toLowerCase()) ||
+          r.title.toLowerCase().includes(query.toLowerCase()) ||
+          r.styleId.toLowerCase().includes(query.toLowerCase()) ||
           r.brand.toLowerCase().includes(query.toLowerCase())
       )
 
@@ -184,12 +192,23 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Get current user for OAuth tokens
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not authenticated. Please sign in to search StockX products.' },
+        { status: 401 }
+      )
+    }
+
     // Real API - search products (with timeout and fallback)
-    let searchResult
+    let searchResult: Awaited<ReturnType<typeof searchProducts>>
     try {
       searchResult = await Promise.race([
-        searchProducts(query, { page, limit }),
-        new Promise((_, reject) =>
+        searchProducts(query, { page, limit, userId: user.id, currencyCode: currency }),
+        new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Search timeout after 8s')), 8000)
         )
       ])
@@ -199,8 +218,8 @@ export async function GET(request: NextRequest) {
       // Fallback to mock data on error
       const filtered = MOCK_SEARCH_RESULTS.filter(
         (r) =>
-          r.name.toLowerCase().includes(query.toLowerCase()) ||
-          r.sku.toLowerCase().includes(query.toLowerCase()) ||
+          r.title.toLowerCase().includes(query.toLowerCase()) ||
+          r.styleId.toLowerCase().includes(query.toLowerCase()) ||
           r.brand.toLowerCase().includes(query.toLowerCase())
       )
 
@@ -215,56 +234,39 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Enrich each product with pricing data
+    // Enrich each product with pricing data from database
     const enrichedResults: EnrichedSearchResult[] = await Promise.all(
       searchResult.products.map(async (product) => {
         try {
-          // Get 7-day sales history for median size (UK 9 / US 10)
-          const salesHistory = await getSalesHistory(product.sku, '10', {
-            limit: 30,
-            days: 7,
-            currency,
-          })
-
-          // Calculate median price
-          const prices = salesHistory.map((s) => s.salePrice).filter(Boolean)
-          const medianPrice =
-            prices.length > 0
-              ? prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)]
-              : null
-
-          // Build 7-day sparkline
-          const sparkline7d = salesHistory
-            .slice(-7)
-            .map((sale) => ({
-              date: new Date(sale.soldAt).toISOString().split('T')[0],
-              value: sale.salePrice,
-            }))
-
-          // Calculate 7-day delta
-          const delta7d = calculateDelta7d(sparkline7d)
-
-          // Get latest price info from our database
-          const { data: latestPrice } = await supabase
+          // Get latest price info from our database for all available sizes
+          const { data: priceRecords } = await supabase
             .from('stockx_latest_prices')
-            .select('last_sale, lowest_ask, as_of')
+            .select('last_sale, lowest_ask, highest_bid, as_of, size')
             .eq('sku', product.sku)
-            .eq('size', '10')
             .eq('currency', currency)
-            .single()
+            .order('as_of', { ascending: false })
+            .limit(10)
+
+          console.log(`[API /stockx/search] Found ${priceRecords?.length || 0} price records for ${product.sku}`)
+
+          // Use the most recent record with actual pricing data
+          const latestPrice = priceRecords?.find(p => p.last_sale || p.lowest_ask) || priceRecords?.[0]
 
           return {
             id: product.id,
-            sku: product.sku,
-            name: product.name,
+            styleId: product.sku,
+            title: product.name,
             brand: product.brand,
             imageUrl: product.imageUrl || null,
-            medianPrice,
+            urlKey: product.slug,
+            colorway: product.colorway,
+            medianPrice: latestPrice?.last_sale || null,
             currency,
-            delta7d,
-            sparkline7d,
+            delta7d: null,
+            sparkline7d: [],
             lastSale: latestPrice?.last_sale || null,
             lowestAsk: latestPrice?.lowest_ask || null,
+            highestBid: latestPrice?.highest_bid || null,
             asOf: latestPrice?.as_of || null,
           }
         } catch (error) {
@@ -273,16 +275,19 @@ export async function GET(request: NextRequest) {
           // Return basic product info without enrichment
           return {
             id: product.id,
-            sku: product.sku,
-            name: product.name,
+            styleId: product.sku,
+            title: product.name,
             brand: product.brand,
             imageUrl: product.imageUrl || null,
+            urlKey: product.slug,
+            colorway: product.colorway,
             medianPrice: null,
             currency,
             delta7d: null,
             sparkline7d: [],
             lastSale: null,
             lowestAsk: null,
+            highestBid: null,
             asOf: null,
           }
         }

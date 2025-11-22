@@ -71,7 +71,7 @@ export const db = {
       return 'GBP' // Default fallback
     }
 
-    return data.base_currency as 'GBP' | 'EUR' | 'USD'
+    return (data as any).base_currency as 'GBP' | 'EUR' | 'USD'
   },
 
   /**
@@ -83,7 +83,7 @@ export const db = {
     toCurrency: string
   ): Promise<number> {
     const client = createServiceClient()
-    const { data, error } = await client.rpc('fx_rate_for', {
+    const { data, error } = await (client.rpc as any)('fx_rate_for', {
       date_in: date,
       from_ccy: fromCurrency,
       to_ccy: toCurrency
@@ -102,7 +102,7 @@ export const db = {
    */
   async migrateSoldToSales(inventoryId: string): Promise<string | null> {
     const client = createServiceClient()
-    const { data, error } = await client.rpc('fn_migrate_sold_to_sales', {
+    const { data, error } = await (client.rpc as any)('fn_migrate_sold_to_sales', {
       p_inventory_id: inventoryId
     })
 
@@ -125,7 +125,7 @@ export const db = {
     userId?: string
   ): Promise<void> {
     const client = createServiceClient()
-    await client.rpc('fn_log_app', {
+    await (client.rpc as any)('fn_log_app', {
       p_level: level,
       p_module: module,
       p_message: message,
@@ -139,7 +139,7 @@ export const db = {
    */
   async jobStart(jobName: string, meta?: Record<string, any>): Promise<string> {
     const client = createServiceClient()
-    const { data, error } = await client.rpc('fn_job_start', {
+    const { data, error } = await (client.rpc as any)('fn_job_start', {
       p_job_name: jobName,
       p_meta: meta ?? {}
     })
@@ -161,7 +161,7 @@ export const db = {
     meta?: Record<string, any>
   ): Promise<void> {
     const client = createServiceClient()
-    await client.rpc('fn_job_complete', {
+    await (client.rpc as any)('fn_job_complete', {
       p_run_id: runId,
       p_status: status,
       p_error: error ?? null,

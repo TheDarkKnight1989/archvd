@@ -27,6 +27,7 @@ export const itemSchema = z.object({
 
   // Org
   tags: z.array(z.string()).optional(),
+  watchlist_id: z.string().optional(),
 
   // Price override
   custom_market_value: z.number().optional(),

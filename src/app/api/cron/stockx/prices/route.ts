@@ -1,13 +1,21 @@
 /**
  * StockX Prices Cron Job
- * Syncs StockX market prices for all connected users
+ * Queues StockX market price jobs for all connected users
  * Triggered: Hourly by Vercel Cron
  * GET /api/cron/stockx/prices
+ *
+ * DIRECTIVE COMPLIANCE:
+ * - No live StockX API calls in this route
+ * - V1 endpoints forbidden
+ * - Worker + V2 + cached stockx_market_latest ONLY
+ * - This route queues jobs via market_jobs table
+ * - stockx-worker processes jobs with V2 services
+ * - Results cached in stockx_market_latest view
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getStockxClient } from '@/lib/services/stockx/client';
+import { createMarketJobsBatch } from '@/lib/stockx/jobs';
 import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -50,16 +58,14 @@ export async function GET(request: NextRequest) {
 
     logger.info('[Cron StockX Prices] Processing users', { count: accounts.length });
 
-    let totalProcessed = 0;
-    let totalUpserted = 0;
-    let totalSkipped = 0;
+    let totalJobsCreated = 0;
+    let totalJobsSkipped = 0;
     const errors: { userId: string; error: string }[] = [];
 
     // Process each user
     for (const account of accounts) {
       try {
         const userId = account.user_id;
-        const client = getStockxClient(userId);
 
         // Fetch distinct (SKU, size) pairs from user's inventory
         const { data: inventoryItems, error: inventoryError } = await supabase
@@ -84,80 +90,31 @@ export async function GET(request: NextRequest) {
         });
 
         const pairs = Array.from(uniquePairs.values());
-        let userProcessed = 0;
-        let userUpserted = 0;
-        let userSkipped = 0;
 
-        // Fetch prices for each (SKU, size) pair
-        for (const { sku, size } of pairs) {
-          try {
-            const marketData = await client.request(
-              `/api/v1/products/${encodeURIComponent(sku)}/market-data?size=${encodeURIComponent(size)}`,
-              { method: 'GET' }
-            );
+        // Queue market jobs in batch (replaces live V1 API calls)
+        const jobParams = pairs.map(({ sku, size }) => ({
+          sku,
+          size,
+          userId,
+        }));
 
-            userProcessed++;
+        const result = await createMarketJobsBatch(jobParams);
 
-            if (!marketData || !marketData.data) {
-              userSkipped++;
-              continue;
-            }
+        totalJobsCreated += result.created;
+        totalJobsSkipped += result.skipped;
 
-            const {
-              lowest_ask,
-              highest_bid,
-              last_sale,
-              currency = 'USD',
-              as_of,
-            } = marketData.data;
-
-            // Upsert into stockx_market_prices
-            const { error: priceError } = await supabase
-              .from('stockx_market_prices')
-              .insert({
-                sku,
-                size,
-                currency,
-                lowest_ask,
-                highest_bid,
-                last_sale,
-                as_of: as_of || new Date().toISOString(),
-                source: 'stockx',
-              });
-
-            if (priceError) {
-              logger.error('[Cron StockX Prices] Failed to insert price', {
-                error: priceError.message,
-                sku,
-                size,
-              });
-              userSkipped++;
-            } else {
-              userUpserted++;
-            }
-
-            // Small delay to avoid rate limiting
-            await new Promise((resolve) => setTimeout(resolve, 100));
-
-          } catch (error: any) {
-            logger.warn('[Cron StockX Prices] Failed to fetch price', {
-              sku,
-              size,
-              error: error.message,
-            });
-            userSkipped++;
-          }
+        if (result.errors.length > 0) {
+          logger.warn('[Cron StockX Prices] Some jobs failed to create', {
+            userId,
+            errors: result.errors,
+          });
         }
-
-        totalProcessed += userProcessed;
-        totalUpserted += userUpserted;
-        totalSkipped += userSkipped;
 
         logger.info('[Cron StockX Prices] User complete', {
           userId,
-          processed: userProcessed,
-          upserted: userUpserted,
-          skipped: userSkipped,
+          jobsCreated: result.created,
+          jobsSkipped: result.skipped,
+          totalPairs: pairs.length,
         });
 
       } catch (userError: any) {
@@ -172,36 +129,25 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Refresh materialized views after price sync
-    try {
-      await supabase.rpc('refresh_sneaker_daily_medians');
-      await supabase.rpc('refresh_portfolio_value_daily');
-      logger.info('[Cron StockX Prices] Materialized views refreshed');
-    } catch (mvError: any) {
-      logger.warn('[Cron StockX Prices] Failed to refresh materialized views', {
-        error: mvError.message,
-      });
-    }
-
     const duration = Date.now() - startTime;
 
     logger.info('[Cron StockX Prices] Complete', {
       duration,
       accounts: accounts.length,
-      processed: totalProcessed,
-      upserted: totalUpserted,
-      skipped: totalSkipped,
+      jobsQueued: totalJobsCreated,
+      jobsSkipped: totalJobsSkipped,
       errors: errors.length,
     });
 
     return NextResponse.json({
       success: true,
+      status: 'ok',
       accounts: accounts.length,
-      processed: totalProcessed,
-      upserted: totalUpserted,
-      skipped: totalSkipped,
+      jobsQueued: totalJobsCreated,
+      jobsSkipped: totalJobsSkipped,
       errors: errors.length > 0 ? errors : undefined,
       duration_ms: duration,
+      message: `Queued ${totalJobsCreated} market jobs for background processing. Worker will fetch prices using V2 API and cache in stockx_market_latest.`,
     });
 
   } catch (error: any) {

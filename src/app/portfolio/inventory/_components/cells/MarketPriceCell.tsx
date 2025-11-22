@@ -9,14 +9,38 @@ export interface MarketPriceCellProps {
   currency?: 'GBP' | 'EUR' | 'USD' | null
   provider: 'stockx' | 'alias' | 'ebay' | 'seed' | null | undefined
   updatedAt: string | null | undefined
+  // PHASE 3.11: StockX mapping health status
+  mappingStatus?: 'ok' | 'stockx_404' | 'invalid' | 'unmapped' | null
+  mappingError?: string | null
 }
 
 /**
  * MarketPriceCell - Market price with provider badge and time ago
  * WHY: Show price provenance (source + freshness) for trust
+ * PHASE 3.11: Show warning instead of price when mapping is invalid
  */
-export function MarketPriceCell({ price, currency, provider, updatedAt }: MarketPriceCellProps) {
+export function MarketPriceCell({ price, currency, provider, updatedAt, mappingStatus, mappingError }: MarketPriceCellProps) {
   const { format } = useCurrency()
+
+  // PHASE 3.11: Check mapping health for StockX items
+  const isInvalidMapping =
+    provider === 'stockx' &&
+    mappingStatus &&
+    (mappingStatus === 'stockx_404' || mappingStatus === 'invalid')
+
+  if (isInvalidMapping) {
+    return (
+      <div className="text-right">
+        <div className="text-sm text-dim mono">—</div>
+        <div className="flex items-center justify-end gap-1.5 mt-1">
+          <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-yellow-500/10 text-yellow-600 border border-yellow-500/20"
+               title={mappingError || 'StockX mapping is broken - price unavailable'}>
+            ⚠ Unavailable
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!price) {
     return (

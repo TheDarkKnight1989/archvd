@@ -49,7 +49,7 @@ async function debugStockXVisibility() {
       if (listing) {
         console.log(`  📋 Has listing: ${listing.stockx_listing_id}`)
         console.log(`     Status: ${listing.status}`)
-        console.log(`     Ask: $${listing.amount / 100}`)
+        console.log(`     Ask: $${listing.amount}`)  // BUG FIX: Amount already in major units
         console.log('  → "List on StockX" should NOT appear')
         console.log(`  → Should show: Reprice, ${listing.status === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}, Delete`)
       } else {

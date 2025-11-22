@@ -421,7 +421,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                           <thead>
                             <tr className="border-b border-border/20">
                               <th className="text-left py-3 px-4 text-xs text-muted uppercase tracking-wider">UK Size</th>
-                              <th className="text-right py-3 px-4 text-xs text-muted uppercase tracking-wider">Last Sale</th>
                               <th className="text-right py-3 px-4 text-xs text-muted uppercase tracking-wider">Lowest Ask</th>
                               <th className="text-right py-3 px-4 text-xs text-muted uppercase tracking-wider">Highest Bid</th>
                             </tr>
@@ -437,11 +436,6 @@ export default function ProductPage({ params }: ProductPageProps) {
                               >
                                 <td className="py-3 px-4">
                                   <span className="text-sm font-medium text-fg">{sizeData.size}</span>
-                                </td>
-                                <td className="text-right py-3 px-4">
-                                  <span className="text-sm font-mono text-fg tabular-nums">
-                                    {sizeData.last_sale ? format(sizeData.last_sale) : '—'}
-                                  </span>
                                 </td>
                                 <td className="text-right py-3 px-4">
                                   <span className="text-sm font-mono text-success tabular-nums">

@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
 
       // Current median (from latest price or first series point)
       const median = latestPrice
-        ? (latestPrice.last_sale || latestPrice.ask || day0)
+        ? (latestPrice.ask || day0)
         : day0;
 
       return {

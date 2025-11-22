@@ -250,7 +250,7 @@ export default function WatchlistsPage() {
             {watchlists.map((watchlist) => (
               <Card
                 key={watchlist.id}
-                elevation={selectedWatchlist?.id === watchlist.id ? 2 : 1}
+                elevation={selectedWatchlist?.id === watchlist.id ? 'medium' : 'soft'}
                 className={cn(
                   'p-4 cursor-pointer transition-boutique group',
                   selectedWatchlist?.id === watchlist.id

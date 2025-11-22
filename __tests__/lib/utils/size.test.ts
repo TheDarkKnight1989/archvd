@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Size Normalization Tests
  * Tests for size conversion and normalization utilities

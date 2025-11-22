@@ -21,6 +21,7 @@ export function ItemCell({ item, onClick }: ItemCellProps) {
       marketImageUrl={item.image.src}
       inventoryImageUrl={item.image.src}
       provider={item.market.provider}
+      imageSource={item.imageSource}
 
       // Product info
       brand={item.brand}

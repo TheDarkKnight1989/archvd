@@ -1,6 +1,19 @@
 /**
  * StockX Products API
  * Product search, details, and variant size mapping
+ *
+ * @deprecated This file is DEPRECATED. Use catalog.ts instead.
+ *
+ * MIGRATION GUIDE:
+ * - searchProducts() → StockxCatalogService.searchProducts()
+ * - getProductBySku() → StockxCatalogService.searchProducts(sku) then getProduct()
+ * - getProductBySlug() → No direct equivalent, use search
+ *
+ * WHY DEPRECATED:
+ * - Duplicates functionality from catalog.ts
+ * - Non-directive compliant data shapes
+ * - Returns null on errors instead of throwing
+ * - catalog.ts is the official, maintained service
  */
 
 import { getStockxClient } from './client'
@@ -89,13 +102,15 @@ export async function searchProducts(
   options: {
     page?: number
     limit?: number
+    userId?: string
+    currencyCode?: string
   } = {}
 ): Promise<StockxSearchResult> {
-  const { page = 1, limit = 20 } = options
+  const { page = 1, limit = 20, userId, currencyCode } = options
 
   // Mock mode
   if (isStockxMockMode()) {
-    console.log('[StockX Products] Mock search', { query, page, limit })
+    console.log('[StockX Products] Mock search', { query, page, limit, currencyCode })
 
     const filtered = MOCK_PRODUCTS.filter(p =>
       p.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -111,34 +126,40 @@ export async function searchProducts(
     }
   }
 
-  // Real API
-  const client = getStockxClient()
+  // Real API - Use v2 catalog/search endpoint with user's OAuth tokens
+  const client = getStockxClient(userId)
 
   try {
-    const response = await client.request<any>(
-      `/v1/products/search?query=${encodeURIComponent(query)}&page=${page}&limit=${limit}`
-    )
+    // Build URL with optional currencyCode parameter
+    let url = `/v2/catalog/search?query=${encodeURIComponent(query)}&pageNumber=${page}&pageSize=${limit}`
+    if (currencyCode) {
+      url += `&currencyCode=${currencyCode}`
+    }
 
-    // Map StockX response to our format
-    const products: StockxProduct[] = (response.data || []).map((item: any) => ({
-      id: item.id || item.uuid,
+    const response = await client.request<any>(url)
+
+    // Map StockX v2 response to our format
+    // V2 uses: products[], productId, styleId, title, productAttributes{}
+    const items = response.products || response.data || []
+    const products: StockxProduct[] = items.map((item: any) => ({
+      id: item.productId || item.id || item.uuid,
       sku: item.styleId || item.sku,
       slug: item.urlKey || item.slug,
       brand: item.brand,
       name: item.title || item.name,
-      model: item.model,
-      colorway: item.colorway,
+      model: item.model || item.productAttributes?.model,
+      colorway: item.productAttributes?.colorway || item.colorway,
       imageUrl: item.media?.imageUrl || item.image,
-      retailPrice: item.retailPrice,
-      releaseDate: item.releaseDate,
+      retailPrice: item.productAttributes?.retailPrice || item.retailPrice,
+      releaseDate: item.productAttributes?.releaseDate || item.releaseDate,
       meta: item,
     }))
 
     return {
       products,
-      total: response.pagination?.total || products.length,
-      page,
-      limit,
+      total: response.count || response.pagination?.total || products.length,
+      page: response.pageNumber || page,
+      limit: response.pageSize || limit,
     }
   } catch (error) {
     console.error('[StockX Products] Search failed:', error)
@@ -149,7 +170,14 @@ export async function searchProducts(
 /**
  * Get product details by SKU
  */
-export async function getProductBySku(sku: string): Promise<StockxProductDetails | null> {
+export async function getProductBySku(
+  sku: string,
+  options: {
+    userId?: string
+    currencyCode?: string
+  } = {}
+): Promise<StockxProductDetails | null> {
+  const { userId, currencyCode } = options
   // Mock mode
   if (isStockxMockMode()) {
     console.log('[StockX Products] Mock get product', { sku })
@@ -176,33 +204,75 @@ export async function getProductBySku(sku: string): Promise<StockxProductDetails
     }
   }
 
-  // Real API
-  const client = getStockxClient()
+  // Real API - Use v2 catalog/search with styleId (SKU)
+  const client = getStockxClient(userId)
 
   try {
-    const response = await client.request<any>(`/v1/products/${encodeURIComponent(sku)}`)
+    // Search by SKU (v2 search supports styleId)
+    let url = `/v2/catalog/search?query=${encodeURIComponent(sku)}&pageSize=1`
+    if (currencyCode) {
+      url += `&currencyCode=${currencyCode}`
+    }
+    const searchResponse = await client.request<any>(url)
 
-    const item = response.data || response
+    const items = searchResponse.products || searchResponse.data || []
+    if (items.length === 0) {
+      return null
+    }
 
+    const item = items[0]
+
+    // If we have a product ID, fetch full details with variants
+    const productId = item.productId || item.id
+    if (productId) {
+      try {
+        const detailsResponse = await client.request<any>(
+          `/v2/catalog/products/${productId}`
+        )
+        const detailItem = detailsResponse.data || detailsResponse
+
+        const product: StockxProductDetails = {
+          id: detailItem.productId || detailItem.id || detailItem.uuid,
+          sku: detailItem.styleId || detailItem.sku,
+          slug: detailItem.urlKey || detailItem.slug,
+          brand: detailItem.brand,
+          name: detailItem.title || detailItem.name,
+          model: detailItem.model || detailItem.productAttributes?.model,
+          colorway: detailItem.productAttributes?.colorway || detailItem.colorway,
+          imageUrl: detailItem.media?.imageUrl || detailItem.image,
+          retailPrice: detailItem.productAttributes?.retailPrice || detailItem.retailPrice,
+          releaseDate: detailItem.productAttributes?.releaseDate || detailItem.releaseDate,
+          meta: detailItem,
+          variants: (detailItem.variants || []).map((v: any) => ({
+            id: v.id || v.variantId,
+            productId: detailItem.productId || detailItem.id,
+            size: v.size,
+            sizeType: v.sizeType || 'US',
+            available: v.available !== false,
+          })),
+        }
+
+        return product
+      } catch (error) {
+        // If details fetch fails, fall back to search result
+        console.warn('[StockX Products] Failed to fetch full details, using search result')
+      }
+    }
+
+    // Fallback: use search result only (without variants)
     const product: StockxProductDetails = {
-      id: item.id || item.uuid,
+      id: item.productId || item.id || item.uuid,
       sku: item.styleId || item.sku,
       slug: item.urlKey || item.slug,
       brand: item.brand,
       name: item.title || item.name,
-      model: item.model,
-      colorway: item.colorway,
+      model: item.model || item.productAttributes?.model,
+      colorway: item.productAttributes?.colorway || item.colorway,
       imageUrl: item.media?.imageUrl || item.image,
-      retailPrice: item.retailPrice,
-      releaseDate: item.releaseDate,
+      retailPrice: item.productAttributes?.retailPrice || item.retailPrice,
+      releaseDate: item.productAttributes?.releaseDate || item.releaseDate,
       meta: item,
-      variants: (item.variants || []).map((v: any) => ({
-        id: v.id,
-        productId: item.id,
-        size: v.size,
-        sizeType: v.sizeType || 'US',
-        available: v.available !== false,
-      })),
+      variants: [],
     }
 
     return product
@@ -218,7 +288,14 @@ export async function getProductBySku(sku: string): Promise<StockxProductDetails
 /**
  * Get product details by slug
  */
-export async function getProductBySlug(slug: string): Promise<StockxProductDetails | null> {
+export async function getProductBySlug(
+  slug: string,
+  options: {
+    userId?: string
+    currencyCode?: string
+  } = {}
+): Promise<StockxProductDetails | null> {
+  const { userId, currencyCode } = options
   // Mock mode
   if (isStockxMockMode()) {
     console.log('[StockX Products] Mock get product by slug', { slug })
@@ -244,33 +321,79 @@ export async function getProductBySlug(slug: string): Promise<StockxProductDetai
     }
   }
 
-  // Real API
-  const client = getStockxClient()
+  // Real API - Use v2 catalog/search with slug/urlKey
+  const client = getStockxClient(userId)
 
   try {
-    const response = await client.request<any>(`/v1/products/slug/${encodeURIComponent(slug)}`)
+    // Search by slug (convert slug to search query)
+    const searchQuery = slug.replace(/-/g, ' ')
+    let url = `/v2/catalog/search?query=${encodeURIComponent(searchQuery)}&pageSize=5`
+    if (currencyCode) {
+      url += `&currencyCode=${currencyCode}`
+    }
+    const searchResponse = await client.request<any>(url)
 
-    const item = response.data || response
+    const items = searchResponse.products || searchResponse.data || []
 
+    // Find exact slug match
+    const item = items.find((p: any) =>
+      (p.urlKey || p.slug)?.toLowerCase() === slug.toLowerCase()
+    )
+
+    if (!item) {
+      return null
+    }
+
+    // If we have a product ID, fetch full details with variants
+    const productId = item.productId || item.id
+    if (productId) {
+      try {
+        const detailsResponse = await client.request<any>(
+          `/v2/catalog/products/${productId}`
+        )
+        const detailItem = detailsResponse.data || detailsResponse
+
+        const product: StockxProductDetails = {
+          id: detailItem.productId || detailItem.id || detailItem.uuid,
+          sku: detailItem.styleId || detailItem.sku,
+          slug: detailItem.urlKey || detailItem.slug,
+          brand: detailItem.brand,
+          name: detailItem.title || detailItem.name,
+          model: detailItem.model || detailItem.productAttributes?.model,
+          colorway: detailItem.productAttributes?.colorway || detailItem.colorway,
+          imageUrl: detailItem.media?.imageUrl || detailItem.image,
+          retailPrice: detailItem.productAttributes?.retailPrice || detailItem.retailPrice,
+          releaseDate: detailItem.productAttributes?.releaseDate || detailItem.releaseDate,
+          meta: detailItem,
+          variants: (detailItem.variants || []).map((v: any) => ({
+            id: v.id || v.variantId,
+            productId: detailItem.productId || detailItem.id,
+            size: v.size,
+            sizeType: v.sizeType || 'US',
+            available: v.available !== false,
+          })),
+        }
+
+        return product
+      } catch (error) {
+        console.warn('[StockX Products] Failed to fetch full details, using search result')
+      }
+    }
+
+    // Fallback: use search result only (without variants)
     const product: StockxProductDetails = {
-      id: item.id || item.uuid,
+      id: item.productId || item.id || item.uuid,
       sku: item.styleId || item.sku,
       slug: item.urlKey || item.slug,
       brand: item.brand,
       name: item.title || item.name,
-      model: item.model,
-      colorway: item.colorway,
+      model: item.model || item.productAttributes?.model,
+      colorway: item.productAttributes?.colorway || item.colorway,
       imageUrl: item.media?.imageUrl || item.image,
-      retailPrice: item.retailPrice,
-      releaseDate: item.releaseDate,
+      retailPrice: item.productAttributes?.retailPrice || item.retailPrice,
+      releaseDate: item.productAttributes?.releaseDate || item.releaseDate,
       meta: item,
-      variants: (item.variants || []).map((v: any) => ({
-        id: v.id,
-        productId: item.id,
-        size: v.size,
-        sizeType: v.sizeType || 'US',
-        available: v.available !== false,
-      })),
+      variants: [],
     }
 
     return product

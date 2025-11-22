@@ -8,35 +8,23 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { SizeSelector } from '@/components/forms/SizeSelector'
-import { TagInput } from '@/components/forms/TagInput'
-import { WatchlistCombobox } from '@/components/forms/WatchlistCombobox'
 import { Toast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils/cn'
-import { listWatchlists } from '@/lib/supabase/items'
 import { useCurrency } from '@/hooks/useCurrency'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Package, Info } from 'lucide-react'
 
-// Form validation schema
+// Form validation schema - SKU + Size only
 const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  styleId: z.string().optional(),
-  brand: z.string().optional(),
-  colorway: z.string().optional(),
-  condition: z.enum(['new', 'used', 'worn', 'defect']),
-  category: z.enum(['shoes', 'clothes', 'other']),
-  size: z.string().optional(),
-  sizeAlt: z.string().optional(),
+  sku: z.string().min(1, "SKU is required"),
+  size: z.string().min(1, "Size is required"),
+  sizeSystem: z.enum(['UK', 'US', 'EU']),
   purchasePrice: z.string().min(1, "Purchase price is required"),
+  purchaseDate: z.string().min(1, "Purchase date is required"),
   tax: z.string().optional(),
   shipping: z.string().optional(),
   placeOfPurchase: z.string().optional(),
-  purchaseDate: z.string().min(1, "Purchase date is required"),
-  tags: z.array(z.string()),
   orderNumber: z.string().optional(),
-  watchlist: z.string().optional(),
-  customMarketValue: z.string().optional(),
+  condition: z.enum(['new', 'used', 'worn', 'defect']),
   notes: z.string().max(250, "Notes must be 250 characters or less").optional(),
 })
 
@@ -64,35 +52,25 @@ const PLACE_OF_PURCHASE_OPTIONS = [
   'Other',
 ]
 
-// Mock watchlist options
-const MOCK_WATCHLISTS = [
-  { value: 'grails', label: 'Grails' },
-  { value: 'summer-2025', label: 'Summer 2025' },
-  { value: 'jordan-collection', label: 'Jordan Collection' },
+const SHOE_SIZES_UK = [
+  '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5',
+  '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5',
+  '11', '11.5', '12', '12.5', '13', '13.5', '14', '14.5',
+  '15', '15.5', '16'
 ]
 
-// Helper function to format relative time
-function formatRelativeTime(timestamp: string): string {
-  const now = new Date()
-  const then = new Date(timestamp)
-  const diffMs = now.getTime() - then.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
+const SHOE_SIZES_US = [
+  '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5',
+  '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5',
+  '12', '12.5', '13', '13.5', '14', '14.5', '15', '15.5',
+  '16', '16.5', '17', '17.5', '18'
+]
 
-  if (diffMins < 1) return 'just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffDays === 1) return 'yesterday'
-  if (diffDays < 7) return `${diffDays}d ago`
-
-  return then.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-  })
-}
+const SHOE_SIZES_EU = [
+  '36', '36.5', '37', '37.5', '38', '38.5', '39', '40',
+  '40.5', '41', '42', '42.5', '43', '44', '44.5', '45',
+  '45.5', '46', '47', '47.5', '48', '48.5', '49', '49.5', '50'
+]
 
 // Common input styles
 const inputClassName = cn(
@@ -103,53 +81,110 @@ const inputClassName = cn(
 
 const labelClassName = "font-display text-muted uppercase tracking-wide text-xs mb-2 block font-medium"
 
+interface ProductPreview {
+  productId: string
+  title: string
+  brand: string
+  colorway: string
+  image: string | null
+  gender: string
+  retailPrice: number | null
+  releaseDate: string | null
+  category: string
+  marketData?: {
+    lowestAsk: number | null
+    highestBid: number | null
+    currencyCode: string
+  }
+}
+
 export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProps) {
   const { symbol, format } = useCurrency()
+
+  // Load smart defaults from localStorage
+  const loadSmartDefaults = () => ({
+    sizeSystem: (localStorage.getItem('add_item_size_system') || 'UK') as 'UK' | 'US' | 'EU',
+    tax: localStorage.getItem('add_item_tax') || '',
+    shipping: localStorage.getItem('add_item_shipping') || '',
+    placeOfPurchase: localStorage.getItem('add_item_place') || '',
+  })
+
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    styleId: '',
-    brand: '',
-    colorway: '',
-    condition: 'new',
-    category: 'shoes',
+    sku: '',
     size: '',
-    sizeAlt: '',
+    sizeSystem: 'UK',
     purchasePrice: '',
+    purchaseDate: new Date().toISOString().split('T')[0],
     tax: '',
     shipping: '',
     placeOfPurchase: '',
-    purchaseDate: new Date().toISOString().split('T')[0],
-    tags: [],
     orderNumber: '',
-    watchlist: '',
-    customMarketValue: '',
+    condition: 'new',
     notes: '',
   })
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showCustomMarket, setShowCustomMarket] = useState(false)
   const [toast, setToast] = useState<{ message: string; variant: 'default' | 'success' | 'error' } | null>(null)
-  const [watchlists, setWatchlists] = useState(MOCK_WATCHLISTS)
-  const [isLoadingMarket, setIsLoadingMarket] = useState(false)
-  const [marketPreview, setMarketPreview] = useState<{
-    price: number
-    source: string
-    timestamp: string
-  } | null>(null)
-  const [marketLookupError, setMarketLookupError] = useState<string | null>(null)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
+  const [productPreview, setProductPreview] = useState<ProductPreview | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const [addAnother, setAddAnother] = useState(false)
 
-  // Load watchlists from database
+  // Reset form when modal opens and load smart defaults
   useEffect(() => {
     if (open) {
-      listWatchlists()
-        .then(data => {
-          const formatted = data.map(c => ({ value: c.id, label: c.name }))
-          setWatchlists(formatted)
-        })
-        .catch(err => console.error('Failed to load watchlists:', err))
+      const defaults = loadSmartDefaults()
+      setFormData({
+        sku: '',
+        size: '',
+        sizeSystem: defaults.sizeSystem,
+        purchasePrice: '',
+        purchaseDate: new Date().toISOString().split('T')[0],
+        tax: defaults.tax,
+        shipping: defaults.shipping,
+        placeOfPurchase: defaults.placeOfPurchase,
+        orderNumber: '',
+        condition: 'new',
+        notes: '',
+      })
+      setProductPreview(null)
+      setPreviewError(null)
+      setErrors({})
     }
   }, [open])
+
+  // Fetch market data when product and size are both available
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      if (!productPreview || !formData.size || !formData.sku) return
+
+      try {
+        const response = await fetch(
+          `/api/stockx/products/${encodeURIComponent(formData.sku)}/market-data?size=${encodeURIComponent(formData.size)}&sizeSystem=${formData.sizeSystem}`
+        )
+
+        if (!response.ok) return
+
+        const data = await response.json()
+
+        if (data.lowestAsk || data.highestBid) {
+          setProductPreview(prev => prev ? {
+            ...prev,
+            marketData: {
+              lowestAsk: data.lowestAsk,
+              highestBid: data.highestBid,
+              currencyCode: data.currency || 'GBP',
+            }
+          } : null)
+        }
+      } catch (error) {
+        console.error('Failed to fetch market data:', error)
+      }
+    }
+
+    fetchMarketData()
+  }, [productPreview?.productId, formData.size, formData.sku])
 
   // Computed subtotal
   const purchaseTotal = (
@@ -157,6 +192,33 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     parseFloat(formData.tax || '0') +
     parseFloat(formData.shipping || '0')
   ).toFixed(2)
+
+  // Computed profit indicators
+  const profitIndicator = (() => {
+    if (!productPreview?.marketData || !formData.purchasePrice) return null
+
+    const purchaseTotalNum = parseFloat(purchaseTotal)
+    const lowestAsk = productPreview.marketData.lowestAsk || 0
+
+    if (lowestAsk <= 0 || purchaseTotalNum <= 0) return null
+
+    const estimatedProfit = lowestAsk - purchaseTotalNum
+    const roi = (estimatedProfit / purchaseTotalNum) * 100
+
+    // Determine color coding
+    let colorClass = 'text-muted'
+    if (roi >= 20) colorClass = 'text-success'
+    else if (roi >= 10) colorClass = 'text-accent'
+    else if (roi >= 0) colorClass = 'text-warning'
+    else colorClass = 'text-danger'
+
+    return {
+      profit: estimatedProfit,
+      roi,
+      colorClass,
+      lowestAsk
+    }
+  })()
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -166,58 +228,53 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     }
   }
 
-  const handleStyleIdBlur = async () => {
-    const sku = formData.styleId?.trim()
+  // Auto-lookup product details when SKU is entered
+  const handleSkuBlur = async () => {
+    const sku = formData.sku?.trim()
     if (!sku) return
 
-    setIsLoadingMarket(true)
-    setMarketPreview(null)
-    setMarketLookupError(null)
+    setIsLoadingPreview(true)
+    setProductPreview(null)
+    setPreviewError(null)
 
     try {
-      // Call real pricing API
-      const category = formData.category === 'shoes' ? 'sneaker' : 'other'
-      const response = await fetch(`/api/pricing/quick?sku=${encodeURIComponent(sku)}&category=${category}`)
+      // Search StockX for product preview using catalog search
+      const response = await fetch(`/api/stockx/search?q=${encodeURIComponent(sku)}&limit=1`)
 
       if (!response.ok) {
-        if (response.status === 429) {
-          setMarketLookupError('Rate limit exceeded. Please wait before retrying.')
-        } else {
-          setMarketLookupError('Unable to fetch pricing data')
-        }
+        setPreviewError('Unable to fetch product details')
         return
       }
 
       const data = await response.json()
 
-      // Prefill product fields if available and empty
-      if (data.product) {
-        if (!formData.brand && data.product.brand) {
-          updateField('brand', data.product.brand)
-        }
-        if (!formData.name && data.product.name) {
-          updateField('name', data.product.name)
-        }
-        if (!formData.colorway && data.product.colorway) {
-          updateField('colorway', data.product.colorway)
-        }
-      }
+      if (data.results && data.results.length > 0) {
+        const product = data.results[0]
 
-      // Store market preview if price available
-      if (data.price && data.price.amount) {
-        setMarketPreview({
-          price: data.price.amount,
-          source: data.sources_used?.[0] || 'Unknown',
-          timestamp: data.price.timestamp,
-        })
-      } else if (!data.product && !data.price) {
-        setMarketLookupError('No data available for this SKU')
+        // Check for exact SKU match
+        if (product.styleId.toLowerCase() === sku.toLowerCase()) {
+          setProductPreview({
+            productId: product.id,
+            title: product.title,
+            brand: product.brand,
+            colorway: product.colorway || '',
+            image: product.imageUrl,
+            gender: '', // Not provided in search results
+            retailPrice: product.medianPrice || null,
+            releaseDate: null, // Not provided in search results
+            category: '', // Not provided in search results
+          })
+        } else {
+          setPreviewError(`No exact match found for SKU "${sku}"`)
+        }
+      } else {
+        setPreviewError(`No products found for SKU "${sku}"`)
       }
     } catch (error) {
-      console.error('Market lookup failed:', error)
-      setMarketLookupError('Unable to connect to pricing service')
+      console.error('Product lookup failed:', error)
+      setPreviewError('Unable to connect to StockX')
     } finally {
-      setIsLoadingMarket(false)
+      setIsLoadingPreview(false)
     }
   }
 
@@ -251,78 +308,84 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     setIsSubmitting(true)
 
     try {
-      // Transform form data to match API schema
+      // Call new API endpoint
       const payload = {
-        sku: formData.styleId || formData.name, // Use styleId as SKU, fallback to name
-        name: formData.name,
-        purchase_price: parseFloat(formData.purchasePrice),
-        style_id: formData.styleId || undefined,
-        brand: formData.brand || undefined,
-        model: formData.name, // Use name as model
-        colorway: formData.colorway || undefined,
-        condition: formData.condition ? (formData.condition.charAt(0).toUpperCase() + formData.condition.slice(1)) as 'New' | 'Used' | 'Worn' | 'Defect' : undefined,
-        category: formData.category === 'shoes' ? 'sneaker' : formData.category,
-        size_uk: formData.size || undefined,
-        size_alt: formData.sizeAlt || undefined,
+        sku: formData.sku.trim(),
+        size: formData.size.trim(),
+        sizeSystem: formData.sizeSystem,
+        purchasePrice: parseFloat(formData.purchasePrice),
+        purchaseDate: formData.purchaseDate,
         tax: formData.tax ? parseFloat(formData.tax) : undefined,
         shipping: formData.shipping ? parseFloat(formData.shipping) : undefined,
-        place_of_purchase: formData.placeOfPurchase || undefined,
-        purchase_date: formData.purchaseDate || undefined,
-        order_number: formData.orderNumber || undefined,
-        tags: formData.tags.length > 0 ? formData.tags : undefined,
-        watchlist_id: formData.watchlist || undefined,
-        custom_market_value: formData.customMarketValue ? parseFloat(formData.customMarketValue) : undefined,
-        notes: formData.notes || undefined,
+        placeOfPurchase: formData.placeOfPurchase?.trim() || undefined,
+        orderNumber: formData.orderNumber?.trim() || undefined,
+        condition: formData.condition,
+        notes: formData.notes?.trim() || undefined,
       }
 
-      // Call API
-      const res = await fetch('/api/items/add', {
+      const res = await fetch('/api/items/add-by-sku', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
 
+      const responseData = await res.json()
+
       if (!res.ok) {
-        const { error, issues } = await res.json()
-        throw new Error(error || 'Failed to add item')
+        if (responseData.code === 'NOT_FOUND') {
+          throw new Error(`Product not found on StockX for SKU "${formData.sku}"`)
+        } else if (responseData.code === 'NO_SIZE_MATCH') {
+          throw new Error(`Size ${formData.size} ${formData.sizeSystem} not available for this product`)
+        } else if (responseData.code === 'AMBIGUOUS_MATCH') {
+          throw new Error('Multiple products found with this SKU. Please contact support.')
+        } else {
+          throw new Error(responseData.error || 'Failed to add item')
+        }
       }
 
-      const { item } = await res.json()
-      console.log('Item added:', item)
+      console.log('Item added:', responseData.item)
+
+      // Save preferences to localStorage for smart defaults
+      localStorage.setItem('add_item_size_system', formData.sizeSystem)
+      if (formData.tax) localStorage.setItem('add_item_tax', formData.tax)
+      if (formData.shipping) localStorage.setItem('add_item_shipping', formData.shipping)
+      if (formData.placeOfPurchase) localStorage.setItem('add_item_place', formData.placeOfPurchase)
 
       setToast({
         message: 'Item added successfully!',
         variant: 'success'
       })
 
+      // Give database time to propagate changes before refreshing
+      // This ensures market data is visible when the inventory list refreshes
+      await new Promise(resolve => setTimeout(resolve, 150))
+
       // Call onSuccess to refresh inventory list
       onSuccess?.()
 
       if (addAnother) {
-        // Reset form but keep category
-        const category = formData.category
+        // Wait for refresh to complete before resetting form
+        // This prevents race conditions where the form resets before the new item appears with market data
+        await new Promise(resolve => setTimeout(resolve, 350))
+
+        // Reset form but keep SKU and smart defaults
+        const currentSku = formData.sku
+        const defaults = loadSmartDefaults()
         setFormData({
-          name: '',
-          styleId: '',
-          brand: '',
-          colorway: '',
-          condition: 'new',
-          category,
+          sku: currentSku, // Keep SKU for quick multi-item entry
           size: '',
-          sizeAlt: '',
+          sizeSystem: defaults.sizeSystem,
           purchasePrice: '',
-          tax: '',
-          shipping: '',
-          placeOfPurchase: '',
           purchaseDate: new Date().toISOString().split('T')[0],
-          tags: [],
+          tax: defaults.tax,
+          shipping: defaults.shipping,
+          placeOfPurchase: defaults.placeOfPurchase,
           orderNumber: '',
-          watchlist: '',
-          customMarketValue: '',
+          condition: 'new',
           notes: '',
         })
-        setShowCustomMarket(false)
-        setMarketPreview(null)
+        setProductPreview(null)
+        setPreviewError(null)
       } else {
         // Close modal after short delay
         setTimeout(() => {
@@ -340,13 +403,18 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     }
   }
 
-  const handleCreateWatchlist = (name: string) => {
-    const newWatchlist = {
-      value: name.toLowerCase().replace(/\s+/g, '-'),
-      label: name
+  // Get size options based on selected system
+  const getSizeOptions = () => {
+    switch (formData.sizeSystem) {
+      case 'UK':
+        return SHOE_SIZES_UK
+      case 'US':
+        return SHOE_SIZES_US
+      case 'EU':
+        return SHOE_SIZES_EU
+      default:
+        return SHOE_SIZES_UK
     }
-    setWatchlists(prev => [...prev, newWatchlist])
-    updateField('watchlist', newWatchlist.value)
   }
 
   return (
@@ -357,106 +425,182 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
             <DialogTitle className="text-2xl font-display font-semibold text-fg tracking-tight">
               Add Item
             </DialogTitle>
+            <p className="text-sm text-muted mt-1">
+              Enter SKU and size - all other details will be autofilled from StockX
+            </p>
           </DialogHeader>
 
           <div className="overflow-y-auto max-h-[calc(100vh-200px)] px-6 py-4">
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-              {/* COLUMN 1: Basic Info + Category/Size */}
+              {/* COLUMN 1: SKU + Size + Product Preview */}
               <div className="space-y-4">
-                {/* Basic Information Card */}
+                {/* Product Lookup Card */}
                 <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
                   {/* Section Header */}
                   <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
                     <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
-                      Basic Information
+                      Product Lookup
                     </h3>
                     <div className="h-px w-12 bg-border rounded-full" />
                   </div>
 
                   <div className="space-y-3">
-                    {/* Name */}
+                    {/* SKU */}
                     <div className="min-h-[70px]">
-                      <Label htmlFor="name" className={labelClassName}>
-                        Name <span className="text-accent">*</span>
+                      <Label htmlFor="sku" className={labelClassName}>
+                        SKU / Style ID <span className="text-accent">*</span>
                       </Label>
                       <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => updateField('name', e.target.value)}
-                        placeholder="e.g., Air Jordan 1 Retro High OG"
-                        className={cn(inputClassName, errors.name && "border-danger")}
+                        id="sku"
+                        value={formData.sku}
+                        onChange={(e) => updateField('sku', e.target.value)}
+                        onBlur={handleSkuBlur}
+                        placeholder="e.g., DZ5485-612, HQ6998-600"
+                        className={cn(inputClassName, "font-mono", errors.sku && "border-danger")}
                       />
                       <div className="h-4 mt-1">
-                        {errors.name && (
-                          <p className="text-xs text-danger">{errors.name}</p>
+                        {errors.sku && (
+                          <p className="text-xs text-danger">{errors.sku}</p>
                         )}
-                      </div>
-                    </div>
-
-                    {/* Style ID */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="styleId" className={labelClassName}>
-                        Style ID / SKU
-                      </Label>
-                      <Input
-                        id="styleId"
-                        value={formData.styleId}
-                        onChange={(e) => updateField('styleId', e.target.value)}
-                        onBlur={handleStyleIdBlur}
-                        placeholder="e.g., DZ5485-612"
-                        className={cn(inputClassName, "font-mono")}
-                      />
-                      <div className="h-4 mt-1">
-                        {isLoadingMarket && (
+                        {isLoadingPreview && (
                           <p className="text-xs text-accent flex items-center gap-1.5">
                             <Loader2 className="h-3 w-3 animate-spin" />
-                            <span>Looking up details...</span>
+                            <span>Looking up product...</span>
                           </p>
                         )}
-                        {!isLoadingMarket && marketPreview && (
-                          <p className="text-xs text-muted flex items-center gap-1.5 flex-wrap">
-                            <span className="text-accent">Market:</span>
-                            <span className="font-mono font-semibold">{symbol()}{marketPreview.price.toFixed(2)}</span>
-                            <span className="text-dim">•</span>
-                            <span className="capitalize">{marketPreview.source}</span>
-                            <span className="text-dim">•</span>
-                            <span>{formatRelativeTime(marketPreview.timestamp)}</span>
+                        {!isLoadingPreview && previewError && (
+                          <p className="text-xs text-dim flex items-center gap-1.5">
+                            <Info className="h-3 w-3" />
+                            <span>{previewError}</span>
                           </p>
-                        )}
-                        {!isLoadingMarket && marketLookupError && (
-                          <p className="text-xs text-dim">{marketLookupError}</p>
                         )}
                       </div>
                     </div>
 
-                    {/* Brand */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="brand" className={labelClassName}>
-                        Brand
+                    {/* Product Preview */}
+                    {productPreview && (
+                      <div className="bg-elev-1 border border-accent/20 rounded-lg p-3 space-y-3">
+                        <div className="flex items-start gap-3">
+                          {productPreview.image ? (
+                            <img
+                              src={productPreview.image}
+                              alt={productPreview.title}
+                              className="w-16 h-16 rounded-lg object-cover bg-elev-2"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-lg bg-elev-2 flex items-center justify-center">
+                              <Package className="h-6 w-6 text-dim" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-fg line-clamp-2">
+                              {productPreview.title}
+                            </h4>
+                            <div className="text-xs text-muted space-y-0.5 mt-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-accent">{productPreview.brand}</span>
+                                {productPreview.colorway && (
+                                  <>
+                                    <span className="text-dim">•</span>
+                                    <span>{productPreview.colorway}</span>
+                                  </>
+                                )}
+                              </div>
+                              {productPreview.marketData?.lowestAsk && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-green-600 dark:text-green-400 font-medium">Lowest Ask:</span>
+                                  <span className="font-mono text-green-600 dark:text-green-400 font-semibold">{symbol()}{Number(productPreview.marketData.lowestAsk).toFixed(2)}</span>
+                                </div>
+                              )}
+                              {productPreview.marketData?.highestBid && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-blue-600 dark:text-blue-400 font-medium">Highest Bid:</span>
+                                  <span className="font-mono text-blue-600 dark:text-blue-400 font-semibold">{symbol()}{Number(productPreview.marketData.highestBid).toFixed(2)}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Size Selection Card */}
+                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
+                  {/* Section Header */}
+                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
+                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
+                      Size Selection
+                    </h3>
+                    <div className="h-px w-12 bg-border rounded-full" />
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Size System Tabs */}
+                    <div>
+                      <Label className={labelClassName}>
+                        Size System <span className="text-accent">*</span>
                       </Label>
-                      <Input
-                        id="brand"
-                        value={formData.brand}
-                        onChange={(e) => updateField('brand', e.target.value)}
-                        placeholder="e.g., Nike"
-                        className={inputClassName}
-                      />
+                      <div className="flex gap-2">
+                        {(['UK', 'US', 'EU'] as const).map((system) => (
+                          <button
+                            key={system}
+                            type="button"
+                            onClick={() => {
+                              updateField('sizeSystem', system)
+                              updateField('size', '') // Reset size when system changes
+                            }}
+                            className={cn(
+                              "flex-1 h-8 px-3 rounded-full text-sm font-medium transition-boutique",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                              formData.sizeSystem === system
+                                ? "bg-accent text-fg shadow-soft"
+                                : "bg-elev-1 border border-border/30 text-muted hover:bg-elev-1 hover:border-accent/30"
+                            )}
+                          >
+                            {system}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Colorway */}
+                    {/* Size Grid */}
                     <div className="min-h-[70px]">
-                      <Label htmlFor="colorway" className={labelClassName}>
-                        Colorway
+                      <Label className={labelClassName}>
+                        Size <span className="text-accent">*</span>
                       </Label>
-                      <Input
-                        id="colorway"
-                        value={formData.colorway}
-                        onChange={(e) => updateField('colorway', e.target.value)}
-                        placeholder="e.g., Chicago Lost & Found"
-                        className={inputClassName}
-                      />
+                      <div className="max-h-[180px] overflow-y-auto bg-elev-1 border border-border/40 rounded-lg p-2">
+                        <div className="grid grid-cols-7 gap-1.5">
+                          {getSizeOptions().map((size) => {
+                            const isSelected = formData.size === size
+                            return (
+                              <button
+                                key={size}
+                                type="button"
+                                onClick={() => updateField('size', size)}
+                                className={cn(
+                                  "h-8 min-w-[42px] rounded-md border text-sm font-medium transition-boutique",
+                                  "flex items-center justify-center",
+                                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+                                  isSelected
+                                    ? "bg-elev-2 border-accent ring-1 ring-accent/40 text-fg"
+                                    : "border-border/40 text-muted hover:bg-elev-2 hover:text-fg shadow-soft"
+                                )}
+                              >
+                                {size}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <div className="h-4 mt-1">
+                        {errors.size && (
+                          <p className="text-xs text-danger">{errors.size}</p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Condition */}
@@ -479,71 +623,9 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                     </div>
                   </div>
                 </div>
-
-                {/* Category & Size Card */}
-                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
-                  {/* Section Header */}
-                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
-                      Category & Size
-                    </h3>
-                    <div className="h-px w-12 bg-border rounded-full" />
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Category Pills */}
-                    <div className="min-h-[70px]">
-                      <Label className={labelClassName}>
-                        Category <span className="text-accent">*</span>
-                      </Label>
-                      <div className="flex gap-2">
-                        {(['shoes', 'clothes', 'other'] as const).map((cat) => (
-                          <button
-                            key={cat}
-                            type="button"
-                            onClick={() => {
-                              updateField('category', cat)
-                              updateField('size', '') // Reset size when category changes
-                            }}
-                            className={cn(
-                              "flex-1 h-8 px-3 rounded-full text-sm font-medium transition-boutique",
-                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                              formData.category === cat
-                                ? "bg-accent text-fg shadow-soft"
-                                : "bg-elev-1 border border-border/30 text-muted hover:bg-elev-1 hover:border-accent/30"
-                            )}
-                          >
-                            {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Size Selector */}
-                    <SizeSelector
-                      value={formData.size}
-                      onChange={(size) => updateField('size', size)}
-                      category={formData.category}
-                    />
-
-                    {/* Other Size */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="sizeAlt" className={labelClassName}>
-                        Other Size <span className="text-muted text-[10px] lowercase normal-case">(if not listed)</span>
-                      </Label>
-                      <Input
-                        id="sizeAlt"
-                        value={formData.sizeAlt}
-                        onChange={(e) => updateField('sizeAlt', e.target.value)}
-                        placeholder="e.g., 9.5W, 42EU"
-                        className={inputClassName}
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* COLUMN 2: Purchase Info + Additional Info */}
+              {/* COLUMN 2: Purchase Info */}
               <div className="space-y-4">
                 {/* Purchase Information Card */}
                 <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
@@ -559,7 +641,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                     {/* Purchase Price */}
                     <div className="min-h-[70px]">
                       <Label htmlFor="purchasePrice" className={labelClassName}>
-                        Purchase Price (£) <span className="text-accent">*</span>
+                        Purchase Price ({symbol()}) <span className="text-accent">*</span>
                       </Label>
                       <Input
                         id="purchasePrice"
@@ -600,7 +682,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                     {/* Tax */}
                     <div className="min-h-[70px]">
                       <Label htmlFor="tax" className={labelClassName}>
-                        Tax (£)
+                        Tax ({symbol()})
                       </Label>
                       <Input
                         id="tax"
@@ -617,7 +699,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                     {/* Shipping */}
                     <div className="min-h-[70px]">
                       <Label htmlFor="shipping" className={labelClassName}>
-                        Shipping (£)
+                        Shipping ({symbol()})
                       </Label>
                       <Input
                         id="shipping"
@@ -636,10 +718,48 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                       <div className="flex items-center justify-between">
                         <span className="font-display text-xs text-muted uppercase tracking-wide font-medium">Total</span>
                         <span className="text-base num text-fg font-semibold tabular-nums">
-                          £{purchaseTotal}
+                          {symbol()}{purchaseTotal}
                         </span>
                       </div>
                     </div>
+
+                    {/* Profit Indicator */}
+                    {profitIndicator && (
+                      <div className={cn(
+                        "bg-elev-1 border rounded-lg p-3 space-y-2",
+                        profitIndicator.roi >= 20 ? "border-green-500/40" :
+                        profitIndicator.roi >= 10 ? "border-accent/40" :
+                        profitIndicator.roi >= 0 ? "border-yellow-500/40" :
+                        "border-red-500/40"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-display text-xs text-muted uppercase tracking-wide font-medium">
+                            Est. Profit
+                          </span>
+                          <span className={cn(
+                            "text-base num font-semibold tabular-nums",
+                            profitIndicator.roi >= 20 ? "text-green-500" :
+                            profitIndicator.roi >= 10 ? "text-accent" :
+                            profitIndicator.roi >= 0 ? "text-yellow-500" :
+                            "text-red-500"
+                          )}>
+                            {profitIndicator.profit >= 0 ? '+' : ''}{symbol()}{profitIndicator.profit.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-dim">ROI</span>
+                          <span className={cn(
+                            "font-mono font-medium",
+                            profitIndicator.colorClass
+                          )}>
+                            {profitIndicator.roi >= 0 ? '+' : ''}{profitIndicator.roi.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="text-xs text-dim pt-1 border-t border-border/20">
+                          Based on current market: {symbol()}{Number(profitIndicator.lowestAsk).toFixed(2)}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Place of Purchase */}
                     <div className="min-h-[70px]">
@@ -672,61 +792,6 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
                         placeholder="Optional"
                         className={cn(inputClassName, "font-mono")}
                       />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Information Card */}
-                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
-                  {/* Section Header */}
-                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
-                      Additional Information
-                    </h3>
-                    <div className="h-px w-12 bg-border rounded-full" />
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Tags */}
-                    <TagInput
-                      value={formData.tags}
-                      onChange={(tags) => updateField('tags', tags)}
-                      placeholder="Type and press Enter to add tags"
-                    />
-
-                    {/* Watchlist */}
-                    <WatchlistCombobox
-                      value={formData.watchlist}
-                      onChange={(value) => updateField('watchlist', value)}
-                      options={watchlists}
-                      onCreateNew={handleCreateWatchlist}
-                    />
-
-                    {/* Custom Market Value */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <input
-                          type="checkbox"
-                          id="customMarketToggle"
-                          checked={showCustomMarket}
-                          onChange={(e) => setShowCustomMarket(e.target.checked)}
-                          className="w-4 h-4 rounded border-border/40 bg-elev-1 text-accent focus:ring-accent/25"
-                        />
-                        <Label htmlFor="customMarketToggle" className={cn(labelClassName, "mb-0 cursor-pointer")}>
-                          Custom Market Value
-                        </Label>
-                      </div>
-                      {showCustomMarket && (
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={formData.customMarketValue}
-                          onChange={(e) => updateField('customMarketValue', e.target.value)}
-                          placeholder="0.00"
-                          className={cn(inputClassName, "font-mono text-right tabular-nums")}
-                        />
-                      )}
                     </div>
 
                     {/* Notes */}
@@ -766,8 +831,8 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
             </div>
           </div>
 
-          {/* Footer Bar */}
-          <div className="flex justify-end gap-3 border-t border-border/20 p-5 md:p-6 bg-elev-2/70 backdrop-blur">
+          {/* Footer Bar - Sticky at bottom */}
+          <div className="flex justify-end gap-3 border-t border-border/20 p-5 md:p-6 bg-elev-2/70 backdrop-blur sticky bottom-0">
             <Button
               type="button"
               variant="ghost"

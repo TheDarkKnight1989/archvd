@@ -1,0 +1,21 @@
+[
+  {
+    "variantId": "abc123-def456",
+    "productId": "5616213f-a646-49ec-8e4d-884c2c0b619e",
+    "lastSaleAmount": 150.0,
+    "lowestAskAmount": 175.0,
+    "highestBidAmount": 145.0,
+    "salesLast72Hours": 5,
+    "totalSalesVolume": 1250,
+    "averageDeadstockPrice": 160.0,
+    "volatility": 0.15,
+    "pricePremium": 0.25
+  },
+  {
+    "variantId": "xyz789-ghi012",
+    "lastSaleAmount": 200.0,
+    "lowestAskAmount": 220.0,
+    "highestBidAmount": 195.0,
+    "salesLast72Hours": 3
+  }
+]

@@ -286,7 +286,7 @@ export async function applyOperationResult(
 
         // Update price if available
         if (result.listingData.amount) {
-          listingUpdate.ask_price = result.listingData.amount
+          listingUpdate.amount = result.listingData.amount
         }
 
         // Update expiry if available
@@ -294,16 +294,72 @@ export async function applyOperationResult(
           listingUpdate.expires_at = result.listingData.expiresAt
         }
 
-        const { error: listingError } = await supabase
-          .from('stockx_listings')
-          .update(listingUpdate)
-          .eq('stockx_listing_id', listingId)
+        // For create_listing job type, upsert into stockx_listings table
+        if (job.job_type === 'create_listing') {
+          const { error: upsertError } = await supabase
+            .from('stockx_listings')
+            .upsert({
+              stockx_listing_id: listingId,
+              user_id: job.user_id,
+              stockx_product_id: job.metadata?.productId || result.listingData?.productId,
+              stockx_variant_id: job.metadata?.variantId || result.listingData?.variantId,
+              status: listingStatus,
+              amount: result.listingData.amount || job.metadata?.askPrice,
+              currency: job.metadata?.currencyCode || 'USD',
+              expires_at: result.listingData.expiresAt,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }, {
+              onConflict: 'stockx_listing_id'
+            })
 
-        if (listingError) {
-          logger.error('[Operations Poller] Failed to update listing', {
-            listingId,
-            error: listingError.message,
-          })
+          if (upsertError) {
+            logger.error('[Operations Poller] Failed to upsert listing', {
+              listingId,
+              error: upsertError.message,
+            })
+          } else {
+            logger.info('[Operations Poller] Created/updated stockx_listings record', {
+              listingId,
+            })
+          }
+
+          // Update inventory_market_links with the listing ID
+          if (job.metadata?.inventoryItemId) {
+            const { error: linkError } = await supabase
+              .from('inventory_market_links')
+              .update({
+                stockx_listing_id: listingId,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('item_id', job.metadata.inventoryItemId)
+
+            if (linkError) {
+              logger.error('[Operations Poller] Failed to update inventory_market_links', {
+                itemId: job.metadata.inventoryItemId,
+                listingId,
+                error: linkError.message,
+              })
+            } else {
+              logger.info('[Operations Poller] Updated inventory_market_links with listing ID', {
+                itemId: job.metadata.inventoryItemId,
+                listingId,
+              })
+            }
+          }
+        } else {
+          // For other job types (update, activate, deactivate), just update existing record
+          const { error: listingError } = await supabase
+            .from('stockx_listings')
+            .update(listingUpdate)
+            .eq('stockx_listing_id', listingId)
+
+          if (listingError) {
+            logger.error('[Operations Poller] Failed to update listing', {
+              listingId,
+              error: listingError.message,
+            })
+          }
         }
 
         // 3. Create history entry

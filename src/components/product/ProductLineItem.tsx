@@ -25,6 +25,7 @@ export type ProductLineItemProps = {
   marketImageUrl?: string | null
   inventoryImageUrl?: string | null
   provider?: 'stockx' | 'alias' | 'ebay' | 'seed' | null
+  imageSource?: 'local' | 'stockx' | null
 
   // Text
   brand: string
@@ -113,6 +114,7 @@ export function ProductLineItem({
   marketImageUrl,
   inventoryImageUrl,
   provider,
+  imageSource,
   brand,
   model,
   variant,
@@ -194,8 +196,8 @@ export function ProductLineItem({
     }
   }
 
-  const imageSizeClass = compact ? 'h-10 w-10' : 'h-10 w-10 lg:h-11 lg:w-11'
-  const imageSize = compact ? 40 : 44
+  const imageSizeClass = compact ? 'h-10 w-10' : 'h-11 w-11 md:h-12 md:w-12'
+  const imageSize = compact ? 40 : 48
 
   return (
     <div className={cn('flex gap-3 items-start', className)}>
@@ -203,7 +205,7 @@ export function ProductLineItem({
       <div
         className={cn(
           imageSizeClass,
-          'rounded-lg overflow-hidden flex-shrink-0 bg-elev-1 transition-transform duration-200 group-hover:-translate-y-[0.5px] relative'
+          'rounded-md overflow-hidden flex-shrink-0 bg-elev-1 transition-transform duration-200 group-hover:-translate-y-[0.5px] relative'
         )}
       >
         {hasError ? (
@@ -218,6 +220,13 @@ export function ProductLineItem({
             className="w-full h-full object-cover"
             loading="lazy"
           />
+        )}
+
+        {/* StockX badge overlay */}
+        {imageSource === 'stockx' && !hasError && (
+          <div className="absolute bottom-0.5 right-0.5 bg-emerald-600 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none shadow-sm">
+            S
+          </div>
         )}
       </div>
 

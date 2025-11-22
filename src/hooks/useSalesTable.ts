@@ -68,8 +68,6 @@ export function useSalesTable(params: SalesTableParams = {}) {
       setLoading(true)
       setError(null)
 
-      // Query Inventory table directly for sold items with all needed fields
-      // This includes purchase info, sale info, and we calculate margins client-side
       let query = supabase
         .from('Inventory')
         .select(`
@@ -104,45 +102,21 @@ export function useSalesTable(params: SalesTableParams = {}) {
         `, { count: 'exact' })
         .eq('status', 'sold')
 
-      // Search filter (SKU, brand, model)
       if (params.search) {
         query = query.or(`sku.ilike.%${params.search}%,brand.ilike.%${params.search}%,model.ilike.%${params.search}%`)
       }
 
-      // Brand filter
-      if (params.brand) {
-        query = query.eq('brand', params.brand)
-      }
+      if (params.brand) query = query.eq('brand', params.brand)
+      if (params.size_uk) query = query.eq('size_uk', params.size_uk)
+      if (params.category) query = query.eq('category', params.category)
+      if (params.platform) query = query.ilike('platform', params.platform)
+      if (params.date_from) query = query.gte('sold_date', params.date_from)
+      if (params.date_to) query = query.lte('sold_date', params.date_to)
 
-      // Size filter
-      if (params.size_uk) {
-        query = query.eq('size_uk', params.size_uk)
-      }
-
-      // Category filter
-      if (params.category) {
-        query = query.eq('category', params.category)
-      }
-
-      // Platform filter
-      if (params.platform) {
-        query = query.eq('platform', params.platform)
-      }
-
-      // Date range filter
-      if (params.date_from) {
-        query = query.gte('sold_date', params.date_from)
-      }
-      if (params.date_to) {
-        query = query.lte('sold_date', params.date_to)
-      }
-
-      // Sorting
       const sortBy = params.sort_by || 'sold_date'
       const sortOrder = params.sort_order || 'desc'
       query = query.order(sortBy, { ascending: sortOrder === 'asc' })
 
-      // Pagination
       if (params.limit) {
         query = query.range(params.offset || 0, (params.offset || 0) + params.limit - 1)
       }
@@ -151,38 +125,22 @@ export function useSalesTable(params: SalesTableParams = {}) {
 
       if (fetchError) throw fetchError
 
-      // Calculate margin fields for each sold item
       const enrichedData = (data || []).map((item: any) => {
-        // Calculate cost basis: purchase_price + tax + shipping
-        const costBasis = item.purchase_total || (
-          item.purchase_price +
-          (item.tax || 0) +
-          (item.shipping || 0)
-        )
-
-        // Use sold_price (the actual field from mark-sold API)
+        const costBasis = item.purchase_total || (item.purchase_price + (item.tax || 0) + (item.shipping || 0))
         const salePrice = item.sold_price || item.sale_price || 0
         const fees = item.sales_fee || 0
-
-        // Calculate margin: sale_price - cost_basis - fees
         const margin_gbp = salePrice - costBasis - fees
-
-        // Calculate margin percentage: (margin / cost_basis) * 100
         const margin_percent = costBasis > 0 ? (margin_gbp / costBasis) * 100 : null
 
-        // For StockX sales, extract commission from sales_fee if needed
         const isStockX = item.platform?.toLowerCase() === 'stockx'
-        const commission = isStockX ? fees : null
-        const net_payout = isStockX ? (salePrice - fees) : null
 
         return {
           ...item,
-          // Add size alias for backwards compatibility
           size: item.size_uk,
           margin_gbp,
           margin_percent,
-          commission,
-          net_payout,
+          commission: isStockX ? fees : null,
+          net_payout: isStockX ? (salePrice - fees) : null,
         } as SalesItem
       })
 
@@ -190,7 +148,9 @@ export function useSalesTable(params: SalesTableParams = {}) {
       setTotal(count || 0)
     } catch (err: any) {
       console.error('Sales fetch error:', err)
-      setError(err.message || 'Failed to load sales')
+      const errorMessage = err?.message || err?.toString() || 'Failed to load sales'
+      console.error('Error details:', { message: errorMessage, code: err?.code, details: err?.details })
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -247,7 +207,7 @@ export function exportSalesToCSV(items: SalesItem[], filename = 'sales-export.cs
     item.sku || '',
     item.brand || '',
     item.model || '',
-    '',
+    item.colorway || '',
     item.size_uk || '',
     item.condition || '',
     item.purchase_price?.toFixed(2) || '0.00',
@@ -255,7 +215,7 @@ export function exportSalesToCSV(items: SalesItem[], filename = 'sales-export.cs
     item.sold_price?.toFixed(2) || '0.00',
     item.sold_date || '',
     item.platform || '',
-    '0.00',
+    item.sales_fee?.toFixed(2) || '0.00',
     item.margin_gbp?.toFixed(2) || '0.00',
     item.margin_percent?.toFixed(2) || '0.00',
     item.location || '',

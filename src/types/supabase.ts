@@ -25,7 +25,12 @@ export interface Database {
         Update: any
       }
       profiles: {
-        Row: any
+        Row: {
+          id: string
+          base_currency: 'GBP' | 'EUR' | 'USD'
+          currency_pref?: 'GBP' | 'EUR' | 'USD'
+          [key: string]: any
+        }
         Insert: any
         Update: any
       }
@@ -51,6 +56,46 @@ export interface Database {
       }
     }
     Functions: {
+      fx_rate_for: {
+        Args: {
+          date_in: string
+          from_ccy: string
+          to_ccy: string
+        }
+        Returns: number
+      }
+      fn_migrate_sold_to_sales: {
+        Args: {
+          p_inventory_id: string
+        }
+        Returns: string
+      }
+      fn_log_app: {
+        Args: {
+          p_level: 'debug' | 'info' | 'warn' | 'error' | 'fatal'
+          p_module: string
+          p_message: string
+          p_meta: Record<string, any>
+          p_user_id: string | null
+        }
+        Returns: void
+      }
+      fn_job_start: {
+        Args: {
+          p_job_name: string
+          p_meta: Record<string, any>
+        }
+        Returns: string
+      }
+      fn_job_complete: {
+        Args: {
+          p_run_id: string
+          p_status: 'completed' | 'failed'
+          p_error: string | null
+          p_meta: Record<string, any>
+        }
+        Returns: void
+      }
       [key: string]: any
     }
     Enums: {

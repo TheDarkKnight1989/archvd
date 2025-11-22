@@ -17,21 +17,65 @@ export async function GET(
     const { id } = await params
     const supabase = await createClient()
 
-    // Check if mapping exists
-    const { data: mapping, error } = await supabase
-      .from('inventory_market_links')
-      .select('stockx_product_id, stockx_variant_id')
-      .eq('item_id', id)
-      .maybeSingle()
+    // Get inventory item details (SKU + size)
+    const { data: item, error: itemError } = await supabase
+      .from('Inventory')
+      .select('sku, size_uk, size')
+      .eq('id', id)
+      .single()
 
-    if (error) {
-      console.error('[Check Mapping] Error:', error)
+    if (itemError || !item) {
+      console.error('[Check Mapping] Item not found:', itemError)
+      return NextResponse.json({
+        mapped: false,
+        productId: null,
+        variantId: null,
+        listingId: null,
+        error: 'Item not found',
+      })
     }
 
+    const { sku, size_uk, size } = item
+    const itemSize = size_uk || size
+
+    console.log('[Check Mapping] Item:', { id, sku, itemSize })
+
+    // Check if we have price data in stockx_market_prices for this SKU/size
+    // This is the SCALABLE solution - works for ALL products with price data
+    const { data: priceData, error: priceError } = await supabase
+      .from('stockx_market_prices')
+      .select('sku, size, last_sale, lowest_ask, highest_bid, currency, as_of')
+      .eq('sku', sku)
+      .eq('size', itemSize)
+      .order('as_of', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (priceError) {
+      console.error('[Check Mapping] Price lookup error:', priceError)
+    }
+
+    console.log('[Check Mapping] Price data:', priceData)
+
+    // If we have price data, item is "mapped" - return SKU/size for live API calls
+    // Don't return cached priceData - let the modal fetch live data
+    if (priceData) {
+      return NextResponse.json({
+        mapped: true,
+        productId: sku, // Use SKU as product ID for API calls
+        variantId: itemSize, // Use size as variant ID
+        listingId: null,
+        source: 'direct',
+      })
+    }
+
+    // No price data available
     return NextResponse.json({
-      mapped: !!mapping,
-      productId: mapping?.stockx_product_id || null,
-      variantId: mapping?.stockx_variant_id || null,
+      mapped: false,
+      productId: null,
+      variantId: null,
+      listingId: null,
+      source: null,
     })
   } catch (error: any) {
     console.error('[Check Mapping] Error:', error)

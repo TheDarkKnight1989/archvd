@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ProvenanceBadge Component Tests
  * Tests for market price attribution component

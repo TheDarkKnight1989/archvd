@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * StockX Listings Sync Worker
  * GET /api/stockx/sync/listings

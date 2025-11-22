@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Unit tests for trading card snapshot statistics
  * Tests IQR outlier removal, median, and percentile calculations

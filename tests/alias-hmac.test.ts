@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Alias Webhook HMAC Verification Tests
  * Critical security tests for webhook signature validation

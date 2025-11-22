@@ -1,3 +1,23 @@
+/**
+ * useInventoryV3 - Fetch and enrich inventory data for InventoryTableV3
+ *
+ * DATA FLOW:
+ * 1. Fetch Inventory items (filtered by user via RLS)
+ * 2. Fetch inventory_market_links (maps items → StockX product/variant)
+ * 3. Fetch stockx_products (for catalog images)
+ * 4. Fetch stockx_listings (active listings for mapped items)
+ * 5. Fetch stockx_market_latest (current market prices per currency)
+ * 6. Fetch market_price_daily_medians (30-day sparkline data)
+ * 7. Enrich each item with market data, listings, images, P/L calculations
+ *
+ * CURRENCY HANDLING:
+ * - Fetches user's base_currency from profiles (defaults to GBP)
+ * - Prefers prices in user currency, falls back to USD/EUR/GBP with FX conversion
+ * - All amounts in DB (stockx_listings.amount, stockx_market_latest.*) are in major units
+ *
+ * WHY: Provide type-safe, fully computed data for V3 table rendering with NO service layer coupling
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -5,13 +25,25 @@ import { supabase } from '@/lib/supabase/client'
 import { getProductImage } from '@/lib/product/getProductImage'
 import type { EnrichedLineItem } from '@/lib/portfolio/types'
 
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
 // WHY: Default StockX seller fee (can be overridden via API in future)
 const STOCKX_SELLER_FEE_PCT = 0.10
 
-/**
- * useInventoryV3 - Fetch and enrich inventory data for InventoryTableV3
- * WHY: Provide type-safe, fully computed data for V3 table rendering
- */
+// TEMP: Hardcoded FX rates for currency conversion
+// TODO: Move to fx_rates table with timestamp-based lookups
+const FX_RATES: Record<string, Record<string, number>> = {
+  'USD': { 'GBP': 0.79, 'EUR': 0.92 },
+  'EUR': { 'GBP': 0.86, 'USD': 1.09 },
+  'GBP': { 'USD': 1.27, 'EUR': 1.16 }
+}
+
+// ============================================================================
+// HOOK
+// ============================================================================
+
 export function useInventoryV3() {
   const [items, setItems] = useState<EnrichedLineItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -21,7 +53,10 @@ export function useInventoryV3() {
     try {
       setLoading(true)
 
-      // 0. Get user's base currency preference
+      // ========================================================================
+      // 1. GET USER'S BASE CURRENCY
+      // ========================================================================
+
       const { data: { user } } = await supabase.auth.getUser()
       const userId = user?.id
 
@@ -38,7 +73,10 @@ export function useInventoryV3() {
 
       console.log('[useInventoryV3] User currency:', userCurrency)
 
-      // 1. Fetch inventory items
+      // ========================================================================
+      // 2. FETCH INVENTORY ITEMS (RLS-filtered by user)
+      // ========================================================================
+
       const { data: inventoryData, error: inventoryError } = await supabase
         .from('Inventory')
         .select('*')
@@ -47,26 +85,42 @@ export function useInventoryV3() {
 
       if (inventoryError) throw inventoryError
 
-      // NOTE: Removed broken market_products query
-      // Database schema doesn't have 'provider' or 'provider_product_sku' columns
-      // Brand/model data comes from Inventory table directly
+      // ========================================================================
+      // 3. FETCH STOCKX MAPPINGS
+      // NOTE: inventory_market_links are inherently user-scoped via item_id FK
+      // PHASE 3.11: Include mapping_status to detect broken/invalid mappings
+      // ========================================================================
 
-      // 4. Fetch inventory → StockX mappings (includes listing ID if item is listed)
       const { data: stockxMappings, error: stockxMappingsError} = await supabase
         .from('inventory_market_links')
-        .select('item_id, stockx_product_id, stockx_variant_id, stockx_listing_id')
+        .select('item_id, stockx_product_id, stockx_variant_id, stockx_listing_id, mapping_status, last_sync_success_at, last_sync_error')
 
       if (stockxMappingsError) {
         console.warn('[useInventoryV3] Failed to fetch StockX mappings:', stockxMappingsError)
       }
 
-      // 4b. Fetch StockX listing details for items that have listings
+      // ========================================================================
+      // 4. FETCH STOCKX PRODUCT CATALOG (for images)
+      // ========================================================================
+
+      const { data: stockxProducts, error: stockxProductsError } = await supabase
+        .from('stockx_products')
+        .select('stockx_product_id, image_url, thumb_url')
+
+      if (stockxProductsError) {
+        console.warn('[useInventoryV3] Failed to fetch StockX products:', stockxProductsError)
+      }
+
+      // ========================================================================
+      // 5. FETCH STOCKX LISTINGS (active listings for mapped items)
+      // BUG FIX: Query by stockx_listing_id (external ID), not id (internal UUID)
+      // ========================================================================
+
       const listingIds = stockxMappings
         ?.filter(m => m.stockx_listing_id)
         .map(m => m.stockx_listing_id)
         .filter(Boolean) || []
 
-      // Only query if we have listing IDs (avoids UUID error with __none__)
       let stockxListings: any[] = []
       let stockxListingsError = null
 
@@ -74,7 +128,7 @@ export function useInventoryV3() {
         const result = await supabase
           .from('stockx_listings')
           .select('id, stockx_listing_id, amount, currency_code, status, expires_at')
-          .in('id', listingIds)
+          .in('stockx_listing_id', listingIds)  // FIX: Query by external ID
         stockxListings = result.data || []
         stockxListingsError = result.error
       }
@@ -83,28 +137,30 @@ export function useInventoryV3() {
         console.warn('[useInventoryV3] Failed to fetch StockX listings:', stockxListingsError)
       }
 
-      // 5. Fetch StockX market prices from stockx_market_latest (materialized view)
-      // Build list of (product_id, variant_id, currency) to query
-      const stockxQueries = new Set<string>()
-      if (stockxMappings) {
-        stockxMappings.forEach(mapping => {
-          // Query all 3 currencies for each product/variant
-          ;['USD', 'GBP', 'EUR'].forEach(currency => {
-            stockxQueries.add(`${mapping.stockx_product_id}:${mapping.stockx_variant_id}:${currency}`)
-          })
-        })
-      }
+      // ========================================================================
+      // 6. FETCH STOCKX MARKET PRICES (latest snapshot per currency)
+      // NOTE: Prices stored in major units (e.g., 150.00 = £150.00)
+      // ========================================================================
 
-      // Fetch StockX market prices
       const { data: stockxPrices, error: stockxPricesError } = await supabase
         .from('stockx_market_latest')
-        .select('stockx_product_id, stockx_variant_id, currency_code, last_sale_price, lowest_ask, highest_bid, snapshot_at')
+        .select('stockx_product_id, stockx_variant_id, currency_code, lowest_ask, highest_bid, snapshot_at')
+
+      console.log('[useInventoryV3] StockX prices fetched:', {
+        count: stockxPrices?.length || 0,
+        error: stockxPricesError,
+        sample: stockxPrices?.[0]
+      })
 
       if (stockxPricesError) {
         console.warn('[useInventoryV3] Failed to fetch StockX market prices:', stockxPricesError)
       }
 
-      // 5. Fetch 30-day sparkline data from market_price_daily_medians
+      // ========================================================================
+      // 7. FETCH SPARKLINE DATA (30-day price history)
+      // KEY FORMAT: "${sku}:${size_uk || ''}" - maintained for consistency
+      // ========================================================================
+
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -118,7 +174,9 @@ export function useInventoryV3() {
         console.warn('[useInventoryV3] Failed to fetch sparkline data:', sparklineError)
       }
 
-      // Build maps for joining (removed market links/products - not in schema)
+      // ========================================================================
+      // 8. BUILD LOOKUP MAPS FOR JOINS
+      // ========================================================================
 
       const stockxMappingMap = new Map<string, any>()
       if (stockxMappings) {
@@ -127,6 +185,17 @@ export function useInventoryV3() {
         }
       }
 
+      const stockxProductsMap = new Map<string, { imageUrl?: string | null; thumbUrl?: string | null }>()
+      if (stockxProducts) {
+        for (const product of stockxProducts) {
+          stockxProductsMap.set(product.stockx_product_id, {
+            imageUrl: product.image_url,
+            thumbUrl: product.thumb_url,
+          })
+        }
+      }
+
+      // Map by compound key: "${stockx_product_id}:${stockx_variant_id}:${currency_code}"
       const stockxPriceMap = new Map<string, any>()
       if (stockxPrices) {
         for (const price of stockxPrices) {
@@ -135,6 +204,7 @@ export function useInventoryV3() {
         }
       }
 
+      // Sparkline key format: "${sku}:${size_uk || ''}"
       const sparklineMap = new Map<string, Array<{ date: string; price: number | null }>>()
       if (sparklineData) {
         for (const point of sparklineData) {
@@ -149,31 +219,53 @@ export function useInventoryV3() {
         }
       }
 
+      // BUG FIX: Key by stockx_listing_id (external ID), not id (internal UUID)
       const stockxListingMap = new Map<string, any>()
       if (stockxListings) {
         for (const listing of stockxListings) {
-          stockxListingMap.set(listing.id, listing)
+          stockxListingMap.set(listing.stockx_listing_id, listing)
         }
       }
 
-      // 6. Compose EnrichedLineItem[]
+      // ========================================================================
+      // 9. ENRICH INVENTORY ITEMS
+      // ========================================================================
+
+      console.log('[useInventoryV3] Starting enrichment:', {
+        inventoryCount: inventoryData?.length || 0,
+        stockxMappingsCount: stockxMappings?.length || 0,
+        priceMapSize: stockxPriceMap.size
+      })
+
       const enrichedItems: EnrichedLineItem[] = (inventoryData || []).map((item: any) => {
-        // Use data directly from Inventory table (no market_products join)
+        // ======================================================================
+        // PRODUCT METADATA (from Inventory table)
+        // ======================================================================
+
         const brand = item.brand || 'Unknown'
         const model = item.model || item.sku
         const colorway = item.colorway || null
 
-        // Get StockX mapping for this inventory item
+        // ======================================================================
+        // STOCKX MAPPING & MARKET DATA
+        // ======================================================================
+
         const stockxMapping = stockxMappingMap.get(item.id)
 
-        // Get StockX market price (prefer user's currency, fallback to USD → convert)
         let stockxPrice = null
         let marketCurrency: 'GBP' | 'EUR' | 'USD' | null = null
 
         if (stockxMapping) {
-          // Try to get price in user's currency first
+          // Try user's currency first
           const priceKeyUser = `${stockxMapping.stockx_product_id}:${stockxMapping.stockx_variant_id}:${userCurrency}`
           stockxPrice = stockxPriceMap.get(priceKeyUser)
+
+          console.log('[useInventoryV3] Price lookup for', item.sku, {
+            priceKey: priceKeyUser,
+            found: !!stockxPrice,
+            mapSize: stockxPriceMap.size,
+            mapKeys: Array.from(stockxPriceMap.keys()).slice(0, 3)
+          })
 
           if (stockxPrice) {
             marketCurrency = userCurrency
@@ -192,29 +284,27 @@ export function useInventoryV3() {
           }
         }
 
-        // Extract individual market data fields
-        const rawLastSale = stockxPrice?.last_sale_price || null
+        // ======================================================================
+        // EXTRACT & CONVERT MARKET DATA
+        // NOTE: All prices in stockx_market_latest are stored in major units
+        // ======================================================================
+
         const rawLowestAsk = stockxPrice?.lowest_ask || null
         const rawHighestBid = stockxPrice?.highest_bid || null
 
-        // Market value logic: last_sale_price → lowest_ask → highest_bid → fallback to item.market_value
-        const rawMarketPrice = rawLastSale || rawLowestAsk || rawHighestBid || item.market_value || null
+        // PHASE 3.8: Market price = lowest_ask ?? highest_bid ?? null
+        // WHY: lowest_ask represents current market value (what buyers pay)
+        // WHY: highest_bid represents instant sell price (what sellers receive)
+        // Portfolio valuation should use lowest_ask as primary market price
+        const rawMarketPrice = rawLowestAsk ?? rawHighestBid ?? null
 
         let marketPrice = rawMarketPrice
-        let lastSale = rawLastSale
         let lowestAsk = rawLowestAsk
         let highestBid = rawHighestBid
 
-        // CURRENCY CONVERSION: Only convert if currencies don't match
+        // CURRENCY CONVERSION: Apply FX rates if currencies don't match
         if (marketCurrency && marketCurrency !== userCurrency) {
-          // Use hardcoded FX rate for now (TODO: fetch from fx_rates table)
-          const fxRates: Record<string, Record<string, number>> = {
-            'USD': { 'GBP': 0.79, 'EUR': 0.92 },
-            'EUR': { 'GBP': 0.86, 'USD': 1.09 },
-            'GBP': { 'USD': 1.27, 'EUR': 1.16 }
-          }
-
-          const rate = fxRates[marketCurrency]?.[userCurrency] || 1.0
+          const rate = FX_RATES[marketCurrency]?.[userCurrency] || 1.0
 
           console.log(`[useInventoryV3] Currency conversion for ${item.sku}:`, {
             rawPrice: rawMarketPrice,
@@ -226,7 +316,6 @@ export function useInventoryV3() {
 
           // Convert all market data fields
           if (marketPrice) marketPrice = marketPrice * rate
-          if (lastSale) lastSale = lastSale * rate
           if (lowestAsk) lowestAsk = lowestAsk * rate
           if (highestBid) highestBid = highestBid * rate
         } else if (marketCurrency) {
@@ -241,51 +330,95 @@ export function useInventoryV3() {
         const marketProvider = stockxPrice ? 'stockx' : (item.market_source || null)
         const marketUpdatedAt = stockxPrice?.snapshot_at || item.market_price_updated_at || null
 
-        // Get sparkline data (legacy key format for market_price_daily_medians)
+        // ======================================================================
+        // SPARKLINE DATA
+        // KEY FORMAT: "${sku}:${size_uk || ''}"
+        // ======================================================================
+
         const sparklineKey = `${item.sku}:${item.size_uk || ''}`
         const spark30d = sparklineMap.get(sparklineKey) || []
 
-        // Resolve image using fallback chain
-        const imageResolved = getProductImage({
-          marketImageUrl: null, // No market_products table
-          inventoryImageUrl: item.image_url,
-          provider: marketProvider as any,
-          brand,
-          model,
-          colorway,
-          sku: item.sku,
-        })
+        // ======================================================================
+        // IMAGE RESOLUTION (Priority order)
+        // 1. Inventory.image_url (local upload)
+        // 2. StockX product image (from catalog)
+        // 3. getProductImage fallback (placeholder)
+        // ======================================================================
 
-        // Compute values
+        const stockxProduct = stockxMapping ? stockxProductsMap.get(stockxMapping.stockx_product_id) : null
+
+        let imageUrl: string | null = null
+        let imageSource: 'local' | 'stockx' | null = null
+
+        if (item.image_url) {
+          // Priority 1: Local image
+          imageUrl = item.image_url
+          imageSource = 'local'
+        } else if (stockxProduct?.imageUrl || stockxProduct?.thumbUrl) {
+          // Priority 2: StockX catalog image
+          imageUrl = stockxProduct.imageUrl || stockxProduct.thumbUrl || null
+          imageSource = 'stockx'
+        }
+
+        // Priority 3: Fallback placeholder
+        const imageResolved = imageUrl
+          ? { src: imageUrl, alt: `${brand} ${model}` }
+          : getProductImage({
+              marketImageUrl: null,
+              inventoryImageUrl: null,
+              provider: marketProvider as any,
+              brand,
+              model,
+              colorway,
+              sku: item.sku,
+            })
+
+        // ======================================================================
+        // FINANCIAL CALCULATIONS
+        // ======================================================================
+
         const qty = 1 // WHY: Assuming qty=1 for now (can enhance with actual qty field)
         const invested = (item.purchase_price || 0) + (item.tax || 0) + (item.shipping || 0)
         const avgCost = invested / qty
 
-        // BUG FIX #1 & #2: Total should fallback to custom_market_value or invested
-        // Priority: 1) market price, 2) custom value, 3) invested amount (minimum)
+        // TOTAL VALUE PRIORITY:
+        // 1) Market price (from StockX latest snapshot)
+        // 2) Custom market value (manual user override)
+        // 3) Invested amount (minimum fallback)
         const total = marketPrice
           ? marketPrice * qty
           : item.custom_market_value
             ? item.custom_market_value * qty
             : invested
 
-        // BUG FIX #1: P/L should use custom_market_value when no market price
-        // Calculate P/L based on whatever value we're using for total
+        // P/L CALCULATION:
+        // Based on whatever value is used for total
+        // Only show P/L if current value differs from invested
         const currentValue = marketPrice || item.custom_market_value || invested
         const pl = currentValue !== invested ? currentValue - invested : null
         const performancePct = pl !== null && invested > 0 ? (pl / invested) * 100 : null
 
-        // Compute instant sell net payout (already converted to user currency)
-        const instantSellGross = highestBid
-        const instantSellNet = highestBid ? Math.round(highestBid * (1 - STOCKX_SELLER_FEE_PCT) * 100) / 100 : null
+        // ======================================================================
+        // INSTANT SELL CALCULATION
+        // Based on highest_bid (already converted to user currency)
+        // BUG FIX: Remove /100 - amounts already in major units
+        // ======================================================================
 
-        // Build StockX data
+        const instantSellGross = highestBid
+        const instantSellNet = highestBid
+          ? Math.round(highestBid * (1 - STOCKX_SELLER_FEE_PCT) * 100) / 100
+          : null
+
+        // ======================================================================
+        // STOCKX LISTING DATA
+        // ======================================================================
+
         const stockxData: EnrichedLineItem['stockx'] = (() => {
           if (!stockxMapping) {
             return { mapped: false }
           }
 
-          // Item is mapped to StockX
+          // Lookup listing by external stockx_listing_id
           const listing = stockxMapping.stockx_listing_id
             ? stockxListingMap.get(stockxMapping.stockx_listing_id)
             : null
@@ -296,10 +429,21 @@ export function useInventoryV3() {
             variantId: stockxMapping.stockx_variant_id,
             listingId: listing?.stockx_listing_id || null,
             listingStatus: listing?.status || null,
-            askPrice: listing?.amount ? listing.amount / 100 : null, // Convert cents to dollars
+            askPrice: listing?.amount || null, // FIX: Already in major units
             expiresAt: listing?.expires_at || null,
+            // Market data (converted to user currency)
+            lowestAsk: lowestAsk,
+            highestBid: highestBid,
+            // PHASE 3.11: Mapping health status
+            mappingStatus: stockxMapping.mapping_status || 'ok',
+            lastSyncSuccessAt: stockxMapping.last_sync_success_at || null,
+            lastSyncError: stockxMapping.last_sync_error || null,
           }
         })()
+
+        // ======================================================================
+        // RETURN ENRICHED ITEM
+        // ======================================================================
 
         return {
           id: item.id,
@@ -312,13 +456,13 @@ export function useInventoryV3() {
             src: imageResolved.src,
             alt: imageResolved.alt,
           },
+          imageSource,
           purchaseDate: item.purchase_date,
           qty,
           invested,
           avgCost,
           market: {
             price: marketPrice,
-            lastSale,
             lowestAsk,
             currency: userCurrency, // All prices converted to user currency
             provider: marketProvider as any,
@@ -364,5 +508,123 @@ export function useInventoryV3() {
     loading,
     error,
     refetch: fetchItems,
+  }
+}
+
+// ============================================================================
+// STOCKX SYNC HELPER
+// ============================================================================
+
+/**
+ * Sync a single inventory item with StockX
+ *
+ * WHY: Provides UI components a simple function to trigger StockX sync
+ * DIRECTIVE COMPLIANT: Only calls API route, never imports worker/service code
+ *
+ * @param inventoryItemId - UUID of inventory item to sync
+ * @returns Sync result with StockX mapping and market data status
+ */
+export async function syncItemWithStockx(inventoryItemId: string): Promise<{
+  status: 'ok' | 'error'
+  itemId?: string
+  stockx?: {
+    productId: string | null
+    variantId: string | null
+    listingId: string | null
+  }
+  market?: {
+    currenciesProcessed: string[]
+    snapshotsCreated: number
+  }
+  error?: string
+}> {
+  try {
+    const response = await fetch('/api/stockx/sync/item', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ inventoryItemId }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        status: 'error',
+        error: data.error || 'Failed to sync with StockX',
+      }
+    }
+
+    return data
+  } catch (error: any) {
+    return {
+      status: 'error',
+      error: error.message || 'Network error',
+    }
+  }
+}
+
+/**
+ * Sync all inventory items with StockX (bulk operation)
+ *
+ * WHY: Provides UI components a simple function to trigger full inventory sync
+ * DIRECTIVE COMPLIANT: Only calls API route, never imports worker/service code
+ *
+ * @param options - Sync options (mode, limit, cursor, dryRun)
+ * @returns Sync result with pagination support and detailed item-level status
+ */
+export async function syncInventoryWithStockx(options?: {
+  mode?: 'mapped-only' | 'auto-discover'
+  limit?: number
+  cursor?: string | null
+  dryRun?: boolean
+}): Promise<{
+  status: 'ok' | 'error'
+  userId?: string
+  mode?: 'mapped-only' | 'auto-discover'
+  pagination?: {
+    limit: number
+    cursor: string | null
+    nextCursor: string | null
+  }
+  summary?: {
+    totalItemsScanned: number
+    totalItemsSynced: number
+    totalItemsSkipped: number
+    totalErrors: number
+  }
+  items?: Array<{
+    inventoryItemId: string
+    status: 'synced' | 'skipped' | 'error'
+    reason?: string
+    mappingExists: boolean
+  }>
+  error?: string
+}> {
+  try {
+    const response = await fetch('/api/stockx/sync/inventory', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(options || {}),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return {
+        status: 'error',
+        error: data.error || 'Failed to sync inventory with StockX',
+      }
+    }
+
+    return data
+  } catch (error: any) {
+    return {
+      status: 'error',
+      error: error.message || 'Network error',
+    }
   }
 }

@@ -109,23 +109,19 @@ export async function GET(request: NextRequest) {
       try {
         console.log(`[Quick Lookup] Searching StockX V2 catalog for SKU: ${sku}`);
         const catalogService = getCatalogService();
-        const results = await catalogService.searchProducts(sku, 1);
+        const results = await catalogService.searchProducts(sku, { limit: 1 });
 
         if (results.length > 0) {
           const stockxProduct = results[0];
-          console.log(`[Quick Lookup] StockX V2 catalog hit: ${stockxProduct.title}`);
-
-          // Save product to database
-          const { productId } = await catalogService.saveToDatabase(stockxProduct);
-          stockxProductId = productId;
+          console.log(`[Quick Lookup] StockX V2 catalog hit: ${stockxProduct.productName}`);
 
           // Map to our product format
           productFromStockX = {
             sku: stockxProduct.styleId,
             brand: stockxProduct.brand,
-            name: stockxProduct.title,
+            name: stockxProduct.productName,
             colorway: stockxProduct.colorway || null,
-            image_url: stockxProduct.imageUrl || stockxProduct.thumbUrl || null,
+            image_url: stockxProduct.image || null,
           };
 
           // Cache in catalog_cache for faster future lookups
@@ -135,9 +131,9 @@ export async function GET(request: NextRequest) {
               {
                 sku: stockxProduct.styleId,
                 brand: stockxProduct.brand,
-                model: stockxProduct.title,
+                model: stockxProduct.productName,
                 colorway: stockxProduct.colorway,
-                image_url: stockxProduct.imageUrl || stockxProduct.thumbUrl,
+                image_url: stockxProduct.image,
                 source: 'stockx_v2',
                 confidence: 95,
                 updated_at: new Date().toISOString(),

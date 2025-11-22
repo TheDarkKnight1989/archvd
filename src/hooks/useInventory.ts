@@ -49,12 +49,19 @@ export type InventoryItem = {
   alias_mapping_status?: 'mapped' | 'unmatched' | 'unmapped' | null
   alias_product_sku?: string | null
   alias_product_id?: string | null
-  stockx_mapping_status?: 'mapped' | 'unmapped' | null
+  // PHASE 3.11: StockX mapping status from inventory_market_links.mapping_status
+  stockx_mapping_status?: 'ok' | 'stockx_404' | 'invalid' | 'unmapped' | null
+  stockx_last_sync_success_at?: string | null
+  stockx_last_sync_error?: string | null
   stockx_product_sku?: string | null
   stockx_lowest_ask?: number | null
   stockx_highest_bid?: number | null
-  stockx_last_sale?: number | null
   stockx_price_as_of?: string | null
+  stockx_listing_id?: string | null
+  stockx_listing_status?: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'MATCHED' | 'COMPLETED' | 'DELETED' | 'EXPIRED' | null
+  stockx_ask_price?: number | null
+  stockx_listing_expires_at?: string | null
+  stockx_listing_pending_operation?: { job_id: string; status: string; job_type: string } | null
 }
 
 export function useInventory() {

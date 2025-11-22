@@ -123,10 +123,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Fetch market links for these inventory items (updated for StockX V2)
+    // PHASE 3.11: Include mapping_status to detect broken/invalid mappings
     const inventoryIds = inventory.map((i) => i.id)
     const { data: marketLinks, error: linksError } = await supabase
       .from('inventory_market_links')
-      .select('item_id, stockx_product_id, stockx_variant_id')
+      .select('item_id, stockx_product_id, stockx_variant_id, mapping_status')
       .in('item_id', inventoryIds)
 
     if (linksError) {
@@ -135,14 +136,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build map: inventory_id -> StockX IDs
-    const inventoryToStockxIds = new Map<string, { productId: string; variantId: string }>()
+    // Build map: inventory_id -> StockX IDs + mapping_status
+    // PHASE 3.11: Include mapping_status to filter out invalid mappings
+    const inventoryToStockxIds = new Map<string, { productId: string; variantId: string; mappingStatus: string | null }>()
 
     marketLinks?.forEach((link) => {
       if (link.stockx_product_id && link.stockx_variant_id) {
         inventoryToStockxIds.set(link.item_id, {
           productId: link.stockx_product_id,
           variantId: link.stockx_variant_id,
+          mappingStatus: link.mapping_status || 'ok',
         })
       }
     })
@@ -164,9 +167,14 @@ export async function GET(request: NextRequest) {
     })
 
     // 4. Fetch StockX market prices first (highest priority)
+    // IMPORTANT: stockx_market_latest returns amounts in MAJOR currency units (e.g., 150.0 = £150.00)
+    // - Do NOT divide by 100
+    // - Filter by currency_code to get prices in user's preferred currency
+    // - Use DbStockxMarketLatest type from @/lib/stockx/dbTypes for type safety
+    // - Market price = highest_bid ?? lowest_ask ?? null (Phase 3.3)
     const { data: stockxPrices, error: stockxPricesError } = await supabase
       .from('stockx_market_latest')
-      .select('stockx_product_id, stockx_variant_id, currency_code, last_sale_price, lowest_ask, highest_bid, snapshot_at')
+      .select('stockx_product_id, stockx_variant_id, currency_code, lowest_ask, highest_bid, snapshot_at')
       .eq('currency_code', currency)
 
     if (stockxPricesError) {
@@ -175,11 +183,11 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Build StockX price map
+    // Build StockX price map (prices already in major units)
     const stockxPriceMap = new Map<string, any>()
     stockxPrices?.forEach((price) => {
       const key = `${price.stockx_product_id}:${price.stockx_variant_id}`
-      stockxPriceMap.set(key, price)
+      stockxPriceMap.set(key, price)  // All price fields already in major units
     })
 
     // 5. Fetch latest prices from latest_market_prices (fallback for non-StockX items)
@@ -202,8 +210,8 @@ export async function GET(request: NextRequest) {
         const { data: priceData } = await qb.limit(1).single()
 
         if (priceData) {
-          // Prefer last_sale, fallback to ask or bid
-          const price = priceData.last_sale || priceData.ask || priceData.bid
+          // Market price: ask → last_sale → null (no bid fallback)
+          const price = priceData.ask || priceData.last_sale || null
           if (price) {
             const key = `${query.sku}:${query.size || 'null'}`
             priceMap.set(key, { ...priceData, price })
@@ -227,12 +235,26 @@ export async function GET(request: NextRequest) {
       // Priority 1: Check for StockX mapping
       const stockxIds = inventoryToStockxIds.get(item.id)
       if (stockxIds) {
+        // PHASE 3.11: Skip items with invalid StockX mappings
+        // WHY: Don't include fake/stale prices from broken product mappings in totals
+        const isInvalidMapping = stockxIds.mappingStatus === 'stockx_404' || stockxIds.mappingStatus === 'invalid'
+
+        if (isInvalidMapping) {
+          missingPrices.push({
+            id: item.id,
+            sku: item.sku,
+            size: item.size_uk || item.size,
+            reason: 'Invalid StockX mapping',
+          })
+          return // Skip invalid mappings - don't include in totals
+        }
+
         const stockxKey = `${stockxIds.productId}:${stockxIds.variantId}`
         const stockxPrice = stockxPriceMap.get(stockxKey)
 
         if (stockxPrice) {
-          // Market value logic: last_sale_price → lowest_ask → highest_bid
-          const price = stockxPrice.last_sale_price || stockxPrice.lowest_ask || stockxPrice.highest_bid
+          // PHASE 3.3: Market price = highest_bid ?? lowest_ask ?? null
+          const price = stockxPrice.highest_bid ?? stockxPrice.lowest_ask ?? null
 
           if (price) {
             totalEstimatedValue += price
@@ -324,6 +346,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 8. Calculate category breakdown (prefer StockX → fallback to other providers)
+    // PHASE 3.11: Exclude items with invalid StockX mappings
     const categoryMap = new Map<string, number>()
     inventory.forEach((item) => {
       const category = item.category || 'uncategorized'
@@ -333,6 +356,12 @@ export async function GET(request: NextRequest) {
       let value = 0
 
       if (stockxIds) {
+        // PHASE 3.11: Skip items with invalid mappings
+        const isInvalidMapping = stockxIds.mappingStatus === 'stockx_404' || stockxIds.mappingStatus === 'invalid'
+        if (isInvalidMapping) {
+          return // Skip invalid mappings - don't include in category breakdown
+        }
+
         const stockxKey = `${stockxIds.productId}:${stockxIds.variantId}`
         const stockxPrice = stockxPriceMap.get(stockxKey)
         if (stockxPrice) {

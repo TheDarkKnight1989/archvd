@@ -23,8 +23,7 @@ export interface StockxListing {
   sku?: string
   size_uk?: string
   image_url?: string
-  market_price?: number
-  market_last_sale?: number
+  market_price?: number | null
   market_lowest_ask?: number
   market_highest_bid?: number
   pending_operation?: {
@@ -98,7 +97,7 @@ export function useStockxListings(filters?: ListingFilters) {
           // Fetch market price for this listing
           const { data: marketPrice } = await supabase
             .from('stockx_market_latest')
-            .select('last_sale_price, lowest_ask, highest_bid')
+            .select('lowest_ask, highest_bid')
             .eq('stockx_product_id', listing.stockx_product_id)
             .eq('stockx_variant_id', listing.stockx_variant_id)
             .eq('currency_code', listing.currency)
@@ -115,6 +114,9 @@ export function useStockxListings(filters?: ListingFilters) {
             .limit(1)
             .single()
 
+          // PHASE 3.3: Market price = highest_bid ?? lowest_ask ?? null
+          const computedMarketPrice = marketPrice?.highest_bid ?? marketPrice?.lowest_ask ?? null
+
           return {
             ...listing,
             inventory_id: inventoryId,
@@ -122,8 +124,7 @@ export function useStockxListings(filters?: ListingFilters) {
             size_uk: inventory?.size_uk,
             image_url: inventory?.image_url,
             product_name: inventory ? `${inventory.brand || ''} ${inventory.model || ''}`.trim() : undefined,
-            market_price: marketPrice?.last_sale_price || marketPrice?.lowest_ask,
-            market_last_sale: marketPrice?.last_sale_price,
+            market_price: computedMarketPrice,
             market_lowest_ask: marketPrice?.lowest_ask,
             market_highest_bid: marketPrice?.highest_bid,
             pending_operation: pendingJob ? {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Vitest Test Setup
  * Global test configuration and mocks

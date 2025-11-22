@@ -414,10 +414,11 @@ export function useItemsTable(userId: string | undefined, params: TableParams = 
           .from('inventory_market_links')
           .select('item_id, stockx_product_id, stockx_variant_id');
 
-        // Fetch StockX latest prices
+        // Fetch StockX latest prices from stockx_market_latest materialized view
+        // PHASE 3.3: StockX V2 API provides highest_bid & lowest_ask (no last_sale)
         const { data: stockxPrices } = await supabase
-          .from('stockx_latest_prices')
-          .select('sku, size, lowest_ask, last_sale, as_of');
+          .from('stockx_market_latest')
+          .select('stockx_product_id, stockx_variant_id, lowest_ask, highest_bid, snapshot_at');
 
         // Build StockX maps
         const stockxLinkMap = new Map<string, any>();
@@ -433,7 +434,7 @@ export function useItemsTable(userId: string | undefined, params: TableParams = 
         const stockxPriceMap = new Map<string, any>();
         if (stockxPrices) {
           for (const price of stockxPrices) {
-            const key = `${price.sku}:${price.size}`;
+            const key = `${price.stockx_product_id}:${price.stockx_variant_id}`;
             stockxPriceMap.set(key, price);
           }
         }
@@ -447,16 +448,16 @@ export function useItemsTable(userId: string | undefined, params: TableParams = 
           let marketUpdatedAt: string | null = (item as any).market_updated_at || null;
 
           if (stockxLink) {
-            // Use size_uk for matching (StockX sizes are stored without UK prefix)
-            const matchSize = (item as any).size_uk || item.size;
-            const priceKey = `${stockxLink.product_sku}:${matchSize}`;
+            // Look up price using stockx_product_id and stockx_variant_id from the mapping
+            const priceKey = `${stockxLink.product_id}:${stockxLink.variant_id}`;
             const stockxPrice = stockxPriceMap.get(priceKey);
 
-            if (stockxPrice?.last_sale) {
-              // Prefer StockX last_sale over existing market_value
-              market = stockxPrice.last_sale;
+            // PHASE 3.3: Market price = highest_bid ?? lowest_ask ?? null
+            const marketPrice = stockxPrice?.highest_bid ?? stockxPrice?.lowest_ask
+            if (marketPrice) {
+              market = marketPrice;
               marketSource = 'stockx';
-              marketUpdatedAt = stockxPrice.as_of;
+              marketUpdatedAt = stockxPrice.snapshot_at;
             }
           }
 

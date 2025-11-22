@@ -12,29 +12,8 @@ export type EnrichedInventoryItem = InventoryItem & {
   market_source: string
 
   // Enriched data
-  image_url?: string
   full_title: string
   sparkline_data: { date: string; value: number }[]
-
-  // Alias mapping status
-  alias_mapping_status?: 'mapped' | 'unmatched' | 'unmapped' | null
-  alias_product_sku?: string | null
-  alias_product_id?: string | null
-
-  // StockX market data
-  stockx_mapping_status?: 'mapped' | 'unmapped' | null
-  stockx_product_sku?: string | null
-  stockx_lowest_ask?: number | null
-  stockx_last_sale?: number | null
-  stockx_highest_bid?: number | null
-  stockx_price_as_of?: string | null
-
-  // StockX listing data
-  stockx_listing_id?: string | null
-  stockx_listing_status?: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'MATCHED' | 'COMPLETED' | 'DELETED' | 'EXPIRED' | null
-  stockx_ask_price?: number | null
-  stockx_listing_expires_at?: string | null
-  stockx_listing_pending_operation?: { job_id: string; status: string; job_type: string } | null
 }
 
 export function usePortfolioInventory() {
@@ -73,9 +52,10 @@ export function usePortfolioInventory() {
 
       // Fetch StockX mapping status from inventory_market_links
       // Note: All links in this table are StockX-only (no provider column)
+      // PHASE 3.11: Include mapping_status to detect broken/invalid mappings
       const { data: stockxLinks, error: stockxError } = await supabase
         .from('inventory_market_links')
-        .select('item_id, stockx_product_id, stockx_variant_id, stockx_listing_id')
+        .select('item_id, stockx_product_id, stockx_variant_id, stockx_listing_id, mapping_status, last_sync_success_at, last_sync_error')
 
       if (stockxError) {
         console.warn('[usePortfolioInventory] Failed to fetch StockX links:', stockxError)
@@ -130,12 +110,12 @@ export function usePortfolioInventory() {
         console.warn('[usePortfolioInventory] Failed to fetch unmatched SKUs:', unmatchedError)
       }
 
-      // Fetch StockX latest prices (filter by user's currency for performance)
+      // Fetch StockX latest prices from stockx_market_latest materialized view
+      // This view contains the most recent snapshot for each product/variant/currency
       const { data: stockxPrices, error: stockxPricesError } = await supabase
-        .from('stockx_latest_prices')
-        .select('sku, size, currency, lowest_ask, highest_bid, last_sale, as_of')
-        .eq('currency', userCurrency)
-        .order('as_of', { ascending: false })
+        .from('stockx_market_latest')
+        .select('stockx_product_id, stockx_variant_id, currency_code, lowest_ask, highest_bid, snapshot_at')
+        .eq('currency_code', userCurrency)
 
       if (stockxPricesError) {
         console.warn('[usePortfolioInventory] Failed to fetch StockX prices:', stockxPricesError)
@@ -149,6 +129,10 @@ export function usePortfolioInventory() {
             product_id: link.stockx_product_id,
             variant_id: link.stockx_variant_id,
             listing_id: link.stockx_listing_id,
+            // PHASE 3.11: Include mapping status fields
+            mapping_status: link.mapping_status,
+            last_sync_success_at: link.last_sync_success_at,
+            last_sync_error: link.last_sync_error,
           })
         }
       }
@@ -184,18 +168,14 @@ export function usePortfolioInventory() {
         }
       }
 
-      // Build StockX price map (key: sku + size)
-      // Prices are already filtered by user's currency and ordered by as_of DESC
-      // So we only keep the first (most recent) entry for each SKU:size
+      // Build StockX price map (key: stockx_product_id:stockx_variant_id)
+      // Prices are already filtered by user's currency
+      // Each entry is the latest snapshot for that product/variant/currency combination
       const stockxPriceMap = new Map<string, any>()
       if (stockxPrices) {
         for (const price of stockxPrices) {
-          const key = `${price.sku}:${price.size}`
-
-          // Only set if not already in map (keep most recent due to ordering)
-          if (!stockxPriceMap.has(key)) {
-            stockxPriceMap.set(key, price)
-          }
+          const key = `${price.stockx_product_id}:${price.stockx_variant_id}`
+          stockxPriceMap.set(key, price)
         }
       }
 
@@ -243,42 +223,43 @@ export function usePortfolioInventory() {
         // Add StockX mapping status and pricing
         const stockxLink = stockxLinkMap.get(item.id)
         if (stockxLink) {
-          // Normalize size for lookup: strip "UK" prefix if present
-          // StockX API returns US sizes, but inventory might have "UK9", "UK10", etc.
-          const normalizedSize = item.size?.replace(/^UK/i, '') || item.size
-          const priceKey = `${item.sku}:${normalizedSize}`
+          // Look up price using stockx_product_id and stockx_variant_id from the mapping
+          const priceKey = `${stockxLink.product_id}:${stockxLink.variant_id}`
           const stockxPrice = stockxPriceMap.get(priceKey)
 
           // Get listing data if exists
           const listing = stockxLink.listing_id ? stockxListingMap.get(stockxLink.listing_id) : null
           const pendingJob = listing?.stockx_listing_id ? pendingJobMap.get(listing.stockx_listing_id) : null
 
+          // PHASE 3.11: Use actual mapping_status from database
           enrichedItem = {
             ...enrichedItem,
-            stockx_mapping_status: 'mapped' as const,
+            stockx_mapping_status: stockxLink.mapping_status || 'ok',
+            stockx_last_sync_success_at: stockxLink.last_sync_success_at || null,
+            stockx_last_sync_error: stockxLink.last_sync_error || null,
             stockx_product_sku: item.sku,
             stockx_lowest_ask: stockxPrice?.lowest_ask || null,
             stockx_highest_bid: stockxPrice?.highest_bid || null,
-            stockx_last_sale: stockxPrice?.last_sale || null,
-            stockx_price_as_of: stockxPrice?.as_of || null,
+            stockx_price_as_of: stockxPrice?.snapshot_at || null,
             // Add listing data
             stockx_listing_id: listing?.stockx_listing_id || null,
             stockx_listing_status: listing?.status || null,
-            stockx_ask_price: listing?.amount ? listing.amount / 100 : null,
+            stockx_ask_price: listing?.amount || null,  // BUG FIX: Amount already in major units
             stockx_listing_expires_at: listing?.expires_at || null,
             stockx_listing_pending_operation: pendingJob || null,
           }
 
           // Update market_value from StockX if available
-          // Priority: last_sale (actual transaction) > lowest_ask (current market) > highest_bid (instant sell floor)
+          // PHASE 3.8: Market price = lowest_ask ?? highest_bid ?? null
+          // WHY: lowest_ask represents current market value (what buyers pay)
           if (stockxPrice) {
-            const marketPrice = stockxPrice.last_sale || stockxPrice.lowest_ask || stockxPrice.highest_bid
+            const marketPrice = stockxPrice.lowest_ask ?? stockxPrice.highest_bid
 
             if (marketPrice) {
               enrichedItem = {
                 ...enrichedItem,
                 market_value: marketPrice,
-                market_currency: stockxPrice.currency,
+                market_currency: stockxPrice.currency_code,
                 market_source: 'stockx',
               }
             }
@@ -290,7 +271,6 @@ export function usePortfolioInventory() {
             stockx_product_sku: null,
             stockx_lowest_ask: null,
             stockx_highest_bid: null,
-            stockx_last_sale: null,
             stockx_price_as_of: null,
             stockx_listing_id: null,
             stockx_listing_status: null,

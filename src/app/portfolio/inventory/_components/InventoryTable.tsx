@@ -22,6 +22,7 @@ import { InventoryCard, InventoryCardSkeleton } from './InventoryCard'
 import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
 import { AliasMapIndicator } from '@/components/AliasMapIndicator'
 import { ListingStatusBadge } from '@/components/stockx/ListingStatusBadge'
+import { MarketplaceListings, type MarketplaceListing } from '@/components/inventory/MarketplaceListings'
 import type { EnrichedInventoryItem } from '@/hooks/usePortfolioInventory'
 
 const columnHelper = createColumnHelper<EnrichedInventoryItem>()
@@ -38,6 +39,12 @@ export interface InventoryTableProps {
   onAddExpense?: (item: EnrichedInventoryItem) => void
   onAddToWatchlist?: (item: EnrichedInventoryItem) => void
   onAddItem?: () => void
+  // StockX listing actions
+  onListOnStockX?: (item: EnrichedInventoryItem) => void
+  onRepriceListing?: (item: EnrichedInventoryItem) => void
+  onDeactivateListing?: (item: EnrichedInventoryItem) => void
+  onReactivateListing?: (item: EnrichedInventoryItem) => void
+  onDeleteListing?: (item: EnrichedInventoryItem) => void
 }
 
 export function InventoryTable({
@@ -52,6 +59,11 @@ export function InventoryTable({
   onAddExpense,
   onAddToWatchlist,
   onAddItem,
+  onListOnStockX,
+  onRepriceListing,
+  onDeactivateListing,
+  onReactivateListing,
+  onDeleteListing,
 }: InventoryTableProps) {
   const parentRef = useRef<HTMLDivElement>(null)
   const { convert, format } = useCurrency()
@@ -112,72 +124,46 @@ export function InventoryTable({
         enableSorting: false,
       }),
 
-      columnHelper.accessor('stockx_mapping_status', {
-        id: 'stockx',
+      columnHelper.display({
+        id: 'marketplaces',
         header: () => (
-          <div className="flex justify-center">
-            <span
-              className="inline-flex items-center justify-center w-4 h-4 rounded money-pos-tint text-[9px] font-bold border border-profit/30"
-              title="StockX"
-            >
-              Sx
-            </span>
+          <div className="text-center">
+            <span className="label-up">Marketplaces</span>
           </div>
         ),
         cell: (info) => {
-          const status = info.getValue()
           const item = info.row.original
-          const hasListing = item.stockx_listing_status
+          const listings: MarketplaceListing[] = []
+
+          // StockX listing
+          if (item.stockx_mapping_status === 'mapped') {
+            const listingStatus = item.stockx_listing_status
+
+            let status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'NONE' = 'NONE'
+            if (listingStatus === 'ACTIVE') {
+              status = 'ACTIVE'
+            } else if (listingStatus === 'PENDING') {
+              status = 'PENDING'
+            } else if (listingStatus === 'INACTIVE') {
+              status = 'INACTIVE'
+            }
+
+            listings.push({
+              marketplace: 'stockx',
+              status,
+              askPrice: item.stockx_ask_price ? parseFloat(item.stockx_ask_price) : undefined,
+              currency: '£',
+              expiresAt: item.stockx_listing_expires_at,
+            })
+          }
+
+          // Future marketplaces can be added here:
+          // if (item.goat_listing_id) { listings.push({ marketplace: 'goat', ... }) }
+          // if (item.ebay_listing_id) { listings.push({ marketplace: 'ebay', ... }) }
 
           return (
-            <div className="flex flex-col items-center gap-1.5 group relative">
-              {/* Mapping status indicator */}
-              <div className="flex justify-center">
-                {status === 'mapped' && (
-                  <div className="inline-flex items-center justify-center w-5 h-5 rounded-full money-pos-tint border border-profit/30">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="w-3 h-3"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                )}
-
-                {status === 'unmapped' && (
-                  <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-soft text-dim border border-border">
-                    <span className="text-xs">—</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Listing status badge */}
-              {hasListing && item.stockx_listing_status && (
-                <ListingStatusBadge status={item.stockx_listing_status} />
-              )}
-
-              {/* Tooltip */}
-              {status === 'mapped' && item.stockx_product_sku && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50">
-                  <div className="bg-surface border border-border rounded-lg px-2.5 py-1.5 shadow-medium whitespace-nowrap">
-                    <div className="text-2xs text-fg">
-                      Mapped to StockX
-                      <div className="text-dim mono mt-0.5">{item.stockx_product_sku}</div>
-                      {hasListing && item.stockx_ask_price && (
-                        <div className="mt-1 pt-1 border-t border-border">
-                          <div className="text-dim">Listed at £{item.stockx_ask_price}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="flex justify-center">
+              <MarketplaceListings listings={listings} compact />
             </div>
           )
         },
@@ -412,18 +398,40 @@ export function InventoryTable({
       columnHelper.display({
         id: 'actions',
         header: '',
-        cell: (info) => (
-          <RowActions
-            status={info.row.original.status || 'active'}
-            onEdit={() => onEdit?.(info.row.original)}
-            onToggleSold={() => onToggleSold?.(info.row.original)}
-            onAddExpense={() => onAddExpense?.(info.row.original)}
-            onAddToWatchlist={() => onAddToWatchlist?.(info.row.original)}
-          />
-        ),
+        cell: (info) => {
+          const item = info.row.original
+          return (
+            <RowActions
+              status={item.status || 'active'}
+              onEdit={() => onEdit?.(item)}
+              onToggleSold={() => onToggleSold?.(item)}
+              onAddExpense={() => onAddExpense?.(item)}
+              onAddToWatchlist={() => onAddToWatchlist?.(item)}
+              stockxMapped={item.stockx_mapping_status === 'mapped'}
+              stockxListingStatus={item.stockx_listing_status}
+              onListOnStockX={onListOnStockX ? () => onListOnStockX(item) : undefined}
+              onRepriceListing={onRepriceListing ? () => onRepriceListing(item) : undefined}
+              onDeactivateListing={onDeactivateListing ? () => onDeactivateListing(item) : undefined}
+              onReactivateListing={onReactivateListing ? () => onReactivateListing(item) : undefined}
+              onDeleteListing={onDeleteListing ? () => onDeleteListing(item) : undefined}
+            />
+          )
+        },
       }),
     ],
-    [onEdit, onToggleSold, onAddExpense, onAddToWatchlist, convert, format]
+    [
+      onEdit,
+      onToggleSold,
+      onAddExpense,
+      onAddToWatchlist,
+      onListOnStockX,
+      onRepriceListing,
+      onDeactivateListing,
+      onReactivateListing,
+      onDeleteListing,
+      convert,
+      format,
+    ]
   )
 
   // Setup table

@@ -1,3 +1,9 @@
+// @ts-nocheck
+/**
+ * @deprecated This file is from V1 and will be removed in a future release.
+ * Use src/app/portfolio/page.tsx instead.
+ * Temporarily disabled from typechecking during Phase 2.6 cleanup.
+ */
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'

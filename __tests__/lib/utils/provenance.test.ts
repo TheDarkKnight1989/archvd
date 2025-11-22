@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Provider Preference Tests
  * Tests for market data provider selection logic

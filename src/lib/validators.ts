@@ -58,7 +58,7 @@ export const markAsSoldSchema = z.object({
   sold_price: z.number().min(0),
   sold_date: dateSchema,
   sale_currency: currencySchema.optional().default('GBP'),
-  platform: z.string().optional(),
+  platform: platformSchema.optional(),
   fees: z.number().min(0).optional().default(0),
   shipping: z.number().min(0).optional().default(0),
   notes: z.string().optional()

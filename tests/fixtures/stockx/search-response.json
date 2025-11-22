@@ -1,0 +1,28 @@
+{
+  "products": [
+    {
+      "productId": "5616213f-a646-49ec-8e4d-884c2c0b619e",
+      "styleId": "DC0350-100",
+      "brand": "Jordan",
+      "productType": "sneakers",
+      "urlKey": "jordan-1-mid-dia-de-los-muertos",
+      "title": "Jordan 1 Mid Dia de los Muertos",
+      "productAttributes": {
+        "colorway": "White/Multi-Color",
+        "releaseDate": "2020-10-28",
+        "retailPrice": 115,
+        "retailCurrency": "USD",
+        "gender": "men",
+        "category": "sneakers"
+      },
+      "media": {
+        "imageUrl": "https://images.stockx.com/images/Air-Jordan-1-Mid-Dia-de-los-Muertos-Product.jpg",
+        "thumbUrl": "https://images.stockx.com/images/Air-Jordan-1-Mid-Dia-de-los-Muertos-Product.jpg",
+        "smallImageUrl": "https://images.stockx.com/360/Air-Jordan-1-Mid-Dia-de-los-Muertos/Images/Air-Jordan-1-Mid-Dia-de-los-Muertos/Lv2/img01.jpg"
+      }
+    }
+  ],
+  "totalResults": 5,
+  "page": 1,
+  "pageSize": 5
+}

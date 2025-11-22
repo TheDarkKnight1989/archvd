@@ -64,6 +64,7 @@ export type EnrichedLineItem = {
 
   // Image resolved through fallback chain
   image: { src: string; alt: string };
+  imageSource?: 'local' | 'stockx' | null;
 
   // Purchase info
   purchaseDate?: string | null;
@@ -72,9 +73,10 @@ export type EnrichedLineItem = {
   avgCost: number;        // invested / qty
 
   // Market data
+  // PHASE 3.8: Market price = lowest_ask ?? highest_bid ?? null
+  // WHY: lowest_ask represents market value (what buyers pay to purchase instantly)
   market: {
     price?: number | null;
-    lastSale?: number | null;
     lowestAsk?: number | null;
     currency?: 'GBP' | 'EUR' | 'USD' | null;
     provider?: 'stockx' | 'alias' | 'ebay' | 'seed' | null;
@@ -113,5 +115,13 @@ export type EnrichedLineItem = {
     listingStatus?: 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'CANCELLED' | 'SOLD' | null;
     askPrice?: number | null;           // Current ask price
     expiresAt?: string | null;          // Listing expiry
+    // Market data (exact match for this product+variant+currency)
+    // PHASE 3.8: Market price = lowest_ask ?? highest_bid ?? null
+    lowestAsk?: number | null;          // Lowest ask
+    highestBid?: number | null;         // Highest bid
+    // PHASE 3.11: Mapping health status
+    mappingStatus?: 'ok' | 'stockx_404' | 'invalid' | 'unmapped' | null;
+    lastSyncSuccessAt?: string | null;
+    lastSyncError?: string | null;
   };
 };
