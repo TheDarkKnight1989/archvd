@@ -16,6 +16,7 @@ export interface RowActionsProps {
   onToggleSold: () => void
   onAddExpense: () => void
   onAddToWatchlist?: () => void
+  onDelete?: () => void
   // StockX listing actions
   stockxMapped?: boolean
   stockxListingStatus?: string | null
@@ -32,6 +33,7 @@ export function RowActions({
   onToggleSold,
   onAddExpense,
   onAddToWatchlist,
+  onDelete,
   stockxMapped,
   stockxListingStatus,
   onListOnStockX,
@@ -171,6 +173,20 @@ export function RowActions({
                   Delete Listing
                 </button>
               )}
+            </>
+          )}
+
+          {/* Delete Item */}
+          {onDelete && (
+            <>
+              <div className="border-t border-border my-1" />
+              <button
+                onClick={() => handleAction(onDelete)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-all duration-120"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Item
+              </button>
             </>
           )}
         </div>

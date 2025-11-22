@@ -336,12 +336,43 @@ export default function PortfolioPage() {
 
       // Refetch inventory data
       refetch()
+    } catch (error) {
+      console.error('Error deleting item:', error)
+      alert(`Failed to delete item: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
 
-      // Show success message
-      console.log('Item deleted successfully:', itemName)
-    } catch (error: any) {
-      console.error('Failed to delete item:', error)
-      alert(`Failed to delete item: ${error.message}`)
+  const handleBulkDelete = async () => {
+    const selectedCount = selectedItems.size
+    if (selectedCount === 0) return
+
+    // Get selected item names for confirmation
+    const itemsToDelete = filteredItems.filter(item => selectedItems.has(item.id))
+    const itemNames = itemsToDelete.slice(0, 5).map(i => `${i.brand} ${i.model} (${i.sku})`).join('\n')
+    const moreCount = selectedCount > 5 ? `\n...and ${selectedCount - 5} more` : ''
+
+    if (!confirm(`Are you sure you want to permanently delete ${selectedCount} item${selectedCount > 1 ? 's' : ''}?\n\n${itemNames}${moreCount}\n\nThis will remove all items and their associated data (expenses, listings, etc.). This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      // Delete all selected items
+      const deletePromises = itemsToDelete.map(item =>
+        fetch(`/api/items/${item.id}/delete`, { method: 'DELETE' })
+          .then(res => {
+            if (!res.ok) throw new Error(`Failed to delete ${item.sku}`)
+            return res
+          })
+      )
+
+      await Promise.all(deletePromises)
+
+      // Clear selection and refetch
+      setSelectedItems(new Set())
+      refetch()
+    } catch (error) {
+      console.error('Error deleting items:', error)
+      alert(`Failed to delete some items: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -605,10 +636,7 @@ export default function PortfolioPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                // TODO: Implement bulk delete
-                console.log('Bulk delete:', Array.from(selectedItems))
-              }}
+              onClick={handleBulkDelete}
             >
               Delete selected
             </Button>
