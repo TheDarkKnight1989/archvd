@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.stockx.com',
+        pathname: '/**',
+      },
+    ],
+  },
+
   async redirects() {
     return [
       {

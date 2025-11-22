@@ -29,6 +29,8 @@ import { MarketModal } from '@/components/MarketModal'
 // Portfolio V3 Components
 import { InventoryTableV3 } from './_components/InventoryTableV3'
 import { FilterTabs } from './_components/FilterTabs'
+import { InventoryV3Table } from './_components/InventoryV3Table'
+import { SyncToolbar } from './_components/SyncToolbar'
 
 export default function PortfolioPage() {
   const { user } = useRequireAuth()
@@ -62,6 +64,9 @@ export default function PortfolioPage() {
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'purchase_date', desc: true }, // Default: newest first
   ])
+
+  // Bulk selection state
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
 
   // Column visibility state - Updated to match new Portfolio table spec
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
@@ -247,8 +252,8 @@ export default function PortfolioPage() {
 
   // Row action handlers
   const handleRowClick = (item: EnrichedLineItem) => {
-    setSelectedMarketItem(item)
-    setMarketModalOpen(true)
+    // Navigate to Product Market Page instead of opening modal
+    router.push(`/portfolio/inventory/market/${item.id}`)
   }
 
   const handleEdit = (item: EnrichedLineItem) => {
@@ -280,8 +285,8 @@ export default function PortfolioPage() {
   const handleRepriceListing = (item: EnrichedLineItem) => {
     // Convert EnrichedLineItem to format expected by modal
     setListingToReprice({
-      stockx_listing_id: (item as any).stockx_listing_id,
-      ask_price: (item as any).stockx_ask_price || item.market.price || 0,
+      stockx_listing_id: item.stockx?.listingId,
+      ask_price: item.stockx?.askPrice || item.market.price || 0,
       market_lowest_ask: item.market.price,
       product_name: `${item.brand} ${item.model}`,
       sku: item.sku,
@@ -290,7 +295,7 @@ export default function PortfolioPage() {
   }
 
   const handleDeactivateListing = async (item: EnrichedLineItem) => {
-    const listingId = (item as any).stockx_listing_id
+    const listingId = item.stockx?.listingId
     if (listingId) {
       await deactivateListing(listingId)
       refetch()
@@ -298,7 +303,7 @@ export default function PortfolioPage() {
   }
 
   const handleReactivateListing = async (item: EnrichedLineItem) => {
-    const listingId = (item as any).stockx_listing_id
+    const listingId = item.stockx?.listingId
     if (listingId) {
       await activateListing(listingId)
       refetch()
@@ -306,7 +311,7 @@ export default function PortfolioPage() {
   }
 
   const handleDeleteListing = async (item: EnrichedLineItem) => {
-    const listingId = (item as any).stockx_listing_id
+    const listingId = item.stockx?.listingId
     if (listingId && confirm('Are you sure you want to delete this listing?')) {
       await deleteListing(listingId)
       refetch()
@@ -551,22 +556,76 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {/* Portfolio Table V3 */}
-      <InventoryTableV3
+      {/* Sync Toolbar */}
+      <SyncToolbar
+        lastSyncedAt={items[0]?.stockx?.lastSyncSuccessAt}
+        onSyncNow={async () => {
+          const response = await fetch('/api/stockx/sync/prices', {
+            method: 'POST',
+          })
+
+          if (!response.ok) {
+            const error = await response.json()
+            throw new Error(error.error || 'Sync failed')
+          }
+
+          const result = await response.json()
+          console.log('[Sync] Completed:', result)
+
+          // Refetch inventory to get updated market data
+          refetch()
+        }}
+      />
+
+      {/* Bulk Actions Toolbar */}
+      {selectedItems.size > 0 && (
+        <div className="sticky top-0 z-10 bg-accent/10 border border-accent/30 rounded-lg p-3 mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">
+              {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedItems(new Set())}
+            >
+              Clear selection
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // TODO: Implement bulk delete
+                console.log('Bulk delete:', Array.from(selectedItems))
+              }}
+            >
+              Delete selected
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Inventory V3 Table */}
+      <InventoryV3Table
         items={filteredItems}
         loading={loading}
+        sorting={sorting}
+        onSortingChange={setSorting}
         onRowClick={handleRowClick}
+        selectedItems={selectedItems}
+        onSelectionChange={setSelectedItems}
         onEdit={handleEdit}
         onMarkSold={handleToggleSold}
         onAddExpense={handleAddExpense}
         onAddToWatchlist={handleAddToWatchlist}
-        onAddItem={() => setAddItemModalOpen(true)}
-        onDelete={handleDeleteItem}
         onListOnStockX={handleListOnStockX}
         onRepriceListing={handleRepriceListing}
         onDeactivateListing={handleDeactivateListing}
         onReactivateListing={handleReactivateListing}
         onDeleteListing={handleDeleteListing}
+        onDelete={handleDeleteItem}
       />
 
       {/* Add Item Modal */}
@@ -639,20 +698,7 @@ export default function PortfolioPage() {
             setListOnStockXModalOpen(false)
             setItemToList(null)
           }}
-          item={{
-            id: itemToList.id,
-            sku: itemToList.sku,
-            brand: itemToList.brand,
-            model: itemToList.model,
-            size_uk: itemToList.size_uk?.toString(),
-            purchase_price: itemToList.invested || itemToList.avgCost || 0,
-            tax: 0,
-            shipping: 0,
-            market_price: itemToList.market.price,
-            market_last_sale: itemToList.market.lastSale,
-            market_lowest_ask: itemToList.market.lowestAsk,
-            market_highest_bid: itemToList.instantSell.gross,
-          }}
+          item={itemToList}
         />
       )}
 
