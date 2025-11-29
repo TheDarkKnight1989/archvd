@@ -100,28 +100,28 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
 
       {/* Desktop: Slim utility strip */}
       <div className="hidden sm:block sticky top-0 z-30 bg-elev-1/95 border-b border-white/5">
-        <div className="mx-auto max-w-6xl px-4 lg:px-8 h-12 flex items-center gap-3">
-          {/* Search Bar */}
-          <button
-            onClick={handleSearchClick}
-            className={cn(
-              "flex-1 max-w-2xl h-9 rounded-lg px-3",
-              "bg-elev-1/50 border border-white/10",
-              "flex items-center gap-2",
-              "text-muted hover:text-fg hover:bg-white/5 hover:border-white/20",
-              "transition-all duration-200",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            )}
-          >
-            <Search className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
-            <span className="text-sm flex-1">Search products...</span>
-            <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-elev-2 px-1.5 font-mono text-[10px] font-medium text-muted">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </button>
+        <div className="mx-auto max-w-6xl px-4 lg:px-8 h-12 flex items-center justify-between gap-4">
+          {/* Left Side: Search + Utility Icons */}
+          <div className="flex items-center gap-3">
+            {/* Search Bar */}
+            <button
+              onClick={handleSearchClick}
+              className={cn(
+                "w-[400px] h-9 rounded-lg px-3",
+                "bg-elev-1/50 border border-white/10",
+                "flex items-center gap-2",
+                "text-muted hover:text-fg hover:bg-white/5 hover:border-white/20",
+                "transition-all duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              )}
+            >
+              <Search className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
+              <span className="text-sm flex-1">Search products...</span>
+              <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-elev-2 px-1.5 font-mono text-[10px] font-medium text-muted">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </button>
 
-          {/* Right Side Controls */}
-          <div className="flex items-center gap-2">
             {/* Utility Icons */}
             <button
               onClick={handleCalculatorClick}
@@ -150,10 +150,10 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
             >
               <Camera className="h-4 w-4" strokeWidth={1.75} />
             </button>
+          </div>
 
-            {/* Separator */}
-            <div className="h-6 w-px bg-white/10 mx-1" />
-
+          {/* Right Side: Notifications + Profile */}
+          <div className="flex items-center gap-2">
             {/* Notifications */}
             <button
               onClick={handleNotificationsClick}
