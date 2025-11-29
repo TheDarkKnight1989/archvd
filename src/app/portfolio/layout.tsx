@@ -17,10 +17,12 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
 
         {/* Main content with dynamic padding based on sidebar pinned state */}
         <main
-          className="md:pl-16 pb-16 md:pb-0 transition-[padding-left] duration-120 ease-terminal"
+          className="pl-16 md:pl-16 transition-[padding-left] duration-120 ease-terminal"
           id="main"
         >
-          {children}
+          <div className="pb-20 sm:pb-0">
+            {children}
+          </div>
         </main>
 
         {/* Mobile Navigation */}

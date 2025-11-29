@@ -72,6 +72,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/cheerio": "^0.22.35",

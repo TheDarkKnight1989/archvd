@@ -11,43 +11,15 @@ import {
   Plus,
   Menu,
   X,
-  TrendingUp,
-  Settings,
-  CandlestickChart,
-  Package,
-  ReceiptText,
-  CalendarRange,
-  UploadCloud,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { useSidebar } from '@/contexts/SidebarContext'
+import { SidebarContent } from './Sidebar'
 
 const dockItems = [
   { icon: LayoutGrid, href: '/portfolio', label: 'Overview' },
   { icon: Boxes, href: '/portfolio/inventory', label: 'Portfolio' },
   { icon: BarChart3, href: '/portfolio/expenses', label: 'Analytics' },
-  { icon: User, href: '/profile', label: 'Profile' },
-]
-
-// Full nav for drawer (same as sidebar)
-const primaryNav = [
-  { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Overview' },
-  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Portfolio' },
-  { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
-  { id: 'analytics', icon: BarChart3, href: '/portfolio/analytics', label: 'Analytics', badge: 'ALPHA' },
-]
-
-const secondaryNav = [
-  { id: 'market', icon: CandlestickChart, href: '/portfolio/market', label: 'Market' },
-  { id: 'releases', icon: CalendarRange, href: '/portfolio/releases', label: 'Releases' },
-  { id: 'expenses', icon: ReceiptText, href: '/portfolio/expenses', label: 'Expenses' },
-  { id: 'packages', icon: Package, href: '/portfolio/packages', label: 'Packages', badge: 'BETA' },
-]
-
-const footerNav = [
-  { id: 'settings', icon: Settings, href: '/settings', label: 'Settings' },
-  { id: 'import', icon: UploadCloud, href: '/portfolio/import', label: 'Import' },
-  { id: 'profile', icon: User, href: '/profile', label: 'Profile' },
+  { icon: User, href: '/settings', label: 'Settings' },
 ]
 
 interface MobileDockProps {
@@ -73,6 +45,18 @@ export function MobileDock({ onQuickAdd }: MobileDockProps) {
     return () => {
       document.body.style.overflow = ''
     }
+  }, [drawerOpen])
+
+  // Close drawer on ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && drawerOpen) {
+        setDrawerOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [drawerOpen])
 
   return (
@@ -129,7 +113,7 @@ export function MobileDock({ onQuickAdd }: MobileDockProps) {
       {/* Drawer Overlay */}
       {drawerOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden"
           onClick={() => setDrawerOpen(false)}
         />
       )}
@@ -137,107 +121,34 @@ export function MobileDock({ onQuickAdd }: MobileDockProps) {
       {/* Drawer */}
       <div
         className={cn(
-          'fixed top-0 left-0 h-full w-[280px] bg-elev-2 gradient-elev border-r border-border z-50 md:hidden',
+          'fixed top-0 left-0 h-full w-[320px] border-r-2 z-[70] md:hidden',
           'transition-transform duration-300 ease-terminal',
           drawerOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         style={{
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)',
+          background: 'linear-gradient(135deg, #0E1A15 0%, #0B1510 50%, rgba(0, 255, 148, 0.03) 100%)',
+          borderColor: 'rgba(0, 255, 148, 0.15)',
+          boxShadow: 'inset 2px 0 0 0 rgba(0, 255, 148, 0.25), 4px 0 24px -8px rgba(0,0,0,0.4), 0 0 60px -15px rgba(0, 255, 148, 0.1)',
         }}
       >
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border/40">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-accent-200 flex items-center justify-center flex-shrink-0">
-                <span className="text-fg font-bold text-sm">A</span>
-              </div>
-              <span className="text-fg font-semibold text-base">Archvd</span>
-            </div>
-            <button
-              onClick={() => setDrawerOpen(false)}
-              className="h-8 w-8 rounded-lg hover:bg-elev-1/80 flex items-center justify-center text-fg transition-colors"
-              aria-label="Close menu"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+        {/* Close button - top right */}
+        <button
+          onClick={() => setDrawerOpen(false)}
+          className="absolute top-4 right-4 z-10 h-8 w-8 rounded-lg bg-elev-2/80 hover:bg-elev-2 flex items-center justify-center text-fg transition-colors border border-border/40"
+          aria-label="Close menu"
+        >
+          <X className="h-4 w-4" />
+        </button>
 
-          {/* Nav Content */}
-          <div className="flex-1 overflow-y-auto p-4">
-            {/* Primary Group */}
-            <div className="mb-4">
-              <h3 className="text-dim uppercase tracking-wider text-[11px] px-3 mb-2">Main</h3>
-              <ul className="space-y-0.5">
-                {primaryNav.map((item) => (
-                  <DrawerNavItem key={item.id} item={item} pathname={pathname} />
-                ))}
-              </ul>
-            </div>
-
-            {/* Secondary Group */}
-            <div className="mb-4">
-              <h3 className="text-dim uppercase tracking-wider text-[11px] px-3 mb-2">Tools</h3>
-              <ul className="space-y-0.5">
-                {secondaryNav.map((item) => (
-                  <DrawerNavItem key={item.id} item={item} pathname={pathname} />
-                ))}
-              </ul>
-            </div>
-
-            {/* Footer Nav */}
-            <div className="border-t border-border/40 pt-3">
-              <ul className="space-y-0.5">
-                {footerNav.map((item) => (
-                  <DrawerNavItem key={item.id} item={item} pathname={pathname} />
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
+        {/* Reuse the same sidebar content */}
+        <SidebarContent
+          isExpanded={true}
+          onClose={() => setDrawerOpen(false)}
+          isMobile={true}
+        />
       </div>
     </>
-  )
-}
-
-// Drawer Nav Item
-interface DrawerNavItemProps {
-  item: {
-    id: string
-    icon: React.ComponentType<{ className?: string }>
-    href: string
-    label: string
-    badge?: string
-  }
-  pathname: string | null
-}
-
-function DrawerNavItem({ item, pathname }: DrawerNavItemProps) {
-  const Icon = item.icon
-  const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
-
-  return (
-    <li>
-      <Link
-        href={item.href}
-        aria-current={isActive ? 'page' : undefined}
-        className={cn(
-          'group relative flex items-center gap-3 px-3 py-2.5 rounded-lg',
-          'transition-all duration-120 ease-terminal',
-          isActive ? 'bg-elev-2 border border-border/60 shadow-soft text-fg' : 'text-fg/90 hover:bg-elev-2/80'
-        )}
-      >
-        {/* Active indicator bar */}
-        {isActive && <span className="absolute left-0 top-1.5 h-[calc(100%-12px)] w-[2px] bg-accent rounded-r" />}
-
-        <Icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-accent' : 'text-muted')} />
-        <span className="flex-1 text-sm font-medium">{item.label}</span>
-
-        {item.badge && (
-          <span className="bg-accent-200 text-fg text-[11px] px-1.5 py-0.5 rounded font-medium">{item.badge}</span>
-        )}
-      </Link>
-    </li>
   )
 }

@@ -9,7 +9,6 @@
  * - 10 inventory items (mix of active/sold)
  * - 5 sales (with P&L data)
  * - 6 expenses
- * - 3 subscriptions
  * - 2 watchlists
  *
  * Usage: npx dotenv -e .env.local -- node scripts/seed-comprehensive.mjs
@@ -385,21 +384,19 @@ async function main() {
   }
   console.log('✅ Expenses seeded\n');
 
-  // 4. Seed subscriptions
-  console.log('🔄 Seeding subscriptions...');
-  const subscriptions = generateSubscriptions(userId);
-
-  const { data: subsData, error: subsError } = await supabase
-    .from('subscriptions')
-    .insert(subscriptions)
-    .select();
-
-  if (subsError) {
-    console.error('   ❌ Error inserting subscriptions:', subsError.message);
-  } else {
-    console.log(`   ✓ Inserted ${subsData.length} subscriptions`);
-  }
-  console.log('✅ Subscriptions seeded\n');
+  // 4. Seed subscriptions (DISABLED - feature removed)
+  // console.log('🔄 Seeding subscriptions...');
+  // const subscriptions = generateSubscriptions(userId);
+  // const { data: subsData, error: subsError } = await supabase
+  //   .from('subscriptions')
+  //   .insert(subscriptions)
+  //   .select();
+  // if (subsError) {
+  //   console.error('   ❌ Error inserting subscriptions:', subsError.message);
+  // } else {
+  //   console.log(`   ✓ Inserted ${subsData.length} subscriptions`);
+  // }
+  // console.log('✅ Subscriptions seeded\n');
 
   // 5. Seed watchlists
   console.log('👀 Seeding watchlists...');

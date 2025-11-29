@@ -722,12 +722,12 @@ export function AddItemModal({ open, onOpenChange, onSuccess, editItem }: AddIte
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[900px] w-[95vw] max-h-[95vh] rounded-2xl border-0 bg-[#111111]/95 backdrop-blur-md p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="w-full max-w-none sm:max-w-[900px] sm:w-[95vw] max-h-[calc(100vh-80px)] sm:max-h-[95vh] rounded-t-2xl sm:rounded-2xl border-0 bg-[#111111]/95 backdrop-blur-md p-0 overflow-y-auto shadow-2xl">
           {/* Header with product info */}
-          <div className="border-b border-[#2a2a2a] px-8 py-6">
+          <div className="border-b border-[#2a2a2a] px-4 sm:px-8 py-4 sm:py-6">
             <div className="space-y-4">
               {/* Name and Style ID Row */}
-              <div className="grid gap-4" style={{ gridTemplateColumns: '2fr 1fr' }}>
+              <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
                 <div>
                   <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
                     Name *
@@ -920,7 +920,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess, editItem }: AddIte
           </div>
 
           {/* Main Content */}
-          <div className="grid grid-cols-2 gap-8 px-8 py-6 max-h-[calc(95vh-240px)] overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 px-4 sm:px-8 py-4 sm:py-6 max-h-[calc(100vh-300px)] sm:max-h-[calc(95vh-240px)] overflow-y-auto">
             {/* Left Column - Purchase Info */}
             <div className="space-y-5">
               {/* Purchase Price */}
@@ -1257,7 +1257,7 @@ export function AddItemModal({ open, onOpenChange, onSuccess, editItem }: AddIte
           </div>
 
           {/* Footer */}
-          <div className="border-t border-[#2a2a2a] px-8 py-5 flex justify-end gap-3 bg-[#0f0f0f]">
+          <div className="border-t border-[#2a2a2a] px-4 sm:px-8 py-4 sm:py-5 pb-6 sm:pb-5 flex justify-end gap-3 bg-[#0f0f0f]">
             <Button
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}

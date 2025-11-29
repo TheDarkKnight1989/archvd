@@ -61,68 +61,20 @@ const footerNav = [
   { id: 'profile', icon: User, href: '/profile', label: 'Profile' },
 ]
 
-export function Sidebar() {
+// Shared sidebar content component used by both desktop and mobile
+interface SidebarContentProps {
+  isExpanded: boolean
+  onClose?: () => void // For mobile drawer close
+  isMobile?: boolean
+}
+
+export function SidebarContent({ isExpanded, onClose, isMobile = false }: SidebarContentProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { pinned, setPinned } = useSidebar()
-  const [expanded, setExpanded] = useState(false)
-  const [theme] = useState<'dark'>('dark')
   const [commandSearchOpen, setCommandSearchOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const leaveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const navRef = useRef<HTMLElement>(null)
-
-  // Force dark mode
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'dark')
-    document.documentElement.classList.add('dark')
-    localStorage.setItem('theme', 'dark')
-  }, [])
-
-  // Determine if sidebar should be expanded
-  const isExpanded = pinned || expanded
-
-  // Hover handlers with debounce
-  const handleMouseEnter = () => {
-    if (pinned) return
-
-    clearTimeout(leaveTimeoutRef.current)
-    hoverTimeoutRef.current = setTimeout(() => {
-      setExpanded(true)
-    }, 80)
-  }
-
-  const handleMouseLeave = () => {
-    if (pinned) return
-
-    clearTimeout(hoverTimeoutRef.current)
-    leaveTimeoutRef.current = setTimeout(() => {
-      setExpanded(false)
-    }, 250)
-  }
-
-  // Focus handlers
-  const handleFocusIn = (e: React.FocusEvent) => {
-    if (navRef.current?.contains(e.target as Node) && !pinned) {
-      setExpanded(true)
-    }
-  }
-
-  const handleFocusOut = (e: React.FocusEvent) => {
-    if (!navRef.current?.contains(e.relatedTarget as Node) && !pinned) {
-      setExpanded(false)
-    }
-  }
-
-  // Cleanup timeouts
-  useEffect(() => {
-    return () => {
-      clearTimeout(hoverTimeoutRef.current)
-      clearTimeout(leaveTimeoutRef.current)
-    }
-  }, [])
 
   // Auto-open search from URL parameter
   useEffect(() => {
@@ -130,19 +82,6 @@ export function Sidebar() {
       setCommandSearchOpen(true)
     }
   }, [searchParams])
-
-  // Global keyboard shortcut: Cmd+K / Ctrl+K
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setCommandSearchOpen(true)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
 
   // Market Quick-Add handlers
   const handleSelectProduct = (product: any) => {
@@ -163,40 +102,15 @@ export function Sidebar() {
   }
 
   const handleAddSuccess = () => {
-    // Optionally refresh inventory or show notification
     setSelectedProduct(null)
   }
 
   return (
     <>
-    <nav
-      ref={navRef}
-      aria-label="Primary"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onFocusCapture={handleFocusIn}
-      onBlurCapture={handleFocusOut}
-      data-expanded={isExpanded || undefined}
-      data-pinned={pinned || undefined}
-      className={cn(
-        'fixed left-0 top-0 h-dvh z-40 max-md:hidden',
-        'border-r-2 transition-[width,background,box-shadow,border] duration-120 ease-terminal',
-        isExpanded ? 'w-[320px]' : 'w-16'
-      )}
-      style={{
-        background: isExpanded
-          ? 'linear-gradient(135deg, #0E1A15 0%, #0B1510 50%, rgba(0, 255, 148, 0.03) 100%)'
-          : '#0E1A15',
-        borderColor: isExpanded ? 'rgba(0, 255, 148, 0.15)' : '#15251B',
-        boxShadow: isExpanded
-          ? 'inset 2px 0 0 0 rgba(0, 255, 148, 0.25), 4px 0 24px -8px rgba(0,0,0,0.4), 0 0 60px -15px rgba(0, 255, 148, 0.1)'
-          : 'none',
-      }}
-    >
       {/* Wrapper */}
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col overflow-y-auto">
         {/* Top Block: Logo + Wordmark + Search */}
-        <div className="px-3 py-4">
+        <div className="px-3 sm:px-4 py-3 sm:py-4">
           {/* Logo + App Name */}
           <div className="mb-4 flex items-center gap-3 px-2">
             <div
@@ -259,8 +173,8 @@ export function Sidebar() {
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-3 pb-3">
-          <div className="flex flex-col gap-2 pt-3.5">
+        <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-3">
+          <div className="flex flex-col gap-2 sm:gap-3 pt-3.5">
             {/* 📦 Manage */}
             <div>
               <h3
@@ -284,6 +198,7 @@ export function Sidebar() {
                     pathname={pathname}
                     isExpanded={isExpanded}
                     index={index}
+                    onClick={isMobile ? onClose : undefined}
                   />
                 ))}
               </ul>
@@ -312,6 +227,7 @@ export function Sidebar() {
                     pathname={pathname}
                     isExpanded={isExpanded}
                     index={index}
+                    onClick={isMobile ? onClose : undefined}
                   />
                 ))}
               </ul>
@@ -340,6 +256,7 @@ export function Sidebar() {
                     pathname={pathname}
                     isExpanded={isExpanded}
                     index={index}
+                    onClick={isMobile ? onClose : undefined}
                   />
                 ))}
               </ul>
@@ -368,6 +285,7 @@ export function Sidebar() {
                     pathname={pathname}
                     isExpanded={isExpanded}
                     index={index}
+                    onClick={isMobile ? onClose : undefined}
                   />
                 ))}
               </ul>
@@ -393,6 +311,7 @@ export function Sidebar() {
             {/* Settings */}
             <Link
               href="/settings"
+              onClick={isMobile ? onClose : undefined}
               className={cn(
                 "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
@@ -411,6 +330,7 @@ export function Sidebar() {
             {/* Accounting */}
             <Link
               href="/portfolio/settings/accounting"
+              onClick={isMobile ? onClose : undefined}
               className={cn(
                 "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
@@ -429,6 +349,7 @@ export function Sidebar() {
             {/* Import */}
             <Link
               href="/portfolio/import"
+              onClick={isMobile ? onClose : undefined}
               className={cn(
                 "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
@@ -444,26 +365,8 @@ export function Sidebar() {
               )}
             </Link>
 
-            {/* Settings */}
-            <Link
-              href="/settings"
-              className={cn(
-                "group rounded-lg flex items-center transition-all duration-200",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
-                pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
-                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
-              )}
-              title={!isExpanded ? 'Settings' : undefined}
-            >
-              <User className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-              {isExpanded && (
-                <span className="text-xs font-medium truncate">Settings</span>
-              )}
-            </Link>
-
-            {/* Pin Toggle - Only when expanded */}
-            {isExpanded && (
+            {/* Pin Toggle - Only when expanded and not mobile */}
+            {isExpanded && !isMobile && (
               <button
                 onClick={() => setPinned(!pinned)}
                 className={cn(
@@ -511,23 +414,108 @@ export function Sidebar() {
           )}
         </div>
       </div>
-    </nav>
 
-    {/* Market Quick-Add Modal */}
-    <MarketQuickAdd
-      open={commandSearchOpen}
-      onOpenChange={setCommandSearchOpen}
-      onSelectProduct={handleSelectProduct}
-    />
+      {/* Market Quick-Add Modal */}
+      <MarketQuickAdd
+        open={commandSearchOpen}
+        onOpenChange={setCommandSearchOpen}
+        onSelectProduct={handleSelectProduct}
+      />
 
-    {/* Add From Search Modal */}
-    <AddFromSearchModal
-      open={addModalOpen}
-      onOpenChange={setAddModalOpen}
-      product={selectedProduct}
-      onSuccess={handleAddSuccess}
-    />
+      {/* Add From Search Modal */}
+      <AddFromSearchModal
+        open={addModalOpen}
+        onOpenChange={setAddModalOpen}
+        product={selectedProduct}
+        onSuccess={handleAddSuccess}
+      />
     </>
+  )
+}
+
+// Desktop sidebar component
+export function Sidebar() {
+  const { pinned } = useSidebar()
+  const [expanded, setExpanded] = useState(false)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const leaveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const navRef = useRef<HTMLElement>(null)
+
+  // Force dark mode
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
+  }, [])
+
+  // Determine if sidebar should be expanded
+  const isExpanded = pinned || expanded
+
+  // Hover handlers with debounce
+  const handleMouseEnter = () => {
+    if (pinned) return
+    clearTimeout(leaveTimeoutRef.current)
+    hoverTimeoutRef.current = setTimeout(() => {
+      setExpanded(true)
+    }, 80)
+  }
+
+  const handleMouseLeave = () => {
+    if (pinned) return
+    clearTimeout(hoverTimeoutRef.current)
+    leaveTimeoutRef.current = setTimeout(() => {
+      setExpanded(false)
+    }, 250)
+  }
+
+  // Focus handlers
+  const handleFocusIn = (e: React.FocusEvent) => {
+    if (navRef.current?.contains(e.target as Node) && !pinned) {
+      setExpanded(true)
+    }
+  }
+
+  const handleFocusOut = (e: React.FocusEvent) => {
+    if (!navRef.current?.contains(e.relatedTarget as Node) && !pinned) {
+      setExpanded(false)
+    }
+  }
+
+  // Cleanup timeouts
+  useEffect(() => {
+    return () => {
+      clearTimeout(hoverTimeoutRef.current)
+      clearTimeout(leaveTimeoutRef.current)
+    }
+  }, [])
+
+  return (
+    <nav
+      ref={navRef}
+      aria-label="Primary"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocusCapture={handleFocusIn}
+      onBlurCapture={handleFocusOut}
+      data-expanded={isExpanded || undefined}
+      data-pinned={pinned || undefined}
+      className={cn(
+        'fixed left-0 top-0 h-dvh z-40 max-md:hidden',
+        'border-r-2 transition-[width,background,box-shadow,border] duration-120 ease-terminal',
+        isExpanded ? 'w-[320px]' : 'w-16'
+      )}
+      style={{
+        background: isExpanded
+          ? 'linear-gradient(135deg, #0E1A15 0%, #0B1510 50%, rgba(0, 255, 148, 0.03) 100%)'
+          : '#0E1A15',
+        borderColor: isExpanded ? 'rgba(0, 255, 148, 0.15)' : '#15251B',
+        boxShadow: isExpanded
+          ? 'inset 2px 0 0 0 rgba(0, 255, 148, 0.25), 4px 0 24px -8px rgba(0,0,0,0.4), 0 0 60px -15px rgba(0, 255, 148, 0.1)'
+          : 'none',
+      }}
+    >
+      <SidebarContent isExpanded={isExpanded} isMobile={false} />
+    </nav>
   )
 }
 
@@ -543,9 +531,10 @@ interface NavItemProps {
   pathname: string | null
   isExpanded: boolean
   index?: number
+  onClick?: () => void
 }
 
-function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
+function NavItem({ item, pathname, isExpanded, index = 0, onClick }: NavItemProps) {
   const Icon = item.icon
   // Portfolio should only be active on exact match, other routes can match sub-paths
   const isActive = item.href === '/portfolio'
@@ -560,6 +549,7 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
     <li>
       <Link
         href={item.href}
+        onClick={onClick}
         aria-current={isActive ? 'page' : undefined}
         title={!isExpanded ? item.label : undefined}
         onMouseEnter={(e) => {

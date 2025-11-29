@@ -228,8 +228,8 @@ export default function DashboardPage() {
     <>
       {/* Header - Hero Style */}
       <header
-        className="relative px-3 md:px-6 lg:px-8 py-8 md:py-12 border-b border-border/50 overflow-hidden sticky top-0 z-10"
-        style={{ paddingTop: 'max(2rem, env(safe-area-inset-top))' }}
+        className="relative px-4 sm:px-8 py-6 sm:py-8 md:py-12 border-b border-border/50 overflow-hidden sticky top-0 z-10"
+        style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
       >
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-bg to-bg pointer-events-none" />
@@ -240,17 +240,17 @@ export default function DashboardPage() {
         <div className="absolute inset-0 bg-bg/80 backdrop-blur-md -z-10" />
 
         <div className="relative mx-auto max-w-[1440px]">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="font-display text-4xl md:text-5xl font-bold text-fg tracking-tight">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-fg tracking-tight">
                   Dashboard
                 </h1>
-                <div className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-full text-xs font-semibold text-accent">
+                <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-accent/10 border border-accent/20 rounded-full text-[10px] sm:text-xs font-semibold text-accent">
                   Live Data
                 </div>
               </div>
-              <p className="text-muted text-sm md:text-base">
+              <p className="text-muted text-xs sm:text-sm md:text-base">
                 Your Inventory & Profit Command Centre
               </p>
             </div>
@@ -260,8 +260,8 @@ export default function DashboardPage() {
       </header>
 
       {/* Content */}
-      <section className="px-3 md:px-6 lg:px-8 py-4 md:py-8">
-        <div className="mx-auto max-w-[1440px] space-y-6 md:space-y-8">
+      <section className="px-4 sm:px-8 py-4 sm:py-6 md:py-8">
+        <div className="mx-auto max-w-[1440px] space-y-4 sm:space-y-6 md:space-y-8">
           {/* Tab Navigation */}
           <TabBar activeView={activeView} onViewChange={handleViewChange} />
 
@@ -293,7 +293,7 @@ export default function DashboardPage() {
               />
 
               {/* Composition + Movers (2-column layout) */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                 {/* Portfolio Composition (1/3 width) */}
                 <div className="lg:col-span-1">
                   <PortfolioComposition movers={movers} loading={moversLoading} />

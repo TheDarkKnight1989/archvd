@@ -137,29 +137,8 @@ async function calculateMetricsDirectly(userId, currency) {
     const itemSpend = sales?.reduce((sum, item) =>
       sum + (parseFloat(item.purchase_total) || 0), 0) || 0
 
-    // Get active subscriptions (prorate for YTD)
-    const { data: subscriptions, error: subError } = await supabase
-      .from('subscriptions')
-      .select('amount, interval, is_active')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-
-    if (subError) throw subError
-
-    // Calculate days in period
-    const daysDiff = Math.ceil((today.getTime() - firstOfYear.getTime()) / (1000 * 60 * 60 * 24))
-    const monthsInPeriod = daysDiff / 30.44
-
-    let subscriptionSpend = 0
-    subscriptions?.forEach((sub) => {
-      let monthlyCost = 0
-      if (sub.interval === 'monthly') {
-        monthlyCost = sub.amount
-      } else if (sub.interval === 'annual') {
-        monthlyCost = sub.amount / 12
-      }
-      subscriptionSpend += monthlyCost * monthsInPeriod
-    })
+    // Subscription tracking has been removed
+    const subscriptionSpend = 0
 
     // Expenses = purchase expenses (tax + shipping) + sales fees
     const purchaseExpenses = sales?.reduce((sum, item) =>

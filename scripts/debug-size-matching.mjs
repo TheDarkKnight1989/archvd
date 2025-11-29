@@ -1,82 +1,97 @@
+#!/usr/bin/env node
 /**
- * Debug size matching between Inventory and StockX prices
+ * Debug size matching for a specific product
+ * Usage: node scripts/debug-size-matching.mjs <SKU> <size> <sizeSystem>
+ * Example: node scripts/debug-size-matching.mjs DZ5485-410 10 UK
  */
 
 import { createClient } from '@supabase/supabase-js'
-import dotenv from 'dotenv'
+import { config } from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-dotenv.config({ path: join(__dirname, '..', '.env.local') })
-dotenv.config({ path: join(__dirname, '..', '.env') })
+config({ path: join(__dirname, '..', '.env.local') })
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-const userId = 'fbcde760-820b-4eaf-949f-534a8130d44b'
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Missing Supabase credentials')
+  process.exit(1)
+}
 
-console.log('🔍 DEBUGGING SIZE MATCHING\n')
-
-// Get inventory items
-const { data: inventory } = await supabase
-  .from('Inventory')
-  .select('id, sku, size, size_uk, image_url')
-  .eq('user_id', userId)
-  .in('status', ['active', 'listed', 'worn'])
-  .order('created_at')
-
-console.log('INVENTORY:')
-inventory?.forEach(item => {
-  console.log(`  ${item.sku} | size: "${item.size}" | size_uk: "${item.size_uk}" | image: ${item.image_url ? 'YES' : 'NO'}`)
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: { persistSession: false }
 })
 
-// Get StockX prices
-const { data: prices } = await supabase
-  .from('stockx_latest_prices')
-  .select('*')
+const sku = process.argv[2]
+const size = process.argv[3]
+const sizeSystem = process.argv[4]
 
-console.log('\nSTOCKX PRICES:')
-prices?.forEach(price => {
-  console.log(`  ${price.sku} | size: "${price.size}" | ask: $${price.lowest_ask}`)
-})
+if (!sku || !size || !sizeSystem) {
+  console.log('Usage: node scripts/debug-size-matching.mjs <SKU> <size> <sizeSystem>')
+  console.log('Example: node scripts/debug-size-matching.mjs DZ5485-410 10 UK')
+  process.exit(1)
+}
 
-// Get market links
-const { data: links } = await supabase
-  .from('inventory_market_links')
-  .select('*')
-  .eq('provider', 'stockx')
+async function debugSizeMatching() {
+  console.log('🔍 Debugging size matching...')
+  console.log(`SKU: ${sku}`)
+  console.log(`Size: ${size} ${sizeSystem}\n`)
 
-console.log('\nMARKET LINKS:')
-links?.forEach(link => {
-  const inv = inventory?.find(i => i.id === link.inventory_id)
-  console.log(`  Inventory: ${inv?.sku} size "${inv?.size}" → StockX: ${link.provider_product_sku}`)
-})
+  // 1. Check if product exists in catalog
+  const { data: catalogData, error: catalogError } = await supabase
+    .from('product_catalog')
+    .select('*')
+    .eq('sku', sku)
+    .single()
 
-console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-console.log('MATCHING LOGIC:')
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
-inventory?.forEach(item => {
-  const link = links?.find(l => l.inventory_id === item.id)
-  if (link) {
-    const priceKey = `${link.provider_product_sku}:${item.size}`
-    const price = prices?.find(p => p.sku === link.provider_product_sku && p.size == item.size)
-
-    console.log(`\n${item.sku}:`)
-    console.log(`  Key: "${priceKey}"`)
-    console.log(`  Match: ${price ? '✅ $' + price.lowest_ask : '❌ NO MATCH'}`)
-
-    if (!price) {
-      // Try alternative matches
-      const altPrice = prices?.find(p => p.sku === link.provider_product_sku)
-      if (altPrice) {
-        console.log(`  Available size: "${altPrice.size}" (inventory has "${item.size}")`)
-      }
-    }
+  if (catalogError || !catalogData) {
+    console.log('❌ Product not found in catalog')
+    console.log('Error:', catalogError?.message)
+    return
   }
-})
+
+  console.log('✅ Product found in catalog:')
+  console.log(`   Brand: ${catalogData.brand}`)
+  console.log(`   Model: ${catalogData.model}`)
+  console.log(`   StockX ID: ${catalogData.stockx_product_id}\n`)
+
+  // 2. Check variants
+  if (!catalogData.stockx_product_id) {
+    console.log('❌ No StockX product ID - cannot fetch variants')
+    return
+  }
+
+  const { data: variantsData, error: variantsError } = await supabase
+    .from('stockx_variants')
+    .select('*')
+    .eq('stockx_product_id', catalogData.stockx_product_id)
+    .order('variant_value', { ascending: true })
+
+  if (variantsError || !variantsData || variantsData.length === 0) {
+    console.log('❌ No variants found')
+    console.log('Error:', variantsError?.message)
+    return
+  }
+
+  console.log(`✅ Found ${variantsData.length} variants:\n`)
+  variantsData.forEach((v, i) => {
+    console.log(`   ${i + 1}. ${v.size_display} (variantValue: ${v.variant_value})`)
+  })
+
+  console.log(`\n🔍 Looking for size ${size} ${sizeSystem}...`)
+  console.log(`\n📋 Available sizes (as stored in DB):`)
+  const availableSizes = variantsData.map(v => v.variant_value).filter(Boolean)
+  console.log(`   ${availableSizes.join(', ')}`)
+
+  console.log(`\n💡 The issue might be:`)
+  console.log(`   1. Size ${size} ${sizeSystem} doesn't exist for this product`)
+  console.log(`   2. Size conversion logic needs adjustment`)
+  console.log(`   3. StockX uses different size format than expected`)
+}
+
+debugSizeMatching()
