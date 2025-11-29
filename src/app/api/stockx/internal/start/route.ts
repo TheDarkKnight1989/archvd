@@ -56,7 +56,10 @@ export async function GET(request: NextRequest) {
 
     // Generate PKCE parameters
     const { codeVerifier, codeChallenge } = generatePKCE();
-    const state = crypto.randomBytes(16).toString('hex');
+    // Embed verifier in state to bypass cookie issues
+    // Format: internal_<random>_<base64url(verifier)>
+    const randomPart = crypto.randomBytes(8).toString('hex');
+    const state = `internal_${randomPart}_${Buffer.from(codeVerifier).toString('base64url')}`;
 
     // Use offline_access to get refresh token
     const scopes = 'offline_access openid';

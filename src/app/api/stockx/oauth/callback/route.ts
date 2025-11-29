@@ -48,49 +48,80 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify state
-    const storedState = request.cookies.get('stockx_oauth_state')?.value;
-    const codeVerifier = request.cookies.get('stockx_oauth_verifier')?.value;
-    const userId = request.cookies.get('stockx_oauth_user_id')?.value;
-    const isInternalCapture = request.cookies.get('stockx_internal_capture')?.value === 'true';
+    // Check if this is internal capture flow (state starts with 'internal_')
+    const isInternalCapture = state?.startsWith('internal_') ||
+                              request.cookies.get('stockx_internal_capture')?.value === 'true';
 
-    // Debug logging for cookies
-    console.log('[StockX OAuth Callback] Cookie debug', {
-      hasStoredState: !!storedState,
-      hasCodeVerifier: !!codeVerifier,
-      hasUserId: !!userId,
-      isInternalCapture,
-      receivedState: state,
-      storedState: storedState?.substring(0, 8) + '...',
-      allCookies: request.cookies.getAll().map(c => c.name),
-    });
+    let codeVerifier: string | undefined;
+    let userId: string | undefined;
 
-    if (!storedState || storedState !== state) {
-      logger.error('[StockX OAuth Callback] State mismatch', {
+    if (isInternalCapture && state?.startsWith('internal_')) {
+      // Internal flow: Extract verifier from state parameter
+      // Format: internal_<random>_<base64url(verifier)>
+      const parts = state.split('_');
+      if (parts.length === 3) {
+        try {
+          codeVerifier = Buffer.from(parts[2], 'base64url').toString();
+          console.log('[StockX OAuth Callback] Internal capture - extracted verifier from state');
+        } catch (err) {
+          console.error('[StockX OAuth Callback] Failed to decode verifier from state:', err);
+          return NextResponse.json(
+            { error: 'Invalid state format for internal capture' },
+            { status: 400 }
+          );
+        }
+      } else {
+        console.error('[StockX OAuth Callback] Invalid internal state format:', state);
+        return NextResponse.json(
+          { error: 'Invalid state format for internal capture' },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Regular user flow: Use cookies
+      const storedState = request.cookies.get('stockx_oauth_state')?.value;
+      codeVerifier = request.cookies.get('stockx_oauth_verifier')?.value;
+      userId = request.cookies.get('stockx_oauth_user_id')?.value;
+
+      // Debug logging for cookies
+      console.log('[StockX OAuth Callback] Cookie debug', {
+        hasStoredState: !!storedState,
+        hasCodeVerifier: !!codeVerifier,
+        hasUserId: !!userId,
+        isInternalCapture,
+        receivedState: state,
         storedState: storedState?.substring(0, 8) + '...',
-        receivedState: state?.substring(0, 8) + '...',
-        statesMatch: storedState === state,
-        allCookies: request.cookies.getAll().map(c => ({ name: c.name, hasValue: !!c.value })),
+        allCookies: request.cookies.getAll().map(c => c.name),
       });
 
-      return NextResponse.json(
-        {
-          error: 'Invalid state parameter',
-          debug: {
-            hasStoredState: !!storedState,
-            receivedState: !!state,
-            hint: 'Cookies may not be persisting across OAuth redirect. Try using desktop browser instead of PWA.',
-          }
-        },
-        { status: 400 }
-      );
-    }
+      // Strict validation for regular user flow
+      if (!storedState || storedState !== state) {
+        logger.error('[StockX OAuth Callback] State mismatch', {
+          storedState: storedState?.substring(0, 8) + '...',
+          receivedState: state?.substring(0, 8) + '...',
+          statesMatch: storedState === state,
+          allCookies: request.cookies.getAll().map(c => ({ name: c.name, hasValue: !!c.value })),
+        });
 
-    if (!codeVerifier) {
-      return NextResponse.json(
-        { error: 'Missing PKCE verifier' },
-        { status: 400 }
-      );
+        return NextResponse.json(
+          {
+            error: 'Invalid state parameter',
+            debug: {
+              hasStoredState: !!storedState,
+              receivedState: !!state,
+              hint: 'Cookies may not be persisting across OAuth redirect. Try using desktop browser instead of PWA.',
+            }
+          },
+          { status: 400 }
+        );
+      }
+
+      if (!codeVerifier) {
+        return NextResponse.json(
+          { error: 'Missing PKCE verifier' },
+          { status: 400 }
+        );
+      }
     }
 
     // For regular OAuth flow, userId is required
