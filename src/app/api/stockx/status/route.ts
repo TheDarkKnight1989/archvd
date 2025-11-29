@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({
         connected: false,
-        mode: process.env.NEXT_PUBLIC_STOCKX_MOCK === 'true' ? 'mock' : 'disabled',
+        mode: process.env.NEXT_PUBLIC_STOCKX_MOCK === 'true' ? 'mock' : 'live',
         lastSyncListings: null,
         lastSyncSales: null,
         lastSyncPrices: null,
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     if (accountError || !account) {
       return NextResponse.json({
         connected: false,
-        mode: process.env.NEXT_PUBLIC_STOCKX_MOCK === 'true' ? 'mock' : 'disabled',
+        mode: process.env.NEXT_PUBLIC_STOCKX_MOCK === 'true' ? 'mock' : 'live',
         lastSyncListings: null,
         lastSyncSales: null,
         lastSyncPrices: null,

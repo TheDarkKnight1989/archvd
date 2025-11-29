@@ -34,17 +34,13 @@ export async function GET(
 
     console.log('[Market Data API]', { productId, variantId, size, sizeSystem, currency })
 
-    // Get authenticated user
+    // Get authenticated user (optional - falls back to app-level client)
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const client = getStockxClient(user.id)
+    const client = getStockxClient(user?.id)
 
     // Detect if productId is a SKU (style code like "IO3372-700")
     // SKUs typically have format: XX####-### or similar patterns

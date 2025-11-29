@@ -104,8 +104,38 @@ export default function IntegrationsPage() {
   }
 
   async function handleConnect() {
-    // TODO: Implement OAuth flow
-    alert('OAuth flow not yet implemented');
+    // Prompt for PAT (Personal Access Token)
+    const pat = prompt(
+      'Enter your Alias (GOAT) Personal Access Token (PAT):\n\n' +
+      'You can generate a PAT from your Alias developer portal.'
+    );
+
+    if (!pat || pat.trim() === '') {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/alias/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pat: pat.trim() }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`✅ Alias connected successfully!${data.username ? `\nUsername: ${data.username}` : ''}`);
+        await fetchAliasStatus();
+      } else {
+        const error = await response.json();
+        alert(`❌ Failed to connect: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Connect failed:', error);
+      alert('❌ Failed to connect to Alias');
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleDisconnect() {
@@ -114,10 +144,17 @@ export default function IntegrationsPage() {
     }
 
     try {
-      await fetch('/api/alias/disconnect', { method: 'POST' });
-      await fetchAliasStatus();
+      const response = await fetch('/api/alias/disconnect', { method: 'POST' });
+      if (response.ok) {
+        alert('✅ Alias disconnected successfully');
+        await fetchAliasStatus();
+      } else {
+        const error = await response.json();
+        alert(`❌ Failed to disconnect: ${error.error || 'Unknown error'}`);
+      }
     } catch (error) {
       console.error('Disconnect failed:', error);
+      alert('❌ Failed to disconnect from Alias');
     }
   }
 
@@ -381,17 +418,17 @@ export default function IntegrationsPage() {
               )}
 
               {aliasEnabled && !aliasStatus?.connected && !loading && (
-                <Button onClick={handleConnect} variant="default" size="sm" disabled>
+                <Button onClick={handleConnect} variant="default" size="sm">
                   Connect Account
                 </Button>
               )}
 
               {aliasEnabled && aliasStatus?.connected && (
                 <>
-                  <Button onClick={handleSync} variant="outline" size="sm" disabled>
+                  <Button onClick={handleSync} variant="outline" size="sm">
                     Sync Now
                   </Button>
-                  <Button onClick={handleDisconnect} variant="outline" size="sm" disabled>
+                  <Button onClick={handleDisconnect} variant="outline" size="sm">
                     Disconnect
                   </Button>
                 </>
@@ -597,7 +634,7 @@ export default function IntegrationsPage() {
               </div>
 
               <p className="text-sm md:text-base text-muted mb-6 md:mb-8 leading-relaxed max-w-2xl">
-                Connect your StockX account, configure seller settings, and sync listings, sales, and market prices.
+                Product search and market data work for all users. Optionally connect your StockX account to sync your personal listings, sales, and inventory.
               </p>
 
               {/* Connection Status & Actions */}

@@ -194,22 +194,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get current user for OAuth tokens
+    // Get current user for OAuth tokens (optional - falls back to app-level client)
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not authenticated. Please sign in to search StockX products.' },
-        { status: 401 }
-      )
-    }
-
     // Real API - search products (with timeout and fallback)
+    // If user is authenticated, use their OAuth tokens; otherwise use app-level client credentials
     let searchResult: Awaited<ReturnType<typeof searchProducts>>
     try {
       searchResult = await Promise.race([
-        searchProducts(query, { page, limit, userId: user.id, currencyCode }),
+        searchProducts(query, { page, limit, userId: user?.id, currencyCode }),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Search timeout after 8s')), 8000)
         )
