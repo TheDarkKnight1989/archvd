@@ -205,7 +205,22 @@ export default function IntegrationsPage() {
   }
 
   async function handleStockxConnect() {
-    window.location.href = '/api/stockx/oauth/start';
+    try {
+      // Refresh session before OAuth redirect to prevent "Auth session missing" errors
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (error || !session) {
+        alert('⚠️ Please refresh the page and log in again before connecting StockX');
+        console.error('[StockX Connect] Session refresh failed:', error);
+        return;
+      }
+
+      console.log('[StockX Connect] Session valid, initiating OAuth...');
+      window.location.href = '/api/stockx/oauth/start';
+    } catch (error) {
+      console.error('[StockX Connect] Error:', error);
+      alert('⚠️ Failed to verify session. Please refresh the page and try again.');
+    }
   }
 
   async function handleStockxDisconnect() {

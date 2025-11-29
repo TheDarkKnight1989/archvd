@@ -44,6 +44,9 @@ export async function GET(request: NextRequest) {
 
     // Verify user is authenticated
     const supabase = await createClient();
+
+    // Try to get user from session first (more reliable in PWAs)
+    const { data: { session } } = await supabase.auth.getSession();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -52,14 +55,20 @@ export async function GET(request: NextRequest) {
         errorMessage: authError?.message,
         errorStatus: authError?.status,
         hasUser: !!user,
+        hasSession: !!session,
         cookies: request.cookies.getAll().map(c => c.name),
+        headers: {
+          authorization: request.headers.get('authorization'),
+          cookie: request.headers.get('cookie')?.substring(0, 100) + '...',
+        },
       });
 
       return NextResponse.json(
         {
           error: 'Unauthorized',
           message: 'Please ensure you are logged in to Archvd before connecting StockX',
-          details: authError?.message || 'No active session found'
+          details: authError?.message || 'No active session found',
+          hint: 'Try refreshing the page and logging in again before connecting StockX',
         },
         { status: 401 }
       );
@@ -68,6 +77,7 @@ export async function GET(request: NextRequest) {
     console.log('[StockX OAuth Start] User authenticated', {
       userId: user.id,
       email: user.email,
+      hasSession: !!session,
     });
 
     // Generate PKCE parameters
