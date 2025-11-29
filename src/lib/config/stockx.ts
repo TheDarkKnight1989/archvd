@@ -1,6 +1,8 @@
 /**
  * StockX Configuration
  * Environment variables and feature flags for StockX integration
+ *
+ * App-level refresh token (STOCKX_REFRESH_TOKEN) now configured for all users
  */
 
 import { z } from 'zod'
