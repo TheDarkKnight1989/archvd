@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Cinzel } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from 'sonner';
+import { PWAUpdatePrompt } from '@/components/PWAUpdatePrompt';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -120,6 +121,7 @@ export default function RootLayout({
         <a href="#main" className="skip-link">Skip to content</a>
         <Providers>{children}</Providers>
         <Toaster position="top-right" richColors closeButton />
+        <PWAUpdatePrompt />
       </body>
     </html>
   );
