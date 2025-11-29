@@ -15,9 +15,13 @@ export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date 
 
 export const uuidSchema = z.string().uuid()
 
-export const platformSchema = z.enum(['ebay', 'stockx', 'goat', 'private', 'other'])
+export const platformSchema = z.enum(['ebay', 'stockx', 'goat', 'instagram', 'tiktok', 'vinted', 'depop', 'private', 'other'])
 
 export const itemStatusSchema = z.enum(['active', 'listed', 'worn', 'sold', 'archived'])
+
+export const aliasRegionSchema = z.enum(['uk', 'de', 'nl', 'fr', 'at', 'be', 'it', 'es'])
+
+export const aliasShippingMethodSchema = z.enum(['dropoff', 'prepaid'])
 
 // ============================================================================
 // Item/Inventory Schemas
@@ -118,6 +122,19 @@ export const createSubscriptionSchema = z.object({
 })
 
 export type CreateSubscriptionInput = z.infer<typeof createSubscriptionSchema>
+
+// ============================================================================
+// User Settings Schemas
+// ============================================================================
+
+export const updateUserSettingsSchema = z.object({
+  stockx_seller_level: z.number().int().min(1).max(5).optional(),
+  alias_region: aliasRegionSchema.optional(),
+  alias_shipping_method: aliasShippingMethodSchema.optional(),
+  alias_commission_fee: z.number().min(0).max(100).optional()
+})
+
+export type UpdateUserSettingsInput = z.infer<typeof updateUserSettingsSchema>
 
 // ============================================================================
 // Query Parameter Schemas

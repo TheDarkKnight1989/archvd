@@ -14,6 +14,8 @@ import { DashboardHero } from './components/v2/DashboardHero'
 import { DashboardChart, type Timeframe } from './components/v2/DashboardChart'
 import { DashboardReports } from './components/v2/DashboardReports'
 import { DashboardMovers } from './components/v2/DashboardMovers'
+import { PortfolioInsights } from './components/v2/PortfolioInsights'
+import { PortfolioComposition } from './components/v2/PortfolioComposition'
 import { ReportsView } from './components/v2/ReportsView'
 import { BreakdownView } from './components/v2/BreakdownView'
 
@@ -166,7 +168,7 @@ export default function DashboardPage() {
 
   // Prepare hero metrics
   const heroMetrics = useMemo(() => {
-    if (!overviewData || overviewData.isEmpty) {
+    if (!overviewData || overviewData.isEmpty || !overviewData.kpis || !overviewData.meta) {
       return {
         estimatedValue: 0,
         invested: 0,
@@ -179,13 +181,13 @@ export default function DashboardPage() {
     }
 
     return {
-      estimatedValue: overviewData.kpis.estimatedValue,
-      invested: overviewData.kpis.invested,
-      unrealisedPL: overviewData.kpis.unrealisedPL,
-      unrealisedPLDelta7d: overviewData.kpis.unrealisedPLDelta7d,
-      roi: overviewData.kpis.roi,
+      estimatedValue: overviewData.kpis.estimatedValue ?? 0,
+      invested: overviewData.kpis.invested ?? 0,
+      unrealisedPL: overviewData.kpis.unrealisedPL ?? 0,
+      unrealisedPLDelta7d: overviewData.kpis.unrealisedPLDelta7d ?? null,
+      roi: overviewData.kpis.roi ?? 0,
       itemCount,
-      pricesAsOf: overviewData.meta.pricesAsOf,
+      pricesAsOf: overviewData.meta.pricesAsOf ?? new Date().toISOString(),
     }
   }, [overviewData, itemCount])
 
@@ -224,17 +226,36 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* Header */}
+      {/* Header - Hero Style */}
       <header
-        className="px-3 md:px-6 lg:px-8 py-4 md:py-5 border-b border-border bg-elev-0/60 backdrop-blur sticky top-0 z-10"
-        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+        className="relative px-3 md:px-6 lg:px-8 py-8 md:py-12 border-b border-border/50 overflow-hidden sticky top-0 z-10"
+        style={{ paddingTop: 'max(2rem, env(safe-area-inset-top))' }}
       >
-        <div className="mx-auto max-w-[1440px] flex items-center justify-between">
-          <h1 className="font-display text-2xl font-semibold text-fg tracking-tight relative inline-block">
-            Dashboard
-            <span className="absolute bottom-0 left-0 w-16 h-px bg-accent/30"></span>
-          </h1>
-          <CurrencySwitcher />
+        {/* Gradient Background */}
+        <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-bg to-bg pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Backdrop blur for sticky effect */}
+        <div className="absolute inset-0 bg-bg/80 backdrop-blur-md -z-10" />
+
+        <div className="relative mx-auto max-w-[1440px]">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="font-display text-4xl md:text-5xl font-bold text-fg tracking-tight">
+                  Dashboard
+                </h1>
+                <div className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-full text-xs font-semibold text-accent">
+                  Live Data
+                </div>
+              </div>
+              <p className="text-muted text-sm md:text-base">
+                Your Inventory & Profit Command Centre
+              </p>
+            </div>
+            <CurrencySwitcher />
+          </div>
         </div>
       </header>
 
@@ -247,10 +268,23 @@ export default function DashboardPage() {
           {/* Portfolio View (Original Dashboard) */}
           {activeView === 'portfolio' && (
             <>
-              {/* Hero Section */}
+              {/* Hero Section - 3 KPI Cards with Sparklines */}
               <DashboardHero metrics={heroMetrics} loading={overviewLoading} />
 
-              {/* Portfolio Chart */}
+              {/* Portfolio Insights - AI-Powered Recommendations */}
+              {!overviewLoading && movers.length > 0 && (
+                <PortfolioInsights
+                  movers={movers}
+                  metrics={{
+                    estimatedValue: heroMetrics.estimatedValue,
+                    unrealisedPL: heroMetrics.unrealisedPL,
+                    roi: heroMetrics.roi,
+                    unrealisedPLDelta7d: heroMetrics.unrealisedPLDelta7d,
+                  }}
+                />
+              )}
+
+              {/* Portfolio Chart - Historical Performance */}
               <DashboardChart
                 data={chartSeries}
                 timeframe={timeframe}
@@ -258,15 +292,15 @@ export default function DashboardPage() {
                 loading={overviewLoading}
               />
 
-              {/* Reports Grid + Movers (2-column layout) */}
+              {/* Composition + Movers (2-column layout) */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                {/* Reports Grid (2/3 width) */}
-                <div className="lg:col-span-2">
-                  <DashboardReports data={reportsData} loading={reportsLoading} />
+                {/* Portfolio Composition (1/3 width) */}
+                <div className="lg:col-span-1">
+                  <PortfolioComposition movers={movers} loading={moversLoading} />
                 </div>
 
-                {/* Movers List (1/3 width) */}
-                <div className="lg:col-span-1">
+                {/* Movers List (2/3 width - more prominent) */}
+                <div className="lg:col-span-2">
                   <DashboardMovers
                     movers={movers}
                     loading={moversLoading}
@@ -275,6 +309,9 @@ export default function DashboardPage() {
                   />
                 </div>
               </div>
+
+              {/* Reports Grid - Financial Metrics */}
+              <DashboardReports data={reportsData} loading={reportsLoading} />
             </>
           )}
 

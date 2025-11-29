@@ -24,8 +24,72 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: 'archvd.io',
-  description: 'Premium sneaker inventory management',
+  metadataBase: new URL('https://archvd.io'),
+  title: {
+    default: 'Archvd - Track Your Collection, Know Your Profit | UK Reseller Analytics',
+    template: '%s | Archvd'
+  },
+  description: 'Archvd helps UK collectors and resellers understand true profit, track every sale and expense, and stay ready for HMRC. Free for collectors, powerful for resellers.',
+  keywords: [
+    'reseller analytics UK',
+    'collection tracker',
+    'HMRC tax ready',
+    'profit tracking',
+    'sneaker reselling',
+    'eBay profit calculator',
+    'StockX analytics',
+    'reseller accounting',
+    'VAT margin scheme',
+    'UK reseller tax',
+    'inventory management',
+    'reseller software UK'
+  ],
+  authors: [{ name: 'Archvd' }],
+  creator: 'Archvd',
+  publisher: 'Archvd',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_GB',
+    url: 'https://archvd.io',
+    title: 'Archvd - Track Your Collection, Know Your Profit',
+    description: 'Archvd helps UK collectors and resellers understand true profit, track every sale and expense, and stay ready for HMRC.',
+    siteName: 'Archvd',
+    images: [
+      {
+        url: '/images/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Archvd - Reseller Analytics Dashboard'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Archvd - Track Your Collection, Know Your Profit',
+    description: 'Archvd helps UK collectors and resellers understand true profit, track every sale and expense, and stay ready for HMRC.',
+    images: ['/images/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add your verification codes here when you have them
+    // google: 'your-google-verification-code',
+    // yandex: 'your-yandex-verification-code',
+  },
 };
 
 export const viewport = {
@@ -45,7 +109,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className={`${inter.variable} ${jetmono.variable} ${cinzel.variable} font-sans min-h-screen bg-bg text-fg`}>
+      <body className={`${inter.variable} ${jetmono.variable} ${cinzel.variable} font-sans min-h-screen bg-bg text-fg`} suppressHydrationWarning>
         <a href="#main" className="skip-link">Skip to content</a>
         <Providers>{children}</Providers>
         <Toaster position="top-right" richColors closeButton />

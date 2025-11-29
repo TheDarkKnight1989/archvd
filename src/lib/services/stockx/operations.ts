@@ -9,6 +9,7 @@
 import { getStockxClient } from './client'
 import { isStockxMockMode } from '@/lib/config/stockx'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/logger'
 
 // ============================================================================
@@ -31,15 +32,16 @@ export interface StockxOperationStatus {
 export interface PendingJob {
   id: string
   user_id: string
-  job_type: string
+  operation: string
   status: string
-  stockx_operation_id: string
+  stockx_batch_id: string
   total_items: number
   processed_items: number
+  successful_items: number
   failed_items: number
-  started_at: string
+  created_at: string
   updated_at: string
-  metadata: any
+  results: any
 }
 
 export interface OperationResult {
@@ -72,20 +74,18 @@ export function mapOperationStatus(stockxStatus: string): string {
 }
 
 /**
- * Determine listing status based on job type and result
+ * Determine listing status based on operation and result
  */
-export function getListingStatus(jobType: string, success: boolean): string | null {
+export function getListingStatus(operation: string, success: boolean): string | null {
   if (!success) return null
 
   const statusMap: Record<string, string> = {
-    'create_listing': 'ACTIVE',
-    'update_listing': 'ACTIVE',
-    'delete_listing': 'DELETED',
-    'activate_listing': 'ACTIVE',
-    'deactivate_listing': 'INACTIVE',
+    'CREATE': 'ACTIVE',
+    'UPDATE': 'ACTIVE',
+    'DELETE': 'DELETED',
   }
 
-  return statusMap[jobType] || null
+  return statusMap[operation] || null
 }
 
 // ============================================================================
@@ -97,12 +97,19 @@ export function getListingStatus(jobType: string, success: boolean): string | nu
  *
  * Criteria:
  * - status = PENDING or IN_PROGRESS
- * - stockx_operation_id is not null
+ * - stockx_batch_id is not null
  * - updated_at < now() - 20 seconds (avoid rapid polling)
  * - limit 50 (rate limit protection)
  */
 export async function fetchPendingJobs(): Promise<PendingJob[]> {
-  const supabase = await createClient()
+  // Use service role client to bypass RLS (this is a background/cron job)
+  const supabase = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false }
+    }
+  )
 
   const twentySecondsAgo = new Date(Date.now() - 20 * 1000).toISOString()
 
@@ -110,9 +117,9 @@ export async function fetchPendingJobs(): Promise<PendingJob[]> {
     .from('stockx_batch_jobs')
     .select('*')
     .in('status', ['PENDING', 'IN_PROGRESS'])
-    .not('stockx_operation_id', 'is', null)
+    .not('stockx_batch_id', 'is', null)
     .lt('updated_at', twentySecondsAgo)
-    .order('started_at', { ascending: true })
+    .order('created_at', { ascending: true })
     .limit(50)
 
   if (error) {
@@ -127,10 +134,17 @@ export async function fetchPendingJobs(): Promise<PendingJob[]> {
 
 /**
  * Poll a single operation from StockX
+ *
+ * Note: StockX API requires listingId in the URL path.
+ * Uses correct endpoint: /v2/selling/listings/{listingId}/operations/{operationId}
+ *
+ * For CREATE operations where listingId isn't known yet, this will fail.
+ * In those cases, the operation tracking happens in the create listing flow.
  */
 export async function pollSingleOperation(
   operationId: string,
-  userId: string
+  userId: string,
+  listingId?: string | null
 ): Promise<OperationResult> {
   if (isStockxMockMode()) {
     // Mock mode: simulate completed operation
@@ -147,8 +161,24 @@ export async function pollSingleOperation(
 
   try {
     const client = getStockxClient(userId)
+
+    // StockX API requires listingId in URL - if not available, we can't poll
+    if (!listingId) {
+      logger.warn('[Operations Poller] Cannot poll operation without listingId', {
+        operationId,
+      })
+      return {
+        success: false,
+        status: 'IN_PROGRESS',
+        error: {
+          code: 'missing_listing_id',
+          message: 'Cannot poll operation without listing ID (required by StockX API)',
+        },
+      }
+    }
+
     const response = await client.request<StockxOperationStatus>(
-      `/v2/operations/${operationId}`
+      `/v2/selling/listings/${listingId}/operations/${operationId}`
     )
 
     const internalStatus = mapOperationStatus(response.status)
@@ -218,7 +248,7 @@ export async function pollSingleOperation(
  */
 export function isJobTimedOut(job: PendingJob): boolean {
   const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000
-  const startedAt = new Date(job.started_at).getTime()
+  const startedAt = new Date(job.created_at).getTime()
   return startedAt < fifteenMinutesAgo
 }
 
@@ -269,12 +299,12 @@ export async function applyOperationResult(
 
   // 2. Update listing if operation completed successfully
   if (result.success && result.listingData) {
-    const listingStatus = getListingStatus(job.job_type, true)
+    const listingStatus = getListingStatus(job.operation, true)
 
     if (listingStatus) {
-      // Extract listing ID from job metadata or result
+      // Extract listing ID from job results or result
       const listingId =
-        job.metadata?.listingId ||
+        job.results?.listingId ||
         result.listingData?.id ||
         result.listingData?.listingId
 
@@ -294,18 +324,18 @@ export async function applyOperationResult(
           listingUpdate.expires_at = result.listingData.expiresAt
         }
 
-        // For create_listing job type, upsert into stockx_listings table
-        if (job.job_type === 'create_listing') {
+        // For CREATE operation type, upsert into stockx_listings table
+        if (job.operation === 'CREATE') {
           const { error: upsertError } = await supabase
             .from('stockx_listings')
             .upsert({
               stockx_listing_id: listingId,
               user_id: job.user_id,
-              stockx_product_id: job.metadata?.productId || result.listingData?.productId,
-              stockx_variant_id: job.metadata?.variantId || result.listingData?.variantId,
+              stockx_product_id: job.results?.productId || result.listingData?.productId,
+              stockx_variant_id: job.results?.variantId || result.listingData?.variantId,
               status: listingStatus,
-              amount: result.listingData.amount || job.metadata?.askPrice,
-              currency: job.metadata?.currencyCode || 'USD',
+              amount: result.listingData.amount || job.results?.askPrice,
+              currency: job.results?.currencyCode || 'USD',
               expires_at: result.listingData.expiresAt,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
@@ -325,30 +355,30 @@ export async function applyOperationResult(
           }
 
           // Update inventory_market_links with the listing ID
-          if (job.metadata?.inventoryItemId) {
+          if (job.results?.inventoryItemId) {
             const { error: linkError } = await supabase
               .from('inventory_market_links')
               .update({
                 stockx_listing_id: listingId,
                 updated_at: new Date().toISOString(),
               })
-              .eq('item_id', job.metadata.inventoryItemId)
+              .eq('item_id', job.results.inventoryItemId)
 
             if (linkError) {
               logger.error('[Operations Poller] Failed to update inventory_market_links', {
-                itemId: job.metadata.inventoryItemId,
+                itemId: job.results.inventoryItemId,
                 listingId,
                 error: linkError.message,
               })
             } else {
               logger.info('[Operations Poller] Updated inventory_market_links with listing ID', {
-                itemId: job.metadata.inventoryItemId,
+                itemId: job.results.inventoryItemId,
                 listingId,
               })
             }
           }
         } else {
-          // For other job types (update, activate, deactivate), just update existing record
+          // For other operation types (UPDATE, DELETE), just update existing record
           const { error: listingError } = await supabase
             .from('stockx_listings')
             .update(listingUpdate)
@@ -365,11 +395,11 @@ export async function applyOperationResult(
         // 3. Create history entry
         await createHistoryEntry(
           listingId,
-          job.job_type,
+          job.operation,
           listingStatus,
           'system',
           {
-            operation_id: job.stockx_operation_id,
+            operation_id: job.stockx_batch_id,
             job_id: job.id,
           }
         )
@@ -379,16 +409,16 @@ export async function applyOperationResult(
 
   // 4. If job failed, create history entry
   if (result.status === 'FAILED') {
-    const listingId = job.metadata?.listingId
+    const listingId = job.results?.listingId
 
     if (listingId) {
       await createHistoryEntry(
         listingId,
-        job.job_type,
+        job.operation,
         'FAILED',
         'system',
         {
-          operation_id: job.stockx_operation_id,
+          operation_id: job.stockx_batch_id,
           job_id: job.id,
           error: result.error,
         }
@@ -461,11 +491,11 @@ export async function handleTimeoutJob(job: PendingJob): Promise<void> {
     .eq('id', job.id)
 
   // Create history entry for timeout
-  const listingId = job.metadata?.listingId
+  const listingId = job.results?.listingId
 
   if (listingId) {
-    await createHistoryEntry(listingId, job.job_type, 'TIMEOUT', 'system', {
-      operation_id: job.stockx_operation_id,
+    await createHistoryEntry(listingId, job.operation, 'TIMEOUT', 'system', {
+      operation_id: job.stockx_batch_id,
       job_id: job.id,
       reason: 'timeout',
     })
@@ -473,8 +503,8 @@ export async function handleTimeoutJob(job: PendingJob): Promise<void> {
 
   logger.warn('[Operations Poller] Job timed out', {
     jobId: job.id,
-    operationId: job.stockx_operation_id,
-    startedAt: job.started_at,
+    operationId: job.stockx_batch_id,
+    startedAt: job.created_at,
   })
 }
 
@@ -517,7 +547,9 @@ export async function pollPendingOperations(): Promise<{
     }
 
     // Poll operation status
-    const result = await pollSingleOperation(job.stockx_operation_id, job.user_id)
+    // Extract listingId from job results (required by StockX API)
+    const listingId = job.results?.listingId || null
+    const result = await pollSingleOperation(job.stockx_batch_id, job.user_id, listingId)
 
     // Apply result
     await applyOperationResult(job, result)
@@ -534,7 +566,7 @@ export async function pollPendingOperations(): Promise<{
     // Log in development
     if (process.env.NODE_ENV === 'development') {
       console.log(
-        `[POLL] Operation ${job.stockx_operation_id} for user ${job.user_id}: ${result.status}`
+        `[POLL] Operation ${job.stockx_batch_id} for user ${job.user_id}: ${result.status}`
       )
 
       if (result.success) {

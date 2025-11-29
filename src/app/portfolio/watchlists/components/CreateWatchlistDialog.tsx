@@ -65,7 +65,7 @@ export function CreateWatchlistDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-elev-2/95 backdrop-blur-md shadow-xl">
         <DialogHeader>
           <DialogTitle>Create Watchlist</DialogTitle>
           <DialogDescription>

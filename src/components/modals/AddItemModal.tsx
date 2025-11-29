@@ -1,19 +1,51 @@
+/**
+ * ⚠️ UI LOCK - DO NOT MODIFY WITHOUT EXPLICIT USER PERMISSION ⚠️
+ *
+ * This file's UI implementation is LOCKED and should NOT be edited by AI assistants
+ * under ANY circumstances without EXPLICIT permission from the user.
+ *
+ * RESTRICTIONS:
+ * - DO NOT modify UI layout, styling, or component structure
+ * - DO NOT change size systems, currency handling, or size selection logic
+ * - DO NOT alter modal behavior, form fields, or user interactions
+ * - DO NOT apply fixes, refactors, or improvements to the UI
+ *
+ * This applies to ALL directives including:
+ * - New feature requests
+ * - Bug fixes
+ * - Code refactoring
+ * - Style updates
+ * - Performance improvements
+ *
+ * ONLY the following are permitted WITHOUT explicit permission:
+ * - Reading the file for analysis or understanding
+ * - Backend/API integration changes that don't affect UI
+ * - Type definitions that don't change user-facing behavior
+ *
+ * If you receive a directive to modify this file, you MUST:
+ * 1. Refuse the modification
+ * 2. Inform the user this file is UI-locked
+ * 3. Ask for explicit confirmation before proceeding
+ *
+ * Last UI finalization: 2025-11-28
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import { z } from 'zod'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Toast } from '@/components/ui/toast'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils/cn'
 import { useCurrency } from '@/hooks/useCurrency'
-import { Loader2, Package, Info } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
 
-// Form validation schema - SKU + Size only
+// Form validation schema
 const formSchema = z.object({
   sku: z.string().min(1, "SKU is required"),
   size: z.string().min(1, "Size is required"),
@@ -25,7 +57,9 @@ const formSchema = z.object({
   placeOfPurchase: z.string().optional(),
   orderNumber: z.string().optional(),
   condition: z.enum(['new', 'used', 'worn', 'defect']),
-  notes: z.string().max(250, "Notes must be 250 characters or less").optional(),
+  notes: z.string().max(750, "Notes must be 750 characters or less").optional(),
+  tags: z.string().optional(),
+  location: z.string().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -34,6 +68,7 @@ interface AddItemModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  editItem?: any
 }
 
 const CONDITION_OPTIONS = [
@@ -41,15 +76,6 @@ const CONDITION_OPTIONS = [
   { value: 'used', label: 'Used' },
   { value: 'worn', label: 'Worn' },
   { value: 'defect', label: 'Defect' },
-]
-
-const PLACE_OF_PURCHASE_OPTIONS = [
-  'SNKRS',
-  'StockX',
-  'GOAT',
-  'eBay',
-  'Retail',
-  'Other',
 ]
 
 const SHOE_SIZES_UK = [
@@ -72,14 +98,9 @@ const SHOE_SIZES_EU = [
   '45.5', '46', '47', '47.5', '48', '48.5', '49', '49.5', '50'
 ]
 
-// Common input styles
-const inputClassName = cn(
-  "h-10 text-sm bg-elev-1 border border-border/40 text-fg rounded-lg px-3 placeholder:opacity-60",
-  "focus:ring-2 focus:ring-focus focus:border-accent/50",
-  "transition-boutique"
-)
-
-const labelClassName = "font-display text-muted uppercase tracking-wide text-xs mb-2 block font-medium"
+const CLOTHING_SIZES = [
+  'XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'
+]
 
 interface ProductPreview {
   productId: string
@@ -98,42 +119,154 @@ interface ProductPreview {
   }
 }
 
-export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProps) {
-  const { symbol, format } = useCurrency()
+export function AddItemModal({ open, onOpenChange, onSuccess, editItem }: AddItemModalProps) {
+  const { currency: globalCurrency } = useCurrency()
+  const isEditMode = !!editItem?.id
 
-  // Load smart defaults from localStorage
+  // Local currency selection for this modal (can override global preference)
+  const [selectedCurrency, setSelectedCurrency] = useState<'GBP' | 'EUR' | 'USD'>('GBP')
+
+  // Map currency to size system: GBP → UK, EUR → EU, USD → US
+  const getRegionalSizeSystem = (): 'UK' | 'US' | 'EU' => {
+    switch (selectedCurrency) {
+      case 'GBP': return 'UK'
+      case 'EUR': return 'EU'
+      case 'USD': return 'US'
+      default: return 'UK'
+    }
+  }
+
+  // Get currency symbol based on selected currency
+  const getCurrencySymbol = (): string => {
+    switch (selectedCurrency) {
+      case 'GBP': return '£'
+      case 'EUR': return '€'
+      case 'USD': return '$'
+      default: return '£'
+    }
+  }
+
   const loadSmartDefaults = () => ({
-    sizeSystem: (localStorage.getItem('add_item_size_system') || 'UK') as 'UK' | 'US' | 'EU',
-    tax: localStorage.getItem('add_item_tax') || '',
-    shipping: localStorage.getItem('add_item_shipping') || '',
-    placeOfPurchase: localStorage.getItem('add_item_place') || '',
+    sizeSystem: getRegionalSizeSystem(),
+    tax: '0',
+    shipping: '0',
+    placeOfPurchase: '',
   })
 
   const [formData, setFormData] = useState<FormData>({
     sku: '',
     size: '',
-    sizeSystem: 'UK',
+    sizeSystem: 'UK', // Will be set correctly when modal opens
     purchasePrice: '',
     purchaseDate: new Date().toISOString().split('T')[0],
-    tax: '',
-    shipping: '',
+    tax: '0',
+    shipping: '0',
     placeOfPurchase: '',
     orderNumber: '',
     condition: 'new',
     notes: '',
+    tags: '',
+    location: '',
   })
 
+  const [selectedSizes, setSelectedSizes] = useState<Array<{ size: string; quantity: number }>>([])
+  const [nameSearch, setNameSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [toast, setToast] = useState<{ message: string; variant: 'default' | 'success' | 'error' } | null>(null)
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [productPreview, setProductPreview] = useState<ProductPreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
-  const [addAnother, setAddAnother] = useState(false)
+  const [sizeCategory, setSizeCategory] = useState<'shoes' | 'apparel' | 'other'>('shoes')
+  const [showCustomSize, setShowCustomSize] = useState(false)
+  const [customSize, setCustomSize] = useState('')
 
-  // Reset form when modal opens and load smart defaults
+  // Initialize currency from user's global preference when modal opens
+  useEffect(() => {
+    if (open && globalCurrency) {
+      setSelectedCurrency(globalCurrency as 'GBP' | 'EUR' | 'USD')
+    }
+  }, [open, globalCurrency])
+
+  // Auto-update size system when currency changes (GBP→UK, EUR→EU, USD→US)
+  useEffect(() => {
+    if (!isEditMode && open) {
+      const regionalSizeSystem = getRegionalSizeSystem()
+      setFormData(prev => ({
+        ...prev,
+        sizeSystem: regionalSizeSystem,
+      }))
+    }
+  }, [selectedCurrency, open, isEditMode])
+
   useEffect(() => {
     if (open) {
+      if (editItem) {
+        setFormData({
+          sku: editItem.sku || '',
+          size: editItem.size_uk?.toString() || '',
+          sizeSystem: 'UK',
+          purchasePrice: editItem.avgCost?.toString() || '',
+          purchaseDate: editItem.purchaseDate || new Date().toISOString().split('T')[0],
+          tax: '0',
+          shipping: '0',
+          placeOfPurchase: editItem.placeOfPurchase || '',
+          orderNumber: editItem.orderNumber || '',
+          condition: (editItem.condition as any) || 'new',
+          notes: editItem.notes || '',
+          tags: '',
+          location: editItem.location || '',
+        })
+        // Populate selected sizes for edit mode
+        if (editItem.size_uk) {
+          setSelectedSizes([{ size: editItem.size_uk.toString(), quantity: 1 }])
+        }
+        if (editItem.brand && editItem.model) {
+          setProductPreview({
+            productId: editItem.stockxProductId || '',
+            title: `${editItem.brand} ${editItem.model}`,
+            brand: editItem.brand,
+            colorway: editItem.colorway || '',
+            image: editItem.image?.url || editItem.imageUrl || null,
+            gender: editItem.gender || '',
+            retailPrice: editItem.retailPrice || null,
+            releaseDate: editItem.releaseDate || null,
+            category: editItem.category || '',
+            marketData: editItem.market ? {
+              lowestAsk: editItem.market.price || null,
+              highestBid: editItem.market.highestBid || null,
+              currencyCode: editItem.market.currencyCode || 'GBP',
+            } : undefined,
+          })
+        }
+      } else {
+        const defaults = loadSmartDefaults()
+        setFormData({
+          sku: '',
+          size: '',
+          sizeSystem: defaults.sizeSystem,
+          purchasePrice: '',
+          purchaseDate: new Date().toISOString().split('T')[0],
+          tax: '0',
+          shipping: '0',
+          placeOfPurchase: defaults.placeOfPurchase,
+          orderNumber: '',
+          condition: 'new',
+          notes: '',
+          tags: '',
+          location: '',
+        })
+        setProductPreview(null)
+      }
+      setPreviewError(null)
+      setErrors({})
+      setSelectedSizes([])
+      setNameSearch('')
+    } else {
+      // Clean up when modal closes - reset everything to defaults
       const defaults = loadSmartDefaults()
       setFormData({
         sku: '',
@@ -141,20 +274,86 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
         sizeSystem: defaults.sizeSystem,
         purchasePrice: '',
         purchaseDate: new Date().toISOString().split('T')[0],
-        tax: defaults.tax,
-        shipping: defaults.shipping,
+        tax: '0',
+        shipping: '0',
         placeOfPurchase: defaults.placeOfPurchase,
         orderNumber: '',
         condition: 'new',
         notes: '',
+        tags: '',
+        location: '',
       })
       setProductPreview(null)
       setPreviewError(null)
       setErrors({})
+      setSelectedSizes([])
+      setNameSearch('')
+      setShowSearchResults(false)
+      setSearchResults([])
+      setShowCustomSize(false)
+      setCustomSize('')
+      setSizeCategory('shoes')
     }
-  }, [open])
+  }, [open, isEditMode, editItem])
 
-  // Fetch market data when product and size are both available
+  // Search products by name using Alias API
+  useEffect(() => {
+    const searchProducts = async () => {
+      if (!nameSearch || nameSearch.length < 3) {
+        setSearchResults([])
+        setShowSearchResults(false)
+        return
+      }
+
+      setIsSearching(true)
+      setShowSearchResults(true)
+
+      try {
+        // Use only Alias API - it already has images and all product details
+        const response = await fetch(`/api/alias/search?query=${encodeURIComponent(nameSearch)}&limit=10`)
+
+        if (!response.ok) {
+          console.error('[AddItemModal] Alias search failed:', response.statusText)
+          setSearchResults([])
+          return
+        }
+
+        const data = await response.json()
+        console.log('[AddItemModal] Alias search results:', data)
+
+        if (data?.items && Array.isArray(data.items)) {
+          // Map Alias catalog items to search result format
+          const results = data.items.map((item: any) => ({
+            id: item.catalog_id,
+            catalog_id: item.catalog_id,
+            source: 'alias',
+            sku: item.sku,
+            name: item.name,
+            brand: item.brand,
+            colorway: item.colorway,
+            image: item.main_picture_url, // Alias provides images
+            releaseDate: item.release_date, // YYYY-MM-DD format
+            retailPrice: item.retail_price_cents ? (item.retail_price_cents / 100).toFixed(2) : null, // Convert cents to dollars
+            category: item.product_category_v2 || 'shoes', // 'shoes', 'apparel', 'accessories', 'collectibles'
+          }))
+
+          console.log('[AddItemModal] Formatted search results:', results)
+          setSearchResults(results)
+        } else {
+          setSearchResults([])
+        }
+      } catch (error) {
+        console.error('[AddItemModal] Search failed:', error)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }
+
+    const debounce = setTimeout(searchProducts, 300)
+    return () => clearTimeout(debounce)
+  }, [nameSearch])
+
   useEffect(() => {
     const fetchMarketData = async () => {
       if (!productPreview || !formData.size || !formData.sku) return
@@ -184,51 +383,15 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     }
 
     fetchMarketData()
-  }, [productPreview?.productId, formData.size, formData.sku])
-
-  // Computed subtotal
-  const purchaseTotal = (
-    parseFloat(formData.purchasePrice || '0') +
-    parseFloat(formData.tax || '0') +
-    parseFloat(formData.shipping || '0')
-  ).toFixed(2)
-
-  // Computed profit indicators
-  const profitIndicator = (() => {
-    if (!productPreview?.marketData || !formData.purchasePrice) return null
-
-    const purchaseTotalNum = parseFloat(purchaseTotal)
-    const lowestAsk = productPreview.marketData.lowestAsk || 0
-
-    if (lowestAsk <= 0 || purchaseTotalNum <= 0) return null
-
-    const estimatedProfit = lowestAsk - purchaseTotalNum
-    const roi = (estimatedProfit / purchaseTotalNum) * 100
-
-    // Determine color coding
-    let colorClass = 'text-muted'
-    if (roi >= 20) colorClass = 'text-success'
-    else if (roi >= 10) colorClass = 'text-accent'
-    else if (roi >= 0) colorClass = 'text-warning'
-    else colorClass = 'text-danger'
-
-    return {
-      profit: estimatedProfit,
-      roi,
-      colorClass,
-      lowestAsk
-    }
-  })()
+  }, [productPreview?.productId, formData.size, formData.sku, formData.sizeSystem])
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    // Clear error for this field
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
     }
   }
 
-  // Auto-lookup product details when SKU is entered
   const handleSkuBlur = async () => {
     const sku = formData.sku?.trim()
     if (!sku) return
@@ -238,41 +401,52 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     setPreviewError(null)
 
     try {
-      // Search StockX for product preview using catalog search
-      const response = await fetch(`/api/stockx/search?q=${encodeURIComponent(sku)}&limit=1`)
+      const [stockxResponse, aliasResponse] = await Promise.all([
+        fetch(`/api/stockx/search?q=${encodeURIComponent(sku)}&limit=1`).catch(() => null),
+        fetch(`/api/alias/search?q=${encodeURIComponent(sku)}&limit=1`).catch(() => null),
+      ])
 
-      if (!response.ok) {
-        setPreviewError('Unable to fetch product details')
-        return
+      let stockxProduct = null
+      let aliasProduct = null
+
+      if (stockxResponse?.ok) {
+        const stockxData = await stockxResponse.json().catch(() => null)
+        if (stockxData?.results && stockxData.results.length > 0) {
+          const product = stockxData.results[0]
+          if (product.styleId.toLowerCase() === sku.toLowerCase()) {
+            stockxProduct = product
+          }
+        }
       }
 
-      const data = await response.json()
-
-      if (data.results && data.results.length > 0) {
-        const product = data.results[0]
-
-        // Check for exact SKU match
-        if (product.styleId.toLowerCase() === sku.toLowerCase()) {
-          setProductPreview({
-            productId: product.id,
-            title: product.title,
-            brand: product.brand,
-            colorway: product.colorway || '',
-            image: product.imageUrl,
-            gender: '', // Not provided in search results
-            retailPrice: product.medianPrice || null,
-            releaseDate: null, // Not provided in search results
-            category: '', // Not provided in search results
-          })
-        } else {
-          setPreviewError(`No exact match found for SKU "${sku}"`)
+      if (aliasResponse?.ok) {
+        const aliasData = await aliasResponse.json().catch(() => null)
+        if (aliasData?.items && aliasData.items.length > 0) {
+          const product = aliasData.items[0]
+          if (product.sku?.toLowerCase() === sku.toLowerCase()) {
+            aliasProduct = product
+          }
         }
+      }
+
+      if (stockxProduct || aliasProduct) {
+        setProductPreview({
+          productId: stockxProduct?.id || aliasProduct?.catalog_id || '',
+          title: stockxProduct?.title || aliasProduct?.name || '',
+          brand: stockxProduct?.brand || aliasProduct?.brand || '',
+          colorway: stockxProduct?.colorway || aliasProduct?.colorway || '',
+          image: aliasProduct?.main_picture_url || stockxProduct?.imageUrl || null,
+          gender: '',
+          retailPrice: stockxProduct?.medianPrice || null,
+          releaseDate: null,
+          category: '',
+        })
       } else {
-        setPreviewError(`No products found for SKU "${sku}"`)
+        setPreviewError(`No exact match found for SKU "${sku}"`)
       }
     } catch (error) {
       console.error('Product lookup failed:', error)
-      setPreviewError('Unable to connect to StockX')
+      setPreviewError('Unable to fetch product details')
     } finally {
       setIsLoadingPreview(false)
     }
@@ -308,94 +482,127 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     setIsSubmitting(true)
 
     try {
-      // Call new API endpoint
-      const payload = {
-        sku: formData.sku.trim(),
-        size: formData.size.trim(),
-        sizeSystem: formData.sizeSystem,
-        purchasePrice: parseFloat(formData.purchasePrice),
-        purchaseDate: formData.purchaseDate,
-        tax: formData.tax ? parseFloat(formData.tax) : undefined,
-        shipping: formData.shipping ? parseFloat(formData.shipping) : undefined,
-        placeOfPurchase: formData.placeOfPurchase?.trim() || undefined,
-        orderNumber: formData.orderNumber?.trim() || undefined,
-        condition: formData.condition,
-        notes: formData.notes?.trim() || undefined,
-      }
-
-      const res = await fetch('/api/items/add-by-sku', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      const responseData = await res.json()
-
-      if (!res.ok) {
-        if (responseData.code === 'NOT_FOUND') {
-          throw new Error(`Product not found on StockX for SKU "${formData.sku}"`)
-        } else if (responseData.code === 'NO_SIZE_MATCH') {
-          throw new Error(`Size ${formData.size} ${formData.sizeSystem} not available for this product`)
-        } else if (responseData.code === 'AMBIGUOUS_MATCH') {
-          throw new Error('Multiple products found with this SKU. Please contact support.')
-        } else {
-          throw new Error(responseData.error || 'Failed to add item')
+      if (isEditMode && editItem) {
+        const payload = {
+          sku: formData.sku.trim(),
+          size: formData.size.trim(),
+          sizeSystem: formData.sizeSystem,
+          purchasePrice: parseFloat(formData.purchasePrice),
+          purchaseDate: formData.purchaseDate,
+          tax: formData.tax ? parseFloat(formData.tax) : undefined,
+          shipping: formData.shipping ? parseFloat(formData.shipping) : undefined,
+          placeOfPurchase: formData.placeOfPurchase?.trim() || undefined,
+          orderNumber: formData.orderNumber?.trim() || undefined,
+          condition: formData.condition,
+          notes: formData.notes?.trim() || undefined,
+          location: formData.location?.trim() || undefined,
         }
-      }
 
-      console.log('Item added:', responseData.item)
-
-      // Save preferences to localStorage for smart defaults
-      localStorage.setItem('add_item_size_system', formData.sizeSystem)
-      if (formData.tax) localStorage.setItem('add_item_tax', formData.tax)
-      if (formData.shipping) localStorage.setItem('add_item_shipping', formData.shipping)
-      if (formData.placeOfPurchase) localStorage.setItem('add_item_place', formData.placeOfPurchase)
-
-      setToast({
-        message: 'Item added successfully!',
-        variant: 'success'
-      })
-
-      // Give database time to propagate changes before refreshing
-      // This ensures market data is visible when the inventory list refreshes
-      await new Promise(resolve => setTimeout(resolve, 150))
-
-      // Call onSuccess to refresh inventory list
-      onSuccess?.()
-
-      if (addAnother) {
-        // Wait for refresh to complete before resetting form
-        // This prevents race conditions where the form resets before the new item appears with market data
-        await new Promise(resolve => setTimeout(resolve, 350))
-
-        // Reset form but keep SKU and smart defaults
-        const currentSku = formData.sku
-        const defaults = loadSmartDefaults()
-        setFormData({
-          sku: currentSku, // Keep SKU for quick multi-item entry
-          size: '',
-          sizeSystem: defaults.sizeSystem,
-          purchasePrice: '',
-          purchaseDate: new Date().toISOString().split('T')[0],
-          tax: defaults.tax,
-          shipping: defaults.shipping,
-          placeOfPurchase: defaults.placeOfPurchase,
-          orderNumber: '',
-          condition: 'new',
-          notes: '',
+        const res = await fetch(`/api/items/${editItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         })
-        setProductPreview(null)
-        setPreviewError(null)
-      } else {
-        // Close modal after short delay
+        const responseData = await res.json()
+
+        if (!res.ok) {
+          throw new Error(responseData.error || 'Failed to update item')
+        }
+
+        setToast({
+          message: 'Item updated successfully!',
+          variant: 'success'
+        })
+
+        await new Promise(resolve => setTimeout(resolve, 150))
+        onSuccess?.()
+
         setTimeout(() => {
           onOpenChange(false)
         }, 1500)
+      } else {
+        const payload = {
+          sku: formData.sku.trim(),
+          size: formData.size.trim(),
+          sizeSystem: formData.sizeSystem,
+          purchasePrice: parseFloat(formData.purchasePrice),
+          purchaseDate: formData.purchaseDate,
+          tax: formData.tax ? parseFloat(formData.tax) : undefined,
+          shipping: formData.shipping ? parseFloat(formData.shipping) : undefined,
+          placeOfPurchase: formData.placeOfPurchase?.trim() || undefined,
+          orderNumber: formData.orderNumber?.trim() || undefined,
+          condition: formData.condition,
+          notes: formData.notes?.trim() || undefined,
+          location: formData.location?.trim() || undefined,
+          currency: selectedCurrency, // User's selected currency (determines region for StockX/Alias)
+        }
+
+        const res = await fetch('/api/items/add-by-sku', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const responseData = await res.json()
+
+        if (!res.ok) {
+          if (responseData.code === 'NOT_FOUND') {
+            throw new Error(`Product not found on StockX for SKU "${formData.sku}"`)
+          } else if (responseData.code === 'NO_SIZE_MATCH') {
+            throw new Error(`Size ${formData.size} ${formData.sizeSystem} not available for this product`)
+          } else if (responseData.code === 'AMBIGUOUS_MATCH') {
+            const matchList = responseData.matches
+              .map((m: any, i: number) => `${i + 1}. ${m.title} (${m.styleId})`)
+              .join('\n')
+            throw new Error(
+              `Multiple products found with SKU "${formData.sku}":\n\n${matchList}\n\nPlease use the full product name or contact support if you need help identifying the correct product.`
+            )
+          } else {
+            throw new Error(responseData.error || 'Failed to add item')
+          }
+        }
+
+        localStorage.setItem('add_item_size_system', formData.sizeSystem)
+
+        setToast({
+          message: 'Item added successfully!',
+          variant: 'success'
+        })
+
+        await new Promise(resolve => setTimeout(resolve, 150))
+        onSuccess?.()
+
+        if (addAnother) {
+          await new Promise(resolve => setTimeout(resolve, 350))
+          const currentSku = formData.sku
+          const defaults = loadSmartDefaults()
+          setFormData({
+            sku: currentSku,
+            size: '',
+            sizeSystem: defaults.sizeSystem,
+            purchasePrice: '',
+            purchaseDate: new Date().toISOString().split('T')[0],
+            tax: '0',
+            shipping: '0',
+            placeOfPurchase: defaults.placeOfPurchase,
+            orderNumber: '',
+            condition: 'new',
+            notes: '',
+            tags: '',
+            location: '',
+          })
+          setProductPreview(null)
+          setPreviewError(null)
+          setSelectedSizes([])
+        } else {
+          setTimeout(() => {
+            onOpenChange(false)
+          }, 1500)
+        }
       }
     } catch (error: any) {
       console.error('Submit error:', error)
       setToast({
-        message: error.message || 'Failed to add item. Please try again.',
+        message: error.message || `Failed to ${isEditMode ? 'update' : 'add'} item. Please try again.`,
         variant: 'error'
       })
     } finally {
@@ -403,466 +610,666 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
     }
   }
 
-  // Get size options based on selected system
   const getSizeOptions = () => {
-    switch (formData.sizeSystem) {
-      case 'UK':
-        return SHOE_SIZES_UK
-      case 'US':
-        return SHOE_SIZES_US
-      case 'EU':
-        return SHOE_SIZES_EU
-      default:
-        return SHOE_SIZES_UK
+    // Return clothing sizes if apparel category is selected
+    if (sizeCategory === 'apparel') {
+      return CLOTHING_SIZES
     }
+
+    // For "other" category, return empty array (will show text input instead)
+    if (sizeCategory === 'other') {
+      return []
+    }
+
+    // Return shoe sizes based on size system
+    switch (formData.sizeSystem) {
+      case 'UK': return SHOE_SIZES_UK
+      case 'US': return SHOE_SIZES_US
+      case 'EU': return SHOE_SIZES_EU
+      default: return SHOE_SIZES_UK
+    }
+  }
+
+  const handleSizeSelect = (size: string) => {
+    // Check if size already selected
+    if (selectedSizes.some(s => s.size === size)) {
+      return
+    }
+    // Add size with default quantity of 1
+    setSelectedSizes(prev => [...prev, { size, quantity: 1 }])
+    // Also update formData.size for validation purposes (use first size)
+    if (selectedSizes.length === 0) {
+      updateField('size', size)
+    }
+  }
+
+  const handleAddCustomSize = () => {
+    if (customSize.trim()) {
+      handleSizeSelect(customSize.trim())
+      setShowCustomSize(false)
+      setCustomSize('')
+    }
+  }
+
+  const handleQuantityChange = (size: string, quantity: number) => {
+    setSelectedSizes(prev =>
+      prev.map(s => s.size === size ? { ...s, quantity: Math.max(1, quantity) } : s)
+    )
+  }
+
+  const handleRemoveSize = (size: string) => {
+    setSelectedSizes(prev => {
+      const newSizes = prev.filter(s => s.size !== size)
+      // Update formData.size for validation
+      if (newSizes.length > 0) {
+        updateField('size', newSizes[0].size)
+      } else {
+        updateField('size', '')
+      }
+      return newSizes
+    })
+  }
+
+  // Clean product name by removing specific size numbers only
+  const cleanProductName = (name: string): string => {
+    if (!name) return name
+    // Only remove patterns like "(Size 8.5)" - keep GS, PS, TD, Infant, etc.
+    return name
+      .replace(/\s*\(Size\s+[\d.]+\)\s*/gi, '')
+      .trim()
+  }
+
+  const handleSelectProduct = (product: any) => {
+    // Set SKU
+    updateField('sku', product.sku)
+
+    // Auto-fill purchase price from retail price if available
+    if (product.retailPrice) {
+      updateField('purchasePrice', product.retailPrice)
+    }
+
+    // Auto-detect and set size category based on product category
+    const productCategory = (product.category || '').toLowerCase()
+    console.log('[AddItemModal] Selected product category:', productCategory, 'Full product:', product)
+
+    if (productCategory === 'shoes' || productCategory === 'sneakers') {
+      setSizeCategory('shoes')
+    } else if (productCategory === 'apparel' || productCategory === 'clothing' || productCategory === 'streetwear') {
+      setSizeCategory('apparel')
+    } else {
+      setSizeCategory('other')
+    }
+
+    // Set product preview
+    setProductPreview({
+      productId: product.id || product.catalog_id || '',
+      title: cleanProductName(product.name || product.title),
+      brand: product.brand || '',
+      colorway: product.colorway || '',
+      image: product.image || product.main_picture_url || null,
+      gender: product.gender || '',
+      retailPrice: product.retailPrice || null,
+      releaseDate: product.releaseDate || null,
+      category: product.category || '',
+    })
+
+    // Clear search
+    setNameSearch('')
+    setShowSearchResults(false)
+    setSearchResults([])
   }
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[720px] w-[90vw] rounded-2xl border border-border bg-elev-3/98 backdrop-blur-md shadow-large p-0 max-h-[calc(100vh-60px)] overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/20">
-            <DialogTitle className="text-2xl font-display font-semibold text-fg tracking-tight">
-              Add Item
-            </DialogTitle>
-            <p className="text-sm text-muted mt-1">
-              Enter SKU and size - all other details will be autofilled from StockX
-            </p>
-          </DialogHeader>
+        <DialogContent className="max-w-[900px] w-[95vw] max-h-[95vh] rounded-2xl border-0 bg-[#111111]/95 backdrop-blur-md p-0 overflow-hidden shadow-2xl">
+          {/* Header with product info */}
+          <div className="border-b border-[#2a2a2a] px-8 py-6">
+            <div className="space-y-4">
+              {/* Name and Style ID Row */}
+              <div className="grid gap-4" style={{ gridTemplateColumns: '2fr 1fr' }}>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Name *
+                  </Label>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 z-10" />
+                    <Input
+                      value={nameSearch || productPreview?.title || ''}
+                      onChange={(e) => {
+                        const newValue = e.target.value
+                        setNameSearch(newValue)
+                        // If user starts typing and there's already a product selected, clear it
+                        if (newValue && productPreview) {
+                          setProductPreview(null)
+                          updateField('sku', '')
+                        }
+                      }}
+                      onFocus={() => {
+                        // If there's a product selected, populate nameSearch so user can edit
+                        if (productPreview?.title && !nameSearch) {
+                          setNameSearch(productPreview.title)
+                        }
+                        if (searchResults.length > 0) setShowSearchResults(true)
+                      }}
+                      placeholder="Search by product name"
+                      className={cn(
+                        "pl-11 h-12 bg-[#1a1a1a] border-[#2a2a2a] text-white placeholder:text-gray-500 rounded-xl text-base",
+                        "focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87]",
+                        "transition-all duration-200"
+                      )}
+                    />
 
-          <div className="overflow-y-auto max-h-[calc(100vh-200px)] px-6 py-4">
-            {/* Two Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-              {/* COLUMN 1: SKU + Size + Product Preview */}
-              <div className="space-y-4">
-                {/* Product Lookup Card */}
-                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
-                  {/* Section Header */}
-                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
-                      Product Lookup
-                    </h3>
-                    <div className="h-px w-12 bg-border rounded-full" />
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* SKU */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="sku" className={labelClassName}>
-                        SKU / Style ID <span className="text-accent">*</span>
-                      </Label>
-                      <Input
-                        id="sku"
-                        value={formData.sku}
-                        onChange={(e) => updateField('sku', e.target.value)}
-                        onBlur={handleSkuBlur}
-                        placeholder="e.g., DZ5485-612, HQ6998-600"
-                        className={cn(inputClassName, "font-mono", errors.sku && "border-danger")}
-                      />
-                      <div className="h-4 mt-1">
-                        {errors.sku && (
-                          <p className="text-xs text-danger">{errors.sku}</p>
-                        )}
-                        {isLoadingPreview && (
-                          <p className="text-xs text-accent flex items-center gap-1.5">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            <span>Looking up product...</span>
-                          </p>
-                        )}
-                        {!isLoadingPreview && previewError && (
-                          <p className="text-xs text-dim flex items-center gap-1.5">
-                            <Info className="h-3 w-3" />
-                            <span>{previewError}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Product Preview */}
-                    {productPreview && (
-                      <div className="bg-elev-1 border border-accent/20 rounded-lg p-3 space-y-3">
-                        <div className="flex items-start gap-3">
-                          {productPreview.image ? (
-                            <img
-                              src={productPreview.image}
-                              alt={productPreview.title}
-                              className="w-16 h-16 rounded-lg object-cover bg-elev-2"
-                            />
-                          ) : (
-                            <div className="w-16 h-16 rounded-lg bg-elev-2 flex items-center justify-center">
-                              <Package className="h-6 w-6 text-dim" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-fg line-clamp-2">
-                              {productPreview.title}
-                            </h4>
-                            <div className="text-xs text-muted space-y-0.5 mt-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-accent">{productPreview.brand}</span>
-                                {productPreview.colorway && (
-                                  <>
-                                    <span className="text-dim">•</span>
-                                    <span>{productPreview.colorway}</span>
-                                  </>
-                                )}
-                              </div>
-                              {productPreview.marketData?.lowestAsk && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-green-600 dark:text-green-400 font-medium">Lowest Ask:</span>
-                                  <span className="font-mono text-green-600 dark:text-green-400 font-semibold">{symbol()}{Number(productPreview.marketData.lowestAsk).toFixed(2)}</span>
-                                </div>
-                              )}
-                              {productPreview.marketData?.highestBid && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-blue-600 dark:text-blue-400 font-medium">Highest Bid:</span>
-                                  <span className="font-mono text-blue-600 dark:text-blue-400 font-semibold">{symbol()}{Number(productPreview.marketData.highestBid).toFixed(2)}</span>
-                                </div>
-                              )}
-                            </div>
+                    {/* Search Results Dropdown */}
+                    {showSearchResults && (nameSearch.length >= 3) && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-2xl max-h-[400px] overflow-y-auto z-50">
+                        {isSearching ? (
+                          <div className="p-4 flex items-center justify-center text-gray-400">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Searching...
                           </div>
-                        </div>
+                        ) : searchResults.length === 0 ? (
+                          <div className="p-4 text-center text-gray-400">No products found</div>
+                        ) : (
+                          searchResults.map((product, index) => (
+                            <button
+                              key={`${product.source}-${product.sku || product.id}-${index}`}
+                              onClick={() => handleSelectProduct(product)}
+                              className="w-full p-3 flex items-start gap-3 hover:bg-[#222222] transition-colors border-b border-[#2a2a2a] last:border-b-0 text-left"
+                            >
+                              {/* Thumbnail - show if available */}
+                              {product.image ? (
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="w-16 h-16 object-cover rounded-lg bg-[#111111] flex-shrink-0"
+                                  onError={(e) => {
+                                    // Hide broken images
+                                    e.currentTarget.style.display = 'none'
+                                    const parent = e.currentTarget.parentElement
+                                    if (parent) {
+                                      const placeholder = document.createElement('div')
+                                      placeholder.className = 'w-16 h-16 bg-[#111111] rounded-lg flex items-center justify-center flex-shrink-0'
+                                      placeholder.innerHTML = '<span class="text-gray-600 text-xs">No image</span>'
+                                      parent.appendChild(placeholder)
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-16 h-16 bg-[#111111] rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <span className="text-gray-600 text-xs">No image</span>
+                                </div>
+                              )}
+
+                              {/* Product Info */}
+                              <div className="flex-1 min-w-0">
+                                {/* SKU - small and subtle at top */}
+                                <div className="text-gray-500 text-xs mb-1 truncate">
+                                  {product.sku}
+                                </div>
+                                <div className="font-semibold text-white text-sm mb-1 truncate">
+                                  {product.brand || 'Unknown Brand'}
+                                </div>
+                                <div className="text-white text-sm mb-1 truncate">
+                                  {cleanProductName(product.name || product.title)}
+                                </div>
+                                {product.colorway && (
+                                  <div className="text-gray-400 text-xs mb-1 truncate">
+                                    {product.colorway}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  {product.releaseDate && (
+                                    <span>{new Date(product.releaseDate).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}</span>
+                                  )}
+                                  {product.retailPrice && (
+                                    <>
+                                      {product.releaseDate && <span>-</span>}
+                                      <span>${product.retailPrice}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
-
-                {/* Size Selection Card */}
-                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
-                  {/* Section Header */}
-                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
-                      Size Selection
-                    </h3>
-                    <div className="h-px w-12 bg-border rounded-full" />
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Size System Tabs */}
-                    <div>
-                      <Label className={labelClassName}>
-                        Size System <span className="text-accent">*</span>
-                      </Label>
-                      <div className="flex gap-2">
-                        {(['UK', 'US', 'EU'] as const).map((system) => (
-                          <button
-                            key={system}
-                            type="button"
-                            onClick={() => {
-                              updateField('sizeSystem', system)
-                              updateField('size', '') // Reset size when system changes
-                            }}
-                            className={cn(
-                              "flex-1 h-8 px-3 rounded-full text-sm font-medium transition-boutique",
-                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                              formData.sizeSystem === system
-                                ? "bg-accent text-fg shadow-soft"
-                                : "bg-elev-1 border border-border/30 text-muted hover:bg-elev-1 hover:border-accent/30"
-                            )}
-                          >
-                            {system}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Size Grid */}
-                    <div className="min-h-[70px]">
-                      <Label className={labelClassName}>
-                        Size <span className="text-accent">*</span>
-                      </Label>
-                      <div className="max-h-[180px] overflow-y-auto bg-elev-1 border border-border/40 rounded-lg p-2">
-                        <div className="grid grid-cols-7 gap-1.5">
-                          {getSizeOptions().map((size) => {
-                            const isSelected = formData.size === size
-                            return (
-                              <button
-                                key={size}
-                                type="button"
-                                onClick={() => updateField('size', size)}
-                                className={cn(
-                                  "h-8 min-w-[42px] rounded-md border text-sm font-medium transition-boutique",
-                                  "flex items-center justify-center",
-                                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
-                                  isSelected
-                                    ? "bg-elev-2 border-accent ring-1 ring-accent/40 text-fg"
-                                    : "border-border/40 text-muted hover:bg-elev-2 hover:text-fg shadow-soft"
-                                )}
-                              >
-                                {size}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                      <div className="h-4 mt-1">
-                        {errors.size && (
-                          <p className="text-xs text-danger">{errors.size}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Condition */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="condition" className={labelClassName}>
-                        Condition <span className="text-accent">*</span>
-                      </Label>
-                      <Select value={formData.condition} onValueChange={(value: any) => updateField('condition', value)}>
-                        <SelectTrigger className={inputClassName}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-elev-1 border-border">
-                          {CONDITION_OPTIONS.map(option => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Style ID
+                  </Label>
+                  <Input
+                    value={formData.sku}
+                    onChange={(e) => updateField('sku', e.target.value)}
+                    onBlur={handleSkuBlur}
+                    placeholder="Enter SKU"
+                    className={cn(
+                      "h-12 bg-[#1a1a1a] border-[#2a2a2a] text-white placeholder:text-gray-500 rounded-xl text-base",
+                      "focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87]",
+                      "transition-all duration-200",
+                      errors.sku && "border-red-500/50 focus-visible:ring-red-500/50"
+                    )}
+                  />
                 </div>
               </div>
 
-              {/* COLUMN 2: Purchase Info */}
-              <div className="space-y-4">
-                {/* Purchase Information Card */}
-                <div className="bg-elev-2 rounded-2xl border border-border/20 p-4 md:p-6 space-y-4">
-                  {/* Section Header */}
-                  <div className="space-y-2 sticky top-0 bg-elev-2 pb-2 -mt-2">
-                    <h3 className="font-display text-fg uppercase tracking-wide text-xs font-semibold">
-                      Purchase Information
-                    </h3>
-                    <div className="h-px w-12 bg-border rounded-full" />
-                  </div>
+              {/* Loading/Error States */}
+              {isLoadingPreview && (
+                <p className="text-xs text-[#00FF87] flex items-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Looking up product...
+                </p>
+              )}
+              {previewError && !isLoadingPreview && (
+                <p className="text-xs text-gray-500">{previewError}</p>
+              )}
 
-                  <div className="space-y-3">
-                    {/* Purchase Price */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="purchasePrice" className={labelClassName}>
-                        Purchase Price ({symbol()}) <span className="text-accent">*</span>
-                      </Label>
-                      <Input
-                        id="purchasePrice"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.purchasePrice}
-                        onChange={(e) => updateField('purchasePrice', e.target.value)}
-                        placeholder="0.00"
-                        className={cn(inputClassName, "font-mono text-right tabular-nums", errors.purchasePrice && "border-danger")}
-                      />
-                      <div className="h-4 mt-1">
-                        {errors.purchasePrice && (
-                          <p className="text-xs text-danger">{errors.purchasePrice}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Purchase Date */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="purchaseDate" className={labelClassName}>
-                        Purchase Date <span className="text-accent">*</span>
-                      </Label>
-                      <Input
-                        id="purchaseDate"
-                        type="date"
-                        value={formData.purchaseDate}
-                        onChange={(e) => updateField('purchaseDate', e.target.value)}
-                        className={cn(inputClassName, "font-mono", errors.purchaseDate && "border-danger")}
-                      />
-                      <div className="h-4 mt-1">
-                        {errors.purchaseDate && (
-                          <p className="text-xs text-danger">{errors.purchaseDate}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tax */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="tax" className={labelClassName}>
-                        Tax ({symbol()})
-                      </Label>
-                      <Input
-                        id="tax"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.tax}
-                        onChange={(e) => updateField('tax', e.target.value)}
-                        placeholder="0.00"
-                        className={cn(inputClassName, "font-mono text-right tabular-nums")}
-                      />
-                    </div>
-
-                    {/* Shipping */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="shipping" className={labelClassName}>
-                        Shipping ({symbol()})
-                      </Label>
-                      <Input
-                        id="shipping"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.shipping}
-                        onChange={(e) => updateField('shipping', e.target.value)}
-                        placeholder="0.00"
-                        className={cn(inputClassName, "font-mono text-right tabular-nums")}
-                      />
-                    </div>
-
-                    {/* Purchase Total */}
-                    <div className="bg-soft border border-border/40 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-display text-xs text-muted uppercase tracking-wide font-medium">Total</span>
-                        <span className="text-base num text-fg font-semibold tabular-nums">
-                          {symbol()}{purchaseTotal}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Profit Indicator */}
-                    {profitIndicator && (
-                      <div className={cn(
-                        "bg-elev-1 border rounded-lg p-3 space-y-2",
-                        profitIndicator.roi >= 20 ? "border-green-500/40" :
-                        profitIndicator.roi >= 10 ? "border-accent/40" :
-                        profitIndicator.roi >= 0 ? "border-yellow-500/40" :
-                        "border-red-500/40"
-                      )}>
-                        <div className="flex items-center justify-between">
-                          <span className="font-display text-xs text-muted uppercase tracking-wide font-medium">
-                            Est. Profit
-                          </span>
-                          <span className={cn(
-                            "text-base num font-semibold tabular-nums",
-                            profitIndicator.roi >= 20 ? "text-green-500" :
-                            profitIndicator.roi >= 10 ? "text-accent" :
-                            profitIndicator.roi >= 0 ? "text-yellow-500" :
-                            "text-red-500"
-                          )}>
-                            {profitIndicator.profit >= 0 ? '+' : ''}{symbol()}{profitIndicator.profit.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-dim">ROI</span>
-                          <span className={cn(
-                            "font-mono font-medium",
-                            profitIndicator.colorClass
-                          )}>
-                            {profitIndicator.roi >= 0 ? '+' : ''}{profitIndicator.roi.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="text-xs text-dim pt-1 border-t border-border/20">
-                          Based on current market: {symbol()}{Number(profitIndicator.lowestAsk).toFixed(2)}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Place of Purchase */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="placeOfPurchase" className={labelClassName}>
-                        Place of Purchase
-                      </Label>
-                      <Select value={formData.placeOfPurchase} onValueChange={(value) => updateField('placeOfPurchase', value)}>
-                        <SelectTrigger className={inputClassName}>
-                          <SelectValue placeholder="Select..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-elev-1 border-border">
-                          {PLACE_OF_PURCHASE_OPTIONS.map(place => (
-                            <SelectItem key={place} value={place}>
-                              {place}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Order Number */}
-                    <div className="min-h-[70px]">
-                      <Label htmlFor="orderNumber" className={labelClassName}>
-                        Order Number
-                      </Label>
-                      <Input
-                        id="orderNumber"
-                        value={formData.orderNumber}
-                        onChange={(e) => updateField('orderNumber', e.target.value)}
-                        placeholder="Optional"
-                        className={cn(inputClassName, "font-mono")}
-                      />
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Label htmlFor="notes" className={cn(labelClassName, "mb-0")}>
-                          Notes
-                        </Label>
-                        <span className={cn(
-                          "text-xs font-mono tabular-nums",
-                          (formData.notes?.length || 0) > 250 ? "text-danger" : "text-muted"
-                        )}>
-                          {formData.notes?.length || 0}/250
-                        </span>
-                      </div>
-                      <Textarea
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) => updateField('notes', e.target.value)}
-                        placeholder="Any additional notes..."
-                        rows={3}
-                        maxLength={250}
-                        className={cn(
-                          "bg-elev-1 border border-border/40 text-fg text-sm resize-none p-3 rounded-lg placeholder:opacity-60",
-                          "focus:ring-2 focus:ring-focus focus:border-accent/50",
-                          "transition-boutique",
-                          errors.notes && "border-danger"
-                        )}
-                      />
-                      {errors.notes && (
-                        <p className="text-xs text-danger mt-1">{errors.notes}</p>
-                      )}
-                    </div>
-                  </div>
+              {/* Brand, Color, and Condition Row */}
+              <div className="flex items-end gap-4">
+                <div className="flex-1">
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Brand
+                  </Label>
+                  <Input
+                    value={productPreview?.brand || ''}
+                    readOnly
+                    placeholder="Nike"
+                    className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl cursor-default"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Color
+                  </Label>
+                  <Input
+                    value={productPreview?.colorway || ''}
+                    readOnly
+                    placeholder="White"
+                    className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl cursor-default"
+                  />
+                </div>
+                <div className="flex-1">
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Condition
+                  </Label>
+                  <Select
+                    value={formData.condition}
+                    onValueChange={(value) => updateField('condition', value as any)}
+                  >
+                    <SelectTrigger className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87]">
+                      <SelectValue placeholder="Select condition" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                      {CONDITION_OPTIONS.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="text-white hover:bg-[#222222] focus:bg-[#222222] cursor-pointer"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Footer Bar - Sticky at bottom */}
-          <div className="flex justify-end gap-3 border-t border-border/20 p-5 md:p-6 bg-elev-2/70 backdrop-blur sticky bottom-0">
+          {/* Main Content */}
+          <div className="grid grid-cols-2 gap-8 px-8 py-6 max-h-[calc(95vh-240px)] overflow-y-auto">
+            {/* Left Column - Purchase Info */}
+            <div className="space-y-5">
+              {/* Purchase Price */}
+              <div>
+                <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                  Purchase Price *
+                </Label>
+                <div className="flex items-center gap-2">
+                  {/* Compact Currency Selector - shows only symbol when closed */}
+                  <Select
+                    value={selectedCurrency}
+                    onValueChange={(value) => {
+                      const newCurrency = value as 'GBP' | 'EUR' | 'USD'
+                      setSelectedCurrency(newCurrency)
+                      // Update size system based on new currency
+                      const newSizeSystem = newCurrency === 'GBP' ? 'UK' : newCurrency === 'EUR' ? 'EU' : 'US'
+                      updateField('sizeSystem', newSizeSystem)
+                    }}
+                  >
+                    <SelectTrigger className="w-[60px] h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] font-medium text-base">
+                      <SelectValue>
+                        {getCurrencySymbol()}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-[#2a2a2a]">
+                      <SelectItem value="GBP" className="text-white hover:bg-[#222222] focus:bg-[#222222] cursor-pointer">
+                        £ GBP - UK Sizes
+                      </SelectItem>
+                      <SelectItem value="EUR" className="text-white hover:bg-[#222222] focus:bg-[#222222] cursor-pointer">
+                        € EUR - EU Sizes
+                      </SelectItem>
+                      <SelectItem value="USD" className="text-white hover:bg-[#222222] focus:bg-[#222222] cursor-pointer">
+                        $ USD - US Sizes
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.purchasePrice}
+                    onChange={(e) => updateField('purchasePrice', e.target.value)}
+                    placeholder="275"
+                    className={cn(
+                      "flex-1 h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl",
+                      "focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87]",
+                      "transition-all duration-200",
+                      errors.purchasePrice && "border-red-500/50"
+                    )}
+                  />
+                </div>
+                {errors.purchasePrice && (
+                  <p className="text-xs text-red-400 mt-1.5">{errors.purchasePrice}</p>
+                )}
+              </div>
+
+              {/* Tax */}
+              <div>
+                <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                  Tax
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.tax}
+                  onChange={(e) => updateField('tax', e.target.value)}
+                  placeholder="0.00"
+                  className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] transition-all duration-200"
+                />
+              </div>
+
+              {/* Shipping */}
+              <div>
+                <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                  Shipping
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.shipping}
+                  onChange={(e) => updateField('shipping', e.target.value)}
+                  placeholder="0.00"
+                  className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] transition-all duration-200"
+                />
+              </div>
+
+              {/* Place of Purchase */}
+              <div>
+                <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                  Place of purchase
+                </Label>
+                <Input
+                  value={formData.placeOfPurchase}
+                  onChange={(e) => updateField('placeOfPurchase', e.target.value)}
+                  placeholder="SNKRS, Adidas, End, KITH etc"
+                  className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] transition-all duration-200"
+                />
+              </div>
+
+              {/* Purchase Date & Tags */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Purchase Date *
+                  </Label>
+                  <Input
+                    type="date"
+                    value={formData.purchaseDate}
+                    onChange={(e) => updateField('purchaseDate', e.target.value)}
+                    className={cn(
+                      "h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl",
+                      "focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87]",
+                      "transition-all duration-200",
+                      errors.purchaseDate && "border-red-500/50"
+                    )}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Tags
+                  </Label>
+                  <Input
+                    value={formData.tags}
+                    onChange={(e) => updateField('tags', e.target.value)}
+                    placeholder="Enter some tags"
+                    className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              {/* Selected Sizes */}
+              {selectedSizes.length > 0 && (
+                <div>
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Selected Sizes
+                  </Label>
+                  <div className="space-y-2">
+                    {selectedSizes.map(({ size, quantity }) => (
+                      <div key={size} className="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-3">
+                        <div className="flex-1">
+                          <span className="text-white font-semibold">Size {size}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={quantity}
+                            onChange={(e) => handleQuantityChange(size, parseInt(e.target.value) || 1)}
+                            className="w-20 h-9 bg-[#111111] border-[#2a2a2a] text-white text-center rounded-lg focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87]"
+                          />
+                          <button
+                            onClick={() => handleRemoveSize(size)}
+                            className="h-9 w-9 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Order Number */}
+              <div>
+                <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                  Order number
+                </Label>
+                <Input
+                  value={formData.orderNumber}
+                  onChange={(e) => updateField('orderNumber', e.target.value)}
+                  placeholder="#00000"
+                  className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] transition-all duration-200"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <Label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                    Notes
+                  </Label>
+                  <span className="text-xs text-gray-600">
+                    {formData.notes?.length || 0}/750 characters left
+                  </span>
+                </div>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => updateField('notes', e.target.value)}
+                  maxLength={750}
+                  rows={4}
+                  placeholder="Add any notes about this item..."
+                  className="bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl resize-none focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] transition-all duration-200"
+                />
+              </div>
+            </div>
+
+            {/* Right Column - Size Grid */}
+            <div className="space-y-5">
+              {/* Category Tabs */}
+              <div className="border-b border-[#2a2a2a]">
+                <div className="flex gap-8">
+                  {(['shoes', 'apparel', 'other'] as const).map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => {
+                        setSizeCategory(category)
+                        // Clear selected sizes when changing category
+                        setSelectedSizes([])
+                        updateField('size', '')
+                      }}
+                      className={cn(
+                        "pb-3 text-sm font-semibold capitalize border-b-2 transition-all duration-200",
+                        sizeCategory === category
+                          ? "border-[#00FF87] text-white"
+                          : "border-transparent text-gray-400 hover:text-gray-300"
+                      )}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Size Grid or Text Input */}
+              {sizeCategory === 'other' ? (
+                // For "other" category, show a simple text input
+                <div>
+                  <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                    Size *
+                  </Label>
+                  <Input
+                    value={formData.size}
+                    onChange={(e) => updateField('size', e.target.value)}
+                    placeholder="Enter size (e.g., One Size, OS, 250ml)"
+                    className={cn(
+                      "h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl",
+                      "focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87]",
+                      "transition-all duration-200",
+                      errors.size && "border-red-500/50"
+                    )}
+                  />
+                </div>
+              ) : (
+                // For shoes and apparel, show size grid
+                <>
+                  <div className="grid grid-cols-4 gap-2">
+                    {getSizeOptions().map((size) => {
+                      const isSelected = selectedSizes.some(s => s.size === size)
+                      return (
+                        <button
+                          key={size}
+                          onClick={() => handleSizeSelect(size)}
+                          disabled={isSelected}
+                          className={cn(
+                            "h-11 rounded-xl text-sm font-semibold transition-all duration-200",
+                            isSelected
+                              ? "bg-[#00FF87] text-black shadow-lg cursor-default"
+                              : "bg-[#1a1a1a] text-gray-300 hover:bg-[#222222] hover:text-white hover:scale-[1.02]"
+                          )}
+                        >
+                          {size}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Add Other Size - only for shoes and apparel */}
+                  {showCustomSize ? (
+                    <div className="flex gap-2 pt-2">
+                      <Input
+                        value={customSize}
+                        onChange={(e) => setCustomSize(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAddCustomSize()
+                          if (e.key === 'Escape') {
+                            setShowCustomSize(false)
+                            setCustomSize('')
+                          }
+                        }}
+                        placeholder="Enter size"
+                        className="flex-1 h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87]"
+                        autoFocus
+                      />
+                      <Button
+                        onClick={handleAddCustomSize}
+                        disabled={!customSize.trim()}
+                        className="bg-[#00FF87] hover:bg-[#00e67a] text-black font-semibold px-6 rounded-xl h-11"
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setShowCustomSize(false)
+                          setCustomSize('')
+                        }}
+                        variant="ghost"
+                        className="text-gray-400 hover:text-white hover:bg-[#1a1a1a] rounded-xl h-11"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowCustomSize(true)}
+                      className="text-sm text-[#00FF87] hover:text-[#00e67a] font-semibold transition-colors pt-2"
+                    >
+                      + Add other size
+                    </button>
+                  )}
+                </>
+              )}
+
+              {errors.size && (
+                <p className="text-xs text-red-400 pt-1">{errors.size}</p>
+              )}
+
+              {/* Location */}
+              <div>
+                <Label className="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">
+                  Location
+                </Label>
+                <Input
+                  value={formData.location}
+                  onChange={(e) => updateField('location', e.target.value)}
+                  placeholder="Shelf A, Closet 1, etc."
+                  className="h-11 bg-[#1a1a1a] border-[#2a2a2a] text-white rounded-xl focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] transition-all duration-200"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-[#2a2a2a] px-8 py-5 flex justify-end gap-3 bg-[#0f0f0f]">
             <Button
-              type="button"
-              variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
-              className="border border-border/30 hover:bg-elev-1 transition-boutique"
+              variant="ghost"
+              className="text-gray-400 hover:text-white hover:bg-[#1a1a1a] font-semibold px-6 h-11 rounded-xl"
             >
-              Cancel
+              Close
             </Button>
             <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleSubmit(true)}
-              disabled={isSubmitting}
-              className="border border-accent/40 text-accent hover:bg-accent/10 transition-boutique"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save & Add Another'
-              )}
-            </Button>
-            <Button
-              type="submit"
               onClick={() => handleSubmit(false)}
               disabled={isSubmitting}
-              className="bg-accent text-fg hover:bg-accent-600 transition-boutique"
+              className="bg-[#00FF87] hover:bg-[#00e67a] text-black font-bold px-8 h-11 rounded-xl shadow-lg hover:shadow-[#00FF87]/20 transition-all duration-200"
             >
               {isSubmitting ? (
                 <>
@@ -877,7 +1284,6 @@ export function AddItemModal({ open, onOpenChange, onSuccess }: AddItemModalProp
         </DialogContent>
       </Dialog>
 
-      {/* Toast Notification */}
       {toast && (
         <Toast
           message={toast.message}

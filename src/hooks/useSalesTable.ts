@@ -109,7 +109,14 @@ export function useSalesTable(params: SalesTableParams = {}) {
       if (params.brand) query = query.eq('brand', params.brand)
       if (params.size_uk) query = query.eq('size_uk', params.size_uk)
       if (params.category) query = query.eq('category', params.category)
-      if (params.platform) query = query.ilike('platform', params.platform)
+      if (params.platform) {
+        // Handle 'alias' filter to also match 'goat' (database value for Alias)
+        if (params.platform.toLowerCase() === 'alias') {
+          query = query.or('platform.ilike.alias,platform.ilike.goat')
+        } else {
+          query = query.ilike('platform', params.platform)
+        }
+      }
       if (params.date_from) query = query.gte('sold_date', params.date_from)
       if (params.date_to) query = query.lte('sold_date', params.date_to)
 

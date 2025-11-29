@@ -12,18 +12,18 @@ import {
 } from '@tanstack/react-table'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Skeleton } from '@/components/ui/skeleton'
-import { DollarSign, MoreHorizontal, Copy, Package } from 'lucide-react'
+import { DollarSign, MoreHorizontal, Copy, Package, Edit } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { EditSaleModal } from '@/components/modals/EditSaleModal'
 import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
 import { ProductLineItem } from '@/components/product/ProductLineItem'
 import { TableWrapper, TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
 import type { SalesItem } from '@/hooks/useSalesTable'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { useRouter } from 'next/navigation'
 
 const columnHelper = createColumnHelper<SalesItem>()
@@ -33,6 +33,7 @@ export interface SalesTableProps {
   loading: boolean
   sorting: SortingState
   onSortingChange: OnChangeFn<SortingState>
+  onRefresh?: () => void
 }
 
 export function SalesTable({
@@ -40,16 +41,53 @@ export function SalesTable({
   loading,
   sorting,
   onSortingChange,
+  onRefresh,
 }: SalesTableProps) {
   const { convert, format, symbol, currency } = useCurrency()
   const router = useRouter()
   const [copiedSku, setCopiedSku] = useState<string | null>(null)
+  const [editingSale, setEditingSale] = useState<SalesItem | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   // Copy SKU to clipboard
   const handleCopySku = async (sku: string) => {
     await navigator.clipboard.writeText(sku)
     setCopiedSku(sku)
     setTimeout(() => setCopiedSku(null), 2000)
+  }
+
+  // Open edit modal
+  const handleEditSale = (sale: SalesItem) => {
+    setEditingSale(sale)
+    setEditModalOpen(true)
+  }
+
+  // Save sale edits
+  const handleSaveSale = async (updates: Partial<SalesItem>) => {
+    if (!editingSale?.id) return
+
+    try {
+      const response = await fetch(`/api/sales/${editingSale.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update sale')
+      }
+
+      // Refresh the sales data
+      if (onRefresh) {
+        onRefresh()
+      }
+
+      setEditModalOpen(false)
+      setEditingSale(null)
+    } catch (error) {
+      console.error('[SalesTable] Error updating sale:', error)
+      throw error
+    }
   }
 
   // Define columns
@@ -229,6 +267,7 @@ export function SalesTable({
                   icon: 'Sx'
                 }
               case 'alias':
+              case 'goat':
                 return {
                   label: 'Alias',
                   bg: 'bg-[#A855F7]/10',
@@ -291,37 +330,67 @@ export function SalesTable({
         header: '',
         cell: (info) => {
           const item = info.row.original
+          const [open, setOpen] = useState(false)
+
+          const handleAction = (action: () => void) => {
+            action()
+            setOpen(false)
+          }
 
           return (
             <div className="flex justify-end">
-              <DropdownMenu>
-                <DropdownMenuTrigger className="p-2 hover:bg-elev-1 rounded-md transition-colors">
-                  <MoreHorizontal className="h-4 w-4 text-muted" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem
-                    onClick={() => router.push('/portfolio/inventory')}
-                    className="cursor-pointer"
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    className="h-8 w-8 p-0 hover:bg-elev-2 rounded-md transition-all duration-120 flex items-center justify-center"
+                    aria-label="Row actions"
                   >
-                    <Package className="h-4 w-4 mr-2" />
-                    View in Portfolio
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleCopySku(item.sku)}
-                    className="cursor-pointer"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    {copiedSku === item.sku ? 'Copied!' : 'Copy SKU'}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[200px] bg-[#0E1A15] border-[#15251B] p-2 shadow-xl"
+                  align="end"
+                >
+                  <div className="space-y-0.5">
+                    {/* SECTION: SALE ACTIONS */}
+                    <div className="px-2 py-1.5">
+                      <span className="text-xs font-semibold text-[#7FA08F] uppercase tracking-wide">Sale</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleAction(() => handleEditSale(item))}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit Sale
+                    </button>
+
+                    <button
+                      onClick={() => handleAction(() => router.push('/portfolio/inventory'))}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
+                    >
+                      <Package className="h-4 w-4" />
+                      View in Portfolio
+                    </button>
+
+                    <button
+                      onClick={() => handleAction(() => handleCopySku(item.sku))}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
+                    >
+                      <Copy className="h-4 w-4" />
+                      {copiedSku === item.sku ? 'Copied!' : 'Copy SKU'}
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           )
         },
         enableSorting: false,
       }),
     ],
-    [convert, format, symbol, currency, copiedSku, router]
+    [convert, format, symbol, currency, copiedSku, router, handleEditSale]
   )
 
   const table = useReactTable({
@@ -338,56 +407,87 @@ export function SalesTable({
 
   if (loading) {
     return (
-      <TableBase>
-        <TableHeader>
-          <TableRow>
-            {columns.map((col, i) => (
-              <TableHead key={i}>
-                <Skeleton className="h-4 w-20" />
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {[...Array(5)].map((_, i) => (
-            <TableRow key={i} index={i}>
-              {columns.map((_, j) => (
-                <TableCell key={j}>
-                  <Skeleton className="h-4 w-full" />
-                </TableCell>
+      <>
+        <TableBase>
+          <TableHeader>
+            <TableRow>
+              {columns.map((col, i) => (
+                <TableHead key={i}>
+                  <Skeleton className="h-4 w-20" />
+                </TableHead>
               ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </TableBase>
+          </TableHeader>
+          <TableBody>
+            {[...Array(5)].map((_, i) => (
+              <TableRow key={i} index={i}>
+                {columns.map((_, j) => (
+                  <TableCell key={j}>
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableBase>
+
+        {/* Edit Sale Modal */}
+        {editingSale && (
+          <EditSaleModal
+            sale={editingSale}
+            open={editModalOpen}
+            onClose={() => {
+              setEditModalOpen(false)
+              setEditingSale(null)
+            }}
+            onSave={handleSaveSale}
+          />
+        )}
+      </>
     )
   }
 
   if (items.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[500px] rounded-2xl border border-keyline bg-panel">
-        <div className="text-center px-6 py-12">
-          {/* Icon with accent glow */}
-          <div className="relative inline-block mb-6">
-            <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full" />
-            <DollarSign className="h-16 w-16 mx-auto text-accent relative" strokeWidth={1.5} />
+      <>
+        <div className="flex items-center justify-center min-h-[500px] rounded-2xl border border-keyline bg-panel">
+          <div className="text-center px-6 py-12">
+            {/* Icon with accent glow */}
+            <div className="relative inline-block mb-6">
+              <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full" />
+              <DollarSign className="h-16 w-16 mx-auto text-accent relative" strokeWidth={1.5} />
+            </div>
+
+            {/* Heading */}
+            <h3 className="text-xl font-semibold text-fg mb-2">
+              No sales yet
+            </h3>
+
+            {/* Description */}
+            <p className="text-sm text-muted mb-8 max-w-sm mx-auto leading-relaxed">
+              When you mark items as sold, they'll appear here with complete sale details and margin analysis.
+            </p>
           </div>
-
-          {/* Heading */}
-          <h3 className="text-xl font-semibold text-fg mb-2">
-            No sales yet
-          </h3>
-
-          {/* Description */}
-          <p className="text-sm text-muted mb-8 max-w-sm mx-auto leading-relaxed">
-            When you mark items as sold, they'll appear here with complete sale details and margin analysis.
-          </p>
         </div>
-      </div>
+
+        {/* Edit Sale Modal */}
+        {editingSale && (
+          <EditSaleModal
+            sale={editingSale}
+            open={editModalOpen}
+            onClose={() => {
+              setEditModalOpen(false)
+              setEditingSale(null)
+            }}
+            onSave={handleSaveSale}
+          />
+        )}
+      </>
     )
   }
 
   return (
+    <>
     <TableBase>
       <TableHeader>
         {table.getHeaderGroups().map((headerGroup) => (
@@ -435,5 +535,19 @@ export function SalesTable({
         ))}
       </TableBody>
     </TableBase>
+
+    {/* Edit Sale Modal */}
+    {editingSale && (
+      <EditSaleModal
+        sale={editingSale}
+        open={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false)
+          setEditingSale(null)
+        }}
+        onSave={handleSaveSale}
+      />
+    )}
+  </>
   )
 }

@@ -205,7 +205,7 @@ export function ProductLineItem({
       <div
         className={cn(
           imageSizeClass,
-          'rounded-md overflow-hidden flex-shrink-0 bg-elev-1 transition-transform duration-200 group-hover:-translate-y-[0.5px] relative'
+          'rounded-md overflow-hidden flex-shrink-0 bg-elev-1 transition-transform duration-200 group-hover:-translate-y-[0.5px] relative flex items-center justify-center'
         )}
       >
         {hasError ? (
@@ -217,7 +217,7 @@ export function ProductLineItem({
             src={imgSrc}
             alt={imageAlt || resolvedImage.alt}
             onError={handleImageError}
-            className="w-full h-full object-cover"
+            className="object-contain w-full h-full"
             loading="lazy"
           />
         )}
@@ -237,10 +237,14 @@ export function ProductLineItem({
           <Link
             href={href}
             onClick={handleClick}
-            className="text-sm text-fg tracking-tight hover:text-muted transition-colors line-clamp-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:rounded"
+            className="text-sm text-fg tracking-tight hover:text-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:rounded"
             aria-label={`View ${brand} ${model} details`}
           >
-            {brand} {model}
+            {/* Only show brand if model doesn't already start with it */}
+            {model.trim().toLowerCase().startsWith(brand.toLowerCase())
+              ? model.trim()
+              : `${brand} ${model}`.trim()
+            }
           </Link>
 
           <Tooltip.Provider delayDuration={300}>
@@ -280,7 +284,7 @@ export function ProductLineItem({
           {/* Size chip for sneakers/streetwear */}
           {sizeLabel && category !== 'pokemon' && (
             <span
-              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted whitespace-nowrap"
+              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted whitespace-nowrap opacity-70"
               title={`Size: ${sizeLabel}`}
             >
               <span className="font-semibold">Size:</span>
@@ -291,7 +295,7 @@ export function ProductLineItem({
           {/* Language tag for Pokémon sealed */}
           {languageTag && category === 'pokemon' && (
             <span
-              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted font-medium"
+              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted font-medium opacity-70"
               title={`Language: ${languageTag}`}
             >
               {languageTag}
@@ -300,7 +304,7 @@ export function ProductLineItem({
 
           {/* SKU chip (always shown) */}
           <span
-            className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted font-mono"
+            className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted font-mono opacity-70"
             title={`SKU: ${sku}`}
           >
             {sku}

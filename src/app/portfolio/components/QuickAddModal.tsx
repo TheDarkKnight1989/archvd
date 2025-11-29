@@ -124,7 +124,7 @@ export function QuickAddModal({ open, onOpenChange, onSuccess, userId }: QuickAd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="bg-elev-2/95 backdrop-blur-md shadow-xl">
         <DialogHeader>
           <DialogTitle>Add Item</DialogTitle>
           <DialogDescription>

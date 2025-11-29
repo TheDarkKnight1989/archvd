@@ -4,7 +4,7 @@
  * POST /api/stockx/listings/create
  *
  * Creates a new ask listing on StockX for an inventory item
- * Returns operationId for async tracking
+ * Saves the listingId directly to inventory_market_links
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -14,6 +14,7 @@ import { isStockxMockMode } from '@/lib/config/stockx'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
     const expiryDate = expiryDays
       ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000)
       : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) // Default 90 days
-    const expiryTime = expiryDate.toISOString() // Keep milliseconds: 2021-11-09T12:44:31.000Z
+    const expiryTime = expiryDate.toISOString()
 
     // Create listing on StockX
     console.log('[Create Listing] Calling StockX API with:', {
@@ -110,58 +111,100 @@ export async function POST(request: NextRequest) {
       productId: mapping.stockx_product_id,
       variantId: mapping.stockx_variant_id,
       amount: askPrice,
-      currencyCode: currencyCode || 'USD',
+      currencyCode: currencyCode || 'GBP',
     })
 
     const operation = await StockxListingsService.createListing(user.id, {
       productId: mapping.stockx_product_id,
       variantId: mapping.stockx_variant_id,
       amount: askPrice,
-      currencyCode: currencyCode || 'USD',
+      currencyCode: currencyCode || 'GBP',
       quantity: 1,
       expiresAt: expiryTime,
     })
 
-    console.log('[Create Listing] Operation completed:', operation)
+    // Extract listing ID from StockX response
+    const listingId = operation.listingId
 
-    // Create batch job for operation tracking
-    const { data: job, error: jobError } = await supabase
-      .from('stockx_batch_jobs')
-      .insert({
-        user_id: user.id,
-        job_type: 'create_listing',
-        status: 'PENDING',
-        stockx_operation_id: operation.operationId,
-        total_items: 1,
-        processed_items: 0,
-        failed_items: 0,
-        started_at: new Date().toISOString(),
-        metadata: {
-          inventoryItemId,
-          askPrice,
-          currencyCode: currencyCode || 'USD',
-          productId: mapping.stockx_product_id,
-          variantId: mapping.stockx_variant_id,
-        },
+    if (!listingId) {
+      console.error('[Create Listing] ERROR: No listing ID in response')
+      console.error('[Create Listing] Response:', JSON.stringify(operation, null, 2))
+      throw new Error('StockX did not return a listing ID')
+    }
+
+    const listingStatus = operation.status === 'completed' ? 'ACTIVE' : 'PENDING'
+    console.log('[Create Listing] Listing created:', listingId, `(${listingStatus})`)
+
+    // 1. Save listing ID to inventory_market_links (needed for updates/deletes)
+    const { error: linkError } = await supabase
+      .from('inventory_market_links')
+      .update({
+        stockx_listing_id: listingId,
+        updated_at: new Date().toISOString()
       })
-      .select()
+      .eq('item_id', inventoryItemId)
+
+    if (linkError) {
+      console.error('[Create Listing] Failed to save listing ID:', linkError)
+      throw new Error(`Database error: ${linkError.message}`)
+    }
+
+    console.log('[Create Listing] ✅ Listing ID saved to inventory_market_links')
+
+    // 2. Look up internal catalog IDs for stockx_listings table
+    const { data: product, error: productError } = await supabase
+      .from('stockx_products')
+      .select('id')
+      .eq('stockx_product_id', mapping.stockx_product_id)
       .single()
 
-    if (jobError) {
-      console.error('[Create Listing] Failed to create batch job:', jobError)
-      // Don't fail the request, job will still be polled eventually
+    const { data: variant, error: variantError } = await supabase
+      .from('stockx_variants')
+      .select('id')
+      .eq('stockx_variant_id', mapping.stockx_variant_id)
+      .single()
+
+    if (productError || variantError || !product || !variant) {
+      console.warn('[Create Listing] Missing catalog data - skipping stockx_listings tracking:', {
+        productError: productError?.message,
+        variantError: variantError?.message,
+        hasProduct: !!product,
+        hasVariant: !!variant,
+      })
+      console.warn('[Create Listing] This is OK - listing ID is saved in inventory_market_links')
     } else {
-      console.log('[Create Listing] Batch job created:', job.id)
+      // 3. Track status in stockx_listings table (only if we have catalog data)
+      const { error: trackingError } = await supabase
+        .from('stockx_listings')
+        .upsert({
+          stockx_listing_id: listingId,
+          user_id: user.id,
+          stockx_product_id: mapping.stockx_product_id,
+          stockx_variant_id: mapping.stockx_variant_id,
+          product_id: product.id,
+          variant_id: variant.id,
+          status: listingStatus,
+          amount: Math.round(askPrice * 100), // Convert pounds to cents (database stores as integer)
+          currency_code: currencyCode || 'GBP',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'stockx_listing_id'
+        })
+
+      if (trackingError) {
+        console.warn('[Create Listing] Failed to track in stockx_listings:', trackingError.message)
+      } else {
+        console.log('[Create Listing] ✅ Status tracked:', listingStatus)
+      }
     }
 
     const duration = Date.now() - startTime
 
     return NextResponse.json({
       success: true,
-      operationId: operation.operationId,
-      status: operation.status,
-      listingId: operation.result?.id,
-      jobId: job?.id,
+      listingId: listingId,
+      status: listingStatus,
       duration_ms: duration,
     })
   } catch (error: any) {

@@ -52,18 +52,38 @@ export function DashboardMovers({
 
   if (loading) {
     return (
-      <Card className="p-5 bg-elev-2 border-border/40">
-        <div className="h-5 bg-elev-1 rounded w-32 mb-4 animate-pulse" />
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 animate-pulse">
-              <div className="h-12 w-12 bg-elev-1 rounded" />
-              <div className="flex-1">
-                <div className="h-4 bg-elev-1 rounded w-3/4 mb-2" />
-                <div className="h-3 bg-elev-1 rounded w-1/2" />
-              </div>
+      <Card className="relative p-5 bg-gradient-to-br from-accent/5 via-elev-2 to-elev-2 border-border/40 overflow-hidden">
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
+
+        <div className="relative space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="h-4 bg-gradient-to-r from-elev-1 to-elev-1/50 rounded w-28 animate-pulse" />
+              <div className="h-3 bg-gradient-to-r from-elev-1 to-elev-1/50 rounded w-36 animate-pulse" />
             </div>
-          ))}
+            <div className="flex gap-1.5">
+              <div className="h-8 w-16 bg-gradient-to-r from-elev-1 to-elev-1/50 rounded-full animate-pulse" />
+              <div className="h-8 w-16 bg-gradient-to-r from-elev-1 to-elev-1/50 rounded-full animate-pulse" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-elev-1 to-elev-2/50 border border-border/30">
+                <div className="h-7 w-7 bg-gradient-to-br from-elev-1 to-elev-1/50 rounded-full animate-pulse" />
+                <div className="h-14 w-14 bg-gradient-to-br from-elev-1 to-elev-1/50 rounded-lg animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gradient-to-r from-elev-1 to-elev-1/50 rounded w-3/4 animate-pulse" />
+                  <div className="h-3 bg-gradient-to-r from-elev-1 to-elev-1/50 rounded w-1/2 animate-pulse" />
+                </div>
+                <div className="text-right space-y-2">
+                  <div className="h-4 bg-gradient-to-r from-elev-1 to-elev-1/50 rounded w-20 animate-pulse ml-auto" />
+                  <div className="h-6 bg-gradient-to-r from-elev-1 to-elev-1/50 rounded-full w-16 animate-pulse ml-auto" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
     )
@@ -71,30 +91,53 @@ export function DashboardMovers({
 
   if (movers.length === 0) {
     return (
-      <Card className="p-5 bg-elev-2 border-border/40">
-        <h3 className="text-sm font-medium text-neutral-50 mb-4">Your Movers</h3>
-        <div className="text-center py-8">
-          <p className="text-sm text-neutral-300">No items with market data yet.</p>
-          <p className="text-[11px] text-neutral-400 mt-2">Add items to track your top performers</p>
+      <Card className="relative p-5 bg-gradient-to-br from-accent/5 via-elev-2 to-elev-2 border-border/40 overflow-hidden">
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-accent/3 to-transparent opacity-50 pointer-events-none" />
+
+        <div className="relative">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-neutral-50 mb-0.5">Your Movers</h3>
+            <p className="text-[10px] text-neutral-400">Top performing items</p>
+          </div>
+
+          <div className="text-center py-12">
+            {/* Icon */}
+            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/30 flex items-center justify-center mb-4">
+              <TrendingUp className="h-8 w-8 text-accent/70" />
+            </div>
+
+            {/* Text */}
+            <p className="text-sm font-semibold text-neutral-200 mb-1">No movers yet</p>
+            <p className="text-xs text-neutral-400 max-w-[200px] mx-auto">
+              Add items with market data to see your top performers here
+            </p>
+          </div>
         </div>
       </Card>
     )
   }
 
   return (
-    <Card className="p-5 bg-elev-2 border-border/40">
+    <Card className="relative p-5 bg-gradient-to-br from-accent/5 via-elev-2 to-elev-2 border-border/40 hover:border-accent/30 transition-all duration-300 overflow-hidden">
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-accent/3 to-transparent opacity-50 pointer-events-none" />
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-neutral-50">Your Movers</h3>
+      <div className="relative flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-semibold text-neutral-50 mb-0.5">Your Movers</h3>
+          <p className="text-[10px] text-neutral-400">Top performing items</p>
+        </div>
         {onSortChange && (
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             <button
               onClick={() => onSortChange('performance')}
               className={cn(
-                'px-2 py-1 rounded text-[11px] font-medium transition-colors',
+                'px-3 py-1.5 rounded-full text-[10px] font-semibold transition-all duration-300 uppercase tracking-wider',
                 sortBy === 'performance'
-                  ? 'bg-accent/20 text-accent border border-accent/60'
-                  : 'text-neutral-400 hover:text-neutral-200'
+                  ? 'bg-gradient-to-r from-accent/30 to-accent/20 text-accent border border-accent/60 shadow-[0_0_12px_rgba(196,164,132,0.3)]'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-accent/5 border border-transparent'
               )}
             >
               % Gain
@@ -102,10 +145,10 @@ export function DashboardMovers({
             <button
               onClick={() => onSortChange('market_value')}
               className={cn(
-                'px-2 py-1 rounded text-[11px] font-medium transition-colors',
+                'px-3 py-1.5 rounded-full text-[10px] font-semibold transition-all duration-300 uppercase tracking-wider',
                 sortBy === 'market_value'
-                  ? 'bg-accent/20 text-accent border border-accent/60'
-                  : 'text-neutral-400 hover:text-neutral-200'
+                  ? 'bg-gradient-to-r from-accent/30 to-accent/20 text-accent border border-accent/60 shadow-[0_0_12px_rgba(196,164,132,0.3)]'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-accent/5 border border-transparent'
               )}
             >
               Value
@@ -115,31 +158,31 @@ export function DashboardMovers({
       </div>
 
       {/* Movers List */}
-      <div className="space-y-2">
+      <div className="relative space-y-2">
         {displayMovers.map((mover, index) => {
           const isPositive = mover.performance_pct >= 0
 
           return (
             <div
               key={mover.id}
-              className="flex items-center gap-3 p-3 rounded-lg bg-elev-1 border border-border/20 hover:border-border/40 transition-colors cursor-pointer group"
+              className="relative flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-elev-1 to-elev-2/50 border border-border/30 hover:border-accent/40 transition-all duration-300 cursor-pointer group hover:shadow-[0_0_20px_rgba(196,164,132,0.08)] hover:scale-[1.01]"
             >
-              {/* Rank Badge */}
-              <div className="flex-shrink-0 w-6 text-center">
-                <span className="text-xs font-bold text-dim mono">{index + 1}</span>
+              {/* Rank Badge with gradient */}
+              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/30 flex items-center justify-center">
+                <span className="text-[10px] font-bold text-accent mono">{index + 1}</span>
               </div>
 
-              {/* Image/Placeholder */}
+              {/* Image/Placeholder with better styling */}
               <div className="flex-shrink-0">
                 {mover.image_url ? (
                   <img
                     src={mover.image_url}
                     alt={`${mover.brand} ${mover.model}`}
-                    className="h-12 w-12 rounded object-cover border border-border/40"
+                    className="h-14 w-14 rounded-lg object-cover border border-border/40 group-hover:border-accent/40 transition-colors shadow-sm"
                   />
                 ) : (
-                  <div className="h-12 w-12 rounded bg-elev-2 border border-border/40 flex items-center justify-center">
-                    <span className="text-xs font-bold text-muted mono">
+                  <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-elev-2 to-elev-1 border border-border/40 group-hover:border-accent/40 transition-colors flex items-center justify-center">
+                    <span className="text-xs font-bold text-accent/70 mono">
                       {mover.brand?.substring(0, 2).toUpperCase() || '??'}
                     </span>
                   </div>
@@ -149,21 +192,21 @@ export function DashboardMovers({
               {/* Details + Mini Chart */}
               <div className="flex-1 min-w-0 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-fg truncate group-hover:text-accent transition-colors">
+                  <p className="text-sm font-semibold text-fg truncate group-hover:text-accent transition-colors">
                     {mover.brand} {mover.model}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-dim mono">{mover.size}</span>
+                    <span className="text-xs text-neutral-400 mono font-medium">{mover.size}</span>
                     {mover.colorway && (
                       <>
-                        <span className="text-xs text-dim">•</span>
-                        <span className="text-xs text-dim truncate max-w-[100px]">{mover.colorway}</span>
+                        <span className="text-xs text-neutral-600">•</span>
+                        <span className="text-xs text-neutral-400 truncate max-w-[100px]">{mover.colorway}</span>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* Mini Sparkline */}
+                {/* Mini Sparkline with enhanced styling */}
                 <div className="hidden sm:block w-20 h-10">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
@@ -174,26 +217,28 @@ export function DashboardMovers({
                         type="monotone"
                         dataKey="value"
                         stroke={isPositive ? 'rgb(52, 211, 153)' : 'rgb(248, 113, 113)'}
-                        fill={isPositive ? 'rgba(52, 211, 153, 0.1)' : 'rgba(248, 113, 113, 0.1)'}
-                        strokeWidth={1.5}
+                        fill={isPositive ? 'rgba(52, 211, 153, 0.15)' : 'rgba(248, 113, 113, 0.15)'}
+                        strokeWidth={2}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Performance */}
+              {/* Performance with premium pill badge */}
               <div className="flex-shrink-0 text-right">
-                <p className="text-sm font-semibold mono tabular-nums text-fg mb-0.5">
+                <p className="text-sm font-bold mono tabular-nums text-fg mb-1">
                   {format(mover.market_value)}
                 </p>
                 <div
                   className={cn(
-                    'inline-flex items-center gap-0.5 text-xs font-semibold rounded px-1.5 py-0.5',
-                    isPositive ? 'money-pos-tint' : 'money-neg-tint'
+                    'inline-flex items-center gap-1 text-[11px] font-bold rounded-full px-2.5 py-1 border shadow-sm',
+                    isPositive
+                      ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.2)]'
+                      : 'bg-gradient-to-r from-red-500/20 to-red-500/10 border-red-500/40 text-red-400 shadow-[0_0_10px_rgba(248,113,113,0.2)]'
                   )}
                 >
-                  <TrendingUp className={cn('h-2.5 w-2.5', isPositive ? '' : 'rotate-180')} />
+                  <TrendingUp className={cn('h-3 w-3', isPositive ? '' : 'rotate-180')} />
                   {isPositive ? '+' : ''}
                   {mover.performance_pct.toFixed(1)}%
                 </div>
@@ -208,17 +253,17 @@ export function DashboardMovers({
         <Button
           variant="ghost"
           size="sm"
-          className="w-full mt-3 h-8 text-xs text-muted hover:text-fg"
+          className="relative w-full mt-3 h-9 text-xs font-semibold text-neutral-400 hover:text-accent hover:bg-accent/5 border border-transparent hover:border-accent/30 transition-all duration-300"
           onClick={() => setExpanded(!expanded)}
         >
           {expanded ? 'Show Less' : `Show ${movers.length - 10} More`}
-          <ChevronDown className={cn('h-3 w-3 ml-1 transition-transform', expanded && 'rotate-180')} />
+          <ChevronDown className={cn('h-3.5 w-3.5 ml-2 transition-transform duration-300', expanded && 'rotate-180')} />
         </Button>
       )}
 
       {/* Footer Note */}
       {movers.length > 0 && movers[0].price_as_of && (
-        <p className="text-[11px] text-neutral-400 text-center mt-4">
+        <p className="relative text-[10px] text-neutral-400 text-center mt-4 font-medium">
           Prices updated {formatRelativeTime(movers[0].price_as_of)}
         </p>
       )}

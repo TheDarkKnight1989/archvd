@@ -91,21 +91,10 @@ export async function GET(
       }
     }
 
-    // Fetch real-time market data from StockX API with the actual product ID
-    const rawMarketData = await client.request<StockxRawMarketDataItem[]>(
-      `/v2/catalog/products/${actualProductId}/market-data?currencyCode=${currency}`
-    )
+    // Determine which variantId to use (if any)
+    let targetVariantId: string | null = null
 
-    if (!Array.isArray(rawMarketData) || rawMarketData.length === 0) {
-      return NextResponse.json({
-        lowestAsk: null,
-        highestBid: null,
-        currency,
-      })
-    }
-
-    // Priority 1: Match by size (if provided) - this is the most accurate
-    let rawVariantData: StockxRawMarketDataItem | null = null
+    // Priority 1: Match by size (if provided) - most accurate for user intent
     if (size) {
       try {
         const variantsResponse = await client.request<any>(
@@ -146,31 +135,58 @@ export async function GET(
         }
 
         if (matchingVariant) {
-          const matchedVariantId = matchingVariant.variantId
-          rawVariantData = findMarketDataByVariantId(rawMarketData, matchedVariantId)
-          console.log('[Market Data API] Found market data for variant:', {
-            variantId: matchedVariantId,
-            size: matchingVariant.variantValue,
-            found: !!rawVariantData,
-          })
+          targetVariantId = matchingVariant.variantId
+          console.log('[Market Data API] Found variantId from size:', targetVariantId)
         }
       } catch (variantError) {
         console.error('[Market Data API] Failed to fetch variants for size matching:', variantError)
       }
     }
 
-    // Priority 2: Match by variantId (if provided and size match failed)
-    if (!rawVariantData && variantId) {
-      rawVariantData = findMarketDataByVariantId(rawMarketData, variantId)
-      console.log('[Market Data API] Matched by variantId:', { variantId, found: !!rawVariantData })
+    // Priority 2: Use provided variantId (if size match failed or wasn't provided)
+    if (!targetVariantId && variantId) {
+      targetVariantId = variantId
+      console.log('[Market Data API] Using provided variantId:', targetVariantId)
     }
 
-    // Priority 3: Use first available variant with data
+    // Fetch market data using the most efficient endpoint
+    let rawVariantData: StockxRawMarketDataItem | null = null
+
+    if (targetVariantId) {
+      // OPTIMIZED: Use variant-specific endpoint (more efficient)
+      console.log('[Market Data API] Fetching variant-specific market data:', targetVariantId)
+      try {
+        const variantMarketData = await client.request<StockxRawMarketDataItem>(
+          `/v2/catalog/products/${actualProductId}/variants/${targetVariantId}/market-data?currencyCode=${currency}`
+        )
+        rawVariantData = variantMarketData
+        console.log('[Market Data API] ✅ Got variant-specific data')
+      } catch (error: any) {
+        console.error('[Market Data API] Failed to fetch variant-specific data:', error.message)
+        // Fall back to product-level endpoint below
+      }
+    }
+
+    // Fallback: Use product-level endpoint if variant-specific failed or no variantId
     if (!rawVariantData) {
+      console.log('[Market Data API] Fetching product-level market data (fallback)')
+      const rawMarketData = await client.request<StockxRawMarketDataItem[]>(
+        `/v2/catalog/products/${actualProductId}/market-data?currencyCode=${currency}`
+      )
+
+      if (!Array.isArray(rawMarketData) || rawMarketData.length === 0) {
+        return NextResponse.json({
+          lowestAsk: null,
+          highestBid: null,
+          currency,
+        })
+      }
+
+      // Use first available variant with data
       rawVariantData = rawMarketData.find(
         (v) => v.lowestAskAmount || v.highestBidAmount
       ) || null
-      console.log('[Market Data API] Using first available variant')
+      console.log('[Market Data API] Using first available variant from product data')
     }
 
     if (!rawVariantData) {

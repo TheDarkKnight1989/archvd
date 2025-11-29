@@ -60,15 +60,25 @@ export function RepriceListingModal({ open, onClose, onSuccess, listing, investe
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="bg-elev-2/95 backdrop-blur-md shadow-xl">
         <DialogHeader>
           <DialogTitle>Reprice Listing</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="border-b pb-3">
-            <p className="font-medium">{listing.product_name || listing.sku}</p>
-            <p className="text-sm text-muted-foreground">Current: {formatCurrency(listing.ask_price, 'GBP')}</p>
+          <div className="border-b pb-3 flex gap-3">
+            {/* Product Image - Alias → StockX → Inventory priority */}
+            {(listing.alias_image_url || listing.image?.url || listing.stockx_image_url || listing.image_url) && (
+              <img
+                src={listing.alias_image_url || listing.image?.url || listing.stockx_image_url || listing.image_url}
+                alt={listing.product_name || listing.sku}
+                className="w-16 h-16 rounded-lg object-cover bg-elev-2 flex-shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-medium">{listing.product_name || listing.sku}</p>
+              <p className="text-sm text-muted-foreground">Current: {formatCurrency(listing.ask_price, 'GBP')}</p>
+            </div>
           </div>
 
           <div className="space-y-2">

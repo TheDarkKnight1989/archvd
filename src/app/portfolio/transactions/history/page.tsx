@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils/cn'
 import { useCurrency } from '@/hooks/useCurrency'
 import { TransactionsTable } from './_components/TransactionsTable'
 import { KpiCards } from './_components/KpiCards'
+import { TransactionTrendsChart } from './_components/TransactionTrendsChart'
+import { PerformanceBreakdownChart } from './_components/PerformanceBreakdownChart'
+import { TransactionInsights } from './_components/TransactionInsights'
 import { useTransactions } from '@/hooks/useTransactions'
 import { EditTransactionModal } from './_components/EditTransactionModal'
 import type { TxRow } from '@/lib/transactions/types'
@@ -125,6 +128,37 @@ export default function TransactionsHistoryPage() {
       {/* KPI Cards */}
       {data && <KpiCards kpis={data.kpis} type={tab} />}
 
+      {/* Charts Row */}
+      {data && data.rows.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          {/* Transaction Trends Chart */}
+          <div className="bg-elev-1 border border-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-fg">Transaction Trends</h3>
+              <span className="text-xs text-muted">Last 12 months</span>
+            </div>
+            <TransactionTrendsChart
+              rows={data.rows}
+              type={tab}
+              formatCurrency={format}
+            />
+          </div>
+
+          {/* Performance Breakdown Chart */}
+          <div className="bg-elev-1 border border-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-fg">Platform Distribution</h3>
+              <span className="text-xs text-muted">By {tab === 'sales' ? 'profit' : 'spending'}</span>
+            </div>
+            <PerformanceBreakdownChart
+              rows={data.rows}
+              type={tab}
+              formatCurrency={format}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Toolbar - Sticky */}
       <div className="sticky top-0 z-30 -mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-3 bg-bg/90 backdrop-blur border-b border-border/40">
         <div className="flex flex-col gap-3">
@@ -218,47 +252,70 @@ export default function TransactionsHistoryPage() {
         </div>
       )}
 
-      {/* Transactions Table */}
-      <TransactionsTable
-        rows={data?.rows || []}
-        loading={loading}
-        type={tab}
-        onEdit={(tx) => setEditingTransaction(tx)}
-      />
+      {/* Content Grid */}
+      {data && data.rows.length > 0 && tab === 'sales' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
+          {/* Transactions Table - 3 columns */}
+          <div className="lg:col-span-3">
+            <TransactionsTable
+              rows={data.rows}
+              loading={loading}
+              type={tab}
+              onEdit={(tx) => setEditingTransaction(tx)}
+            />
+          </div>
+
+          {/* Sidebar - 1 column */}
+          <div className="space-y-4">
+            <TransactionInsights
+              rows={data.rows}
+              type={tab}
+              formatCurrency={format}
+            />
+          </div>
+        </div>
+      ) : data && data.rows.length > 0 ? (
+        <TransactionsTable
+          rows={data.rows}
+          loading={loading}
+          type={tab}
+          onEdit={(tx) => setEditingTransaction(tx)}
+        />
+      ) : null}
 
       {/* Empty State */}
       {!loading && data && data.rows.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="bg-elev-1 rounded-full p-6 mb-4">
+        <div className="flex flex-col items-center justify-center py-20 px-4">
+          <div className="w-20 h-20 rounded-full bg-elev-2 flex items-center justify-center mb-4">
             {tab === 'sales' ? (
-              <TrendingUp className="h-12 w-12 text-muted" />
+              <TrendingUp className="h-10 w-10 text-dim" />
             ) : (
-              <ShoppingBag className="h-12 w-12 text-muted" />
+              <ShoppingBag className="h-10 w-10 text-dim" />
             )}
           </div>
-          <h3 className="text-lg font-semibold text-fg mb-2">
+          <h3 className="text-xl font-semibold text-fg mb-2">
             No {tab === 'sales' ? 'sales' : 'purchases'} yet
           </h3>
-          <p className="text-sm text-muted mb-4 text-center max-w-sm">
+          <p className="text-sm text-muted mb-6 text-center max-w-md">
             {tab === 'sales'
-              ? 'When you mark items as sold, they will appear here with profit tracking.'
-              : 'When you add items to your portfolio, purchase records will appear here.'}
+              ? 'When you mark items as sold, they will appear here with detailed profit tracking and performance analytics.'
+              : 'When you add items to your portfolio, purchase records will appear here with comprehensive tracking.'}
           </p>
           <div className="flex items-center gap-3">
             <Button
-              variant="outline"
               onClick={() => router.push('/portfolio/inventory')}
-              className="border-accent text-accent hover:bg-accent/10"
+              className="bg-accent text-fg hover:bg-accent/90"
             >
-              Go to Portfolio
+              Go to Inventory
             </Button>
             {tab === 'sales' && (
-              <button
+              <Button
+                variant="outline"
                 onClick={() => handleTabChange('purchases')}
-                className="text-sm text-accent hover:underline"
+                className="border-border text-fg hover:bg-elev-2"
               >
                 View Purchases →
-              </button>
+              </Button>
             )}
           </div>
         </div>

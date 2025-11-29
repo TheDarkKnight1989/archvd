@@ -4,7 +4,7 @@
  * Helper functions for currency conversion and formatting
  */
 
-export type Currency = 'GBP' | 'EUR'
+export type Currency = 'GBP' | 'EUR' | 'USD' | 'CAD' | 'AUD' | 'JPY'
 
 export interface FxRates {
   gbp_per_eur: number
@@ -66,9 +66,22 @@ export function getCurrencySymbol(currency: Currency): string {
   const symbols: Record<Currency, string> = {
     GBP: '£',
     EUR: '€',
+    USD: '$',
+    CAD: 'C$',
+    AUD: 'A$',
+    JPY: '¥',
   }
 
   return symbols[currency]
+}
+
+export const SUPPORTED_CURRENCIES: Record<Currency, { symbol: string; name: string; flag: string }> = {
+  GBP: { symbol: '£', name: 'British Pound', flag: '🇬🇧' },
+  EUR: { symbol: '€', name: 'Euro', flag: '🇪🇺' },
+  USD: { symbol: '$', name: 'US Dollar', flag: '🇺🇸' },
+  CAD: { symbol: 'C$', name: 'Canadian Dollar', flag: '🇨🇦' },
+  AUD: { symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺' },
+  JPY: { symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵' },
 }
 
 /**

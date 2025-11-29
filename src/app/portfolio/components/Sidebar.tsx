@@ -19,11 +19,10 @@ import {
   Moon,
   Sun,
   Package,
-  CreditCard,
-  Activity,
   Eye,
   FileText,
   ArrowLeftRight,
+  List,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useSidebar } from '@/contexts/SidebarContext'
@@ -32,23 +31,28 @@ import { MarketQuickAdd } from '@/components/MarketQuickAdd'
 import { AddFromSearchModal } from '@/components/modals/AddFromSearchModal'
 import { useSearchParams } from 'next/navigation'
 
-// Navigation structure
-const primaryNav = [
+// Navigation structure - Reorganized into logical groups
+const manageNav = [
   { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Overview' },
-  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Portfolio' },
-  { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
+  { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Inventory' },
   { id: 'transactions', icon: ArrowLeftRight, href: '/portfolio/transactions/history', label: 'Transactions' },
+]
+
+const sellNav = [
+  { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
+  { id: 'packages', icon: Package, href: '/portfolio/packages', label: 'Packages', badge: 'BETA' },
+  { id: 'sell-lists', icon: List, href: '/sell-lists', label: 'Sell Lists' },
+]
+
+const financeNav = [
   { id: 'pnl', icon: FileText, href: '/portfolio/pnl', label: 'P&L' },
+  { id: 'expenses', icon: ReceiptText, href: '/portfolio/expenses', label: 'Expenses' },
   { id: 'analytics', icon: BarChart3, href: '/portfolio/analytics', label: 'Analytics', badge: 'ALPHA' },
 ]
 
-const secondaryNav = [
+const marketNav = [
   { id: 'releases', icon: CalendarRange, href: '/portfolio/releases', label: 'Releases' },
   { id: 'watchlists', icon: Eye, href: '/portfolio/watchlists', label: 'Watchlists' },
-  { id: 'expenses', icon: ReceiptText, href: '/portfolio/expenses', label: 'Expenses' },
-  { id: 'subscriptions', icon: CreditCard, href: '/portfolio/subscriptions', label: 'Subscriptions' },
-  { id: 'activity', icon: Activity, href: '/portfolio/activity', label: 'Activity' },
-  { id: 'packages', icon: Package, href: '/portfolio/packages', label: 'Packages', badge: 'BETA' },
 ]
 
 // Footer utilities (Settings, Import, Profile, Theme)
@@ -191,17 +195,16 @@ export function Sidebar() {
       data-pinned={pinned || undefined}
       className={cn(
         'fixed left-0 top-0 h-dvh z-40 max-md:hidden',
-        'bg-elev-1 border-r border-keyline',
-        'transition-[width,background,box-shadow] duration-120 ease-terminal',
+        'border-r-2 transition-[width,background,box-shadow,border] duration-120 ease-terminal',
         isExpanded ? 'w-[320px]' : 'w-16'
       )}
       style={{
-        background: `
-          linear-gradient(135deg, rgba(var(--archvd-accent-400-rgb), 0.05) 0%, transparent 28%, transparent 72%, rgba(var(--archvd-accent-400-rgb), 0.04) 100%),
-          linear-gradient(to bottom, var(--archvd-bg-elev-1) 0%, var(--archvd-bg-elev-1) 40%, var(--archvd-bg-elev-2) 100%)
-        `,
+        background: isExpanded
+          ? 'linear-gradient(135deg, #0E1A15 0%, #0B1510 50%, rgba(0, 255, 148, 0.03) 100%)'
+          : '#0E1A15',
+        borderColor: isExpanded ? 'rgba(0, 255, 148, 0.15)' : '#15251B',
         boxShadow: isExpanded
-          ? 'inset 2px 0 0 0 rgba(var(--archvd-accent-400-rgb), 0.35), 4px 0 24px -8px rgba(0,0,0,0.3)'
+          ? 'inset 2px 0 0 0 rgba(0, 255, 148, 0.25), 4px 0 24px -8px rgba(0,0,0,0.4), 0 0 60px -15px rgba(0, 255, 148, 0.1)'
           : 'none',
       }}
     >
@@ -211,15 +214,25 @@ export function Sidebar() {
         <div className="px-3 py-4">
           {/* Logo + App Name */}
           <div className="mb-4 flex items-center gap-3 px-2">
-            <div className="h-8 w-8 rounded-lg bg-accent-200 flex items-center justify-center flex-shrink-0">
-              <span className="text-fg font-bold text-sm">A</span>
+            <div
+              className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
+              style={{
+                background: '#00FF94',
+                boxShadow: '0 0 20px rgba(0, 255, 148, 0.4), 0 0 40px rgba(0, 255, 148, 0.2)'
+              }}
+            >
+              <span className="font-bold text-sm" style={{ color: '#0E1A15' }}>A</span>
             </div>
             <span
               className={cn(
-                "text-fg font-semibold text-base transition-all duration-200",
+                "font-semibold text-base transition-all duration-200",
                 isExpanded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"
               )}
-              style={{ transitionDelay: isExpanded ? '60ms' : '0ms' }}
+              style={{
+                transitionDelay: isExpanded ? '60ms' : '0ms',
+                color: '#E8F6EE',
+                textShadow: isExpanded ? '0 0 20px rgba(0, 255, 148, 0.15)' : 'none'
+              }}
             >
               Archvd
             </span>
@@ -231,11 +244,25 @@ export function Sidebar() {
             className={cn(
               "relative transition-boutique w-full",
               isExpanded ? "flex" : "hidden",
-              "h-8 pl-7 pr-2 rounded-lg bg-elev-1/80 border border-border/40",
-              "text-sm text-dim hover:text-fg hover:border-accent/50",
-              "focus:outline-none focus:ring-2 focus:ring-focus",
+              "h-8 pl-7 pr-2 rounded-lg border",
+              "text-sm focus:outline-none focus:ring-2",
               "text-left items-center gap-2"
             )}
+            style={{
+              background: 'linear-gradient(135deg, #0B1510 0%, rgba(0, 255, 148, 0.05) 100%)',
+              borderColor: 'rgba(0, 255, 148, 0.2)',
+              color: '#7FA08F'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#00FF94'
+              e.currentTarget.style.borderColor = '#00FF94'
+              e.currentTarget.style.boxShadow = '0 0 12px rgba(0, 255, 148, 0.3)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#7FA08F'
+              e.currentTarget.style.borderColor = 'rgba(0, 255, 148, 0.2)'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
             tabIndex={isExpanded ? 0 : -1}
           >
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" />
@@ -248,20 +275,24 @@ export function Sidebar() {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-3 pb-3">
-          <div className="flex flex-col gap-1.5 pt-3.5">
-            {/* Primary Group */}
+          <div className="flex flex-col gap-2 pt-3.5">
+            {/* 📦 Manage */}
             <div>
               <h3
                 className={cn(
-                  "label-uppercase px-3 pt-2 pb-1 transition-boutique",
+                  "text-[10px] font-bold tracking-widest uppercase px-3 pt-2 pb-1.5 transition-boutique flex items-center gap-1.5",
                   isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
-                style={{ color: '#8B857B' }}
+                style={{
+                  color: '#00FF94',
+                  textShadow: '0 0 15px rgba(0, 255, 148, 0.3)'
+                }}
               >
-                Main
+                <span className="text-xs">📦</span>
+                Manage
               </h3>
               <ul className="flex flex-col gap-0.5">
-                {primaryNav.map((item, index) => (
+                {manageNav.map((item, index) => (
                   <NavItem
                     key={item.id}
                     item={item}
@@ -273,19 +304,79 @@ export function Sidebar() {
               </ul>
             </div>
 
-            {/* Secondary Group */}
-            <div className="mt-2">
+            {/* 💸 Sell */}
+            <div className="mt-1">
               <h3
                 className={cn(
-                  "label-uppercase px-3 pt-2 pb-1 transition-boutique",
+                  "text-[10px] font-bold tracking-widest uppercase px-3 pt-2 pb-1.5 transition-boutique flex items-center gap-1.5",
                   isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
                 )}
-                style={{ color: '#8B857B' }}
+                style={{
+                  color: '#00FF94',
+                  textShadow: '0 0 15px rgba(0, 255, 148, 0.3)'
+                }}
               >
-                Tools
+                <span className="text-xs">💸</span>
+                Sell
               </h3>
               <ul className="flex flex-col gap-0.5">
-                {secondaryNav.map((item, index) => (
+                {sellNav.map((item, index) => (
+                  <NavItem
+                    key={item.id}
+                    item={item}
+                    pathname={pathname}
+                    isExpanded={isExpanded}
+                    index={index}
+                  />
+                ))}
+              </ul>
+            </div>
+
+            {/* 📊 Finance */}
+            <div className="mt-1">
+              <h3
+                className={cn(
+                  "text-[10px] font-bold tracking-widest uppercase px-3 pt-2 pb-1.5 transition-boutique flex items-center gap-1.5",
+                  isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+                style={{
+                  color: '#00FF94',
+                  textShadow: '0 0 15px rgba(0, 255, 148, 0.3)'
+                }}
+              >
+                <span className="text-xs">📊</span>
+                Finance
+              </h3>
+              <ul className="flex flex-col gap-0.5">
+                {financeNav.map((item, index) => (
+                  <NavItem
+                    key={item.id}
+                    item={item}
+                    pathname={pathname}
+                    isExpanded={isExpanded}
+                    index={index}
+                  />
+                ))}
+              </ul>
+            </div>
+
+            {/* 🔍 Market */}
+            <div className="mt-1">
+              <h3
+                className={cn(
+                  "text-[10px] font-bold tracking-widest uppercase px-3 pt-2 pb-1.5 transition-boutique flex items-center gap-1.5",
+                  isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+                style={{
+                  color: '#00FF94',
+                  textShadow: '0 0 15px rgba(0, 255, 148, 0.3)'
+                }}
+              >
+                <span className="text-xs">🔍</span>
+                Market
+              </h3>
+              <ul className="flex flex-col gap-0.5">
+                {marketNav.map((item, index) => (
                   <NavItem
                     key={item.id}
                     item={item}
@@ -300,7 +391,13 @@ export function Sidebar() {
         </div>
 
         {/* Footer - Two-section layout */}
-        <div className="border-t border-border/30 bg-elev-1/90 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]">
+        <div
+          className="border-t-2 backdrop-blur-sm pb-[env(safe-area-inset-bottom)]"
+          style={{
+            borderColor: 'rgba(0, 255, 148, 0.15)',
+            background: 'linear-gradient(to top, rgba(0, 255, 148, 0.05), transparent)'
+          }}
+        >
           {/* Quick Actions - Vertical stack when expanded, horizontal when collapsed */}
           <div
             className={cn(
@@ -432,8 +529,14 @@ export function Sidebar() {
 
           {/* Bottom Section: Currency (only when expanded) */}
           {isExpanded && (
-            <div className="px-3 pb-3 pt-3 border-t border-border/20 space-y-2">
-              <h3 className="label-uppercase text-muted/60 px-1 pb-1">
+            <div className="px-3 pb-3 pt-3 border-t-2 space-y-2" style={{ borderColor: 'rgba(0, 255, 148, 0.1)' }}>
+              <h3
+                className="label-uppercase px-1 pb-1"
+                style={{
+                  color: '#00FF94',
+                  textShadow: '0 0 15px rgba(0, 255, 148, 0.3)'
+                }}
+              >
                 Preferences
               </h3>
 
@@ -499,25 +602,36 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
         href={item.href}
         aria-current={isActive ? 'page' : undefined}
         title={!isExpanded ? item.label : undefined}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseEnter={(e) => {
+          setIsHovered(true)
+          if (!isActive) {
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 255, 148, 0.1) 0%, rgba(0, 255, 148, 0.05) 100%)'
+            e.currentTarget.style.boxShadow = '0 0 12px rgba(0, 255, 148, 0.2)'
+          }
+        }}
+        onMouseLeave={(e) => {
+          setIsHovered(false)
+          if (!isActive) {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.boxShadow = 'none'
+          }
+        }}
         className={cn(
           'group relative h-11 px-3 rounded-xl',
           'flex items-center gap-3',
           'whitespace-nowrap overflow-hidden',
           'transition-all duration-200',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
-          isActive
-            ? 'bg-accent/15 text-accent font-semibold border border-accent/30'
-            : 'text-fg/90 hover:bg-elev-2/80'
+          'focus-visible:outline-none focus-visible:ring-2',
+          isActive ? 'font-semibold border' : ''
         )}
         style={isActive ? {
-          boxShadow: `
-            0 0 20px rgba(var(--archvd-accent-rgb), 0.15),
-            0 0 40px rgba(var(--archvd-accent-rgb), 0.08),
-            inset 0 1px 0 rgba(var(--archvd-accent-rgb), 0.1)
-          `
-        } : undefined}
+          background: 'linear-gradient(135deg, #00FF94 0%, #00E085 100%)',
+          borderColor: '#00FF94',
+          color: '#0E1A15',
+          boxShadow: '0 0 20px rgba(0, 255, 148, 0.5), 0 0 40px rgba(0, 255, 148, 0.2)'
+        } : {
+          color: '#E8F6EE',
+        }}
       >
         {/* Active indicator bar with hover animation */}
         {(isActive || isHovered) && (
@@ -562,15 +676,19 @@ function NavItem({ item, pathname, isExpanded, index = 0 }: NavItemProps) {
           {item.label}
         </span>
 
-        {/* Badge - hidden when collapsed */}
+        {/* Badge - hidden when collapsed, enhanced styling */}
         {item.badge && (
           <span
             className={cn(
-              "flex-shrink-0 bg-accent-200 text-fg text-[10px] px-1.5 py-0.5 rounded font-medium",
-              "transition-all duration-120",
+              "flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider",
+              "transition-all duration-120 border",
               isExpanded
                 ? "opacity-100 translate-x-0"
-                : "opacity-0 translate-x-1 pointer-events-none"
+                : "opacity-0 translate-x-1 pointer-events-none",
+              // Badge color variants
+              item.badge === 'BETA' && "bg-blue-500/10 text-blue-400 border-blue-500/30",
+              item.badge === 'ALPHA' && "bg-purple-500/10 text-purple-400 border-purple-500/30",
+              item.badge === 'NEW' && "bg-green-500/10 text-green-400 border-green-500/30"
             )}
             style={{
               transitionDelay: isExpanded ? `${staggerDelay + 40}ms` : '0ms',

@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         sale_price: order.sale_price,
         currency: order.currency,
         sale_date: order.sold_at,
-        platform: 'GOAT',
+        platform: 'goat',
         platform_order_id: order.order_number,
         fees: order.commission + order.processing_fee,
         net_payout: order.net_payout,

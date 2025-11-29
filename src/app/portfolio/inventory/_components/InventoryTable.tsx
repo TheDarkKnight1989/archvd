@@ -136,7 +136,9 @@ export function InventoryTable({
           const listings: MarketplaceListing[] = []
 
           // StockX listing
-          if (item.stockx_mapping_status === 'mapped') {
+          // Show badge if item is mapped to StockX (mapping_status is 'ok', 'stockx_404', or 'invalid')
+          // Database values: 'ok', 'stockx_404', 'invalid', 'unmapped'
+          if (item.stockx_mapping_status && item.stockx_mapping_status !== 'unmapped') {
             const listingStatus = item.stockx_listing_status
 
             let status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'NONE' = 'NONE'
@@ -385,7 +387,19 @@ export function InventoryTable({
         id: 'status',
         header: 'Status',
         cell: (info) => {
+          const item = info.row.original
           const status = info.getValue()
+          const hasActiveListing = item.stockx_listing_status === 'ACTIVE' || item.stockx_listing_status === 'PENDING'
+
+          // Show "Listed" in green if item has active/pending listings
+          if (hasActiveListing && status === 'active') {
+            return (
+              <Badge variant="outline" className="text-xs capitalize border-emerald-500/30 text-emerald-600 bg-emerald-500/10">
+                Listed
+              </Badge>
+            )
+          }
+
           return (
             <Badge variant="outline" className="text-xs capitalize">
               {status}
@@ -407,7 +421,10 @@ export function InventoryTable({
               onToggleSold={() => onToggleSold?.(item)}
               onAddExpense={() => onAddExpense?.(item)}
               onAddToWatchlist={() => onAddToWatchlist?.(item)}
-              stockxMapped={item.stockx_mapping_status === 'mapped'}
+              stockxMapped={
+                item.stockx_mapping_status !== null &&
+                item.stockx_mapping_status !== 'unmapped'
+              }
               stockxListingStatus={item.stockx_listing_status}
               onListOnStockX={onListOnStockX ? () => onListOnStockX(item) : undefined}
               onRepriceListing={onRepriceListing ? () => onRepriceListing(item) : undefined}

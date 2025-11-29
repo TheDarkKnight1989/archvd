@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger'
  * Returns aggregated metrics for a given date range:
  * - Sales metrics (income, profit from sold items, count sold)
  * - Purchase metrics (item spend, count purchased)
- * - Expense metrics (subscriptions, fees)
+ * - Expense metrics (fees, taxes, shipping)
  * - Net profit calculations
  *
  * Performance: 60s server-side LRU cache by (userId, currency, dateRange)
@@ -138,42 +138,11 @@ export async function GET(request: NextRequest) {
     })
 
     // ==========================================
-    // 3. CALCULATE SUBSCRIPTION SPEND FOR PERIOD
+    // 3. SUBSCRIPTION SPEND (REMOVED)
     // ==========================================
-    const { data: subscriptions, error: subsError } = await supabase
-      .from('subscriptions')
-      .select('amount, interval, currency, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-
-    if (subsError) {
-      logger.warn('[Portfolio Reports] Error fetching subscriptions', {
-        message: subsError.message,
-      })
-    }
-
-    // Calculate number of days in period
-    const fromDate = new Date(from)
-    const toDate = new Date(to)
-    const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24))
-    const monthsInPeriod = daysDiff / 30.44 // Average days per month
-
-    let subscriptionSpend = 0
-    subscriptions?.forEach((sub) => {
-      // Convert to monthly cost first
-      let monthlyCost = 0
-      if (sub.interval === 'monthly') {
-        monthlyCost = sub.amount
-      } else if (sub.interval === 'annual') {
-        monthlyCost = sub.amount / 12
-      }
-
-      // Prorate for the period
-      subscriptionSpend += monthlyCost * monthsInPeriod
-
-      // TODO: Handle currency conversion if sub.currency !== currency
-      // For now, assume all subscriptions are in user's base currency
-    })
+    // Note: Subscription tracking feature has been removed.
+    // Keeping this field at 0 for backward compatibility with API consumers.
+    const subscriptionSpend = 0
 
     // ==========================================
     // 4. CALCULATE EXPENSE SPEND (TAX + SHIPPING + FEES)

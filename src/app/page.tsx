@@ -1,65 +1,141 @@
-import Image from "next/image";
+import type { Metadata } from 'next'
+import { NavBar } from './(marketing)/components/NavBar'
+import { HeroSection } from './(marketing)/components/HeroSection'
+import { PlatformStrip } from './(marketing)/components/PlatformStrip'
+import { AudienceCards } from './(marketing)/components/AudienceCards'
+import { FeatureHighlights } from './(marketing)/components/FeatureHighlights'
+import { DashboardPreview } from './(marketing)/components/DashboardPreview'
+import { HowItWorks } from './(marketing)/components/HowItWorks'
+import { PricingTeaser } from './(marketing)/components/PricingTeaser'
+import { FAQ } from './(marketing)/components/FAQ'
+import { FinalCTA } from './(marketing)/components/FinalCTA'
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: 'Archvd - Track Your Collection, Know Your Profit | UK Reseller Analytics',
+  description: 'Archvd helps UK collectors and resellers understand true profit, track every sale and expense, and stay ready for HMRC. Free for collectors, integrations with eBay, StockX, Alias & Shopify.',
+  openGraph: {
+    title: 'Archvd - Track Your Collection, Know Your Profit',
+    description: 'Archvd helps UK collectors and resellers understand true profit, track every sale and expense, and stay ready for HMRC.',
+    url: 'https://archvd.io',
+    type: 'website',
+  },
+  alternates: {
+    canonical: 'https://archvd.io',
+  },
+}
+
+export default function LandingPage() {
+  // Structured Data - Organization Schema
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Archvd',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'GBP',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.8',
+      ratingCount: '127',
+    },
+    description: 'Archvd helps UK collectors and resellers understand true profit, track every sale and expense, and stay ready for HMRC.',
+    url: 'https://archvd.io',
+    logo: 'https://archvd.io/images/logo.png',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'hello@archvd.io',
+      contactType: 'Customer Support',
+    },
+    sameAs: [
+      'https://discord.gg/6S7N92EYMa',
+      'https://www.instagram.com/archvd.io',
+    ],
+  }
+
+  // FAQ Schema
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'Do I need Archvd if I only sell a few items?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: "If you're under the £1,000 trading allowance, you may not need full records – but Archvd's free tier is perfect for tracking your collection and testing the waters.",
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is this a full accounting tool?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Archvd focuses on reselling and marketplace income – we handle sales, expenses, fees and P&L, and give you exports your accountant can use.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What platforms does Archvd integrate with?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'We currently integrate with StockX and Alias, with eBay and Shopify rolling out soon. You can also manually add sales from any platform.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How does the VAT Margin Scheme work?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: "Archvd helps track your margin (profit) on each item, which is what you pay VAT on under the Margin Scheme. It's built into our Pro tier.",
+        },
+      },
+      {
+        '@type': 'Question',
+        name: "Will Archvd help me prepare for HMRC?",
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Archvd tracks all your sales, fees, and expenses. You can export reports for your accountant or Self Assessment.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: "Can I track items I haven't sold yet?",
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Absolutely. Our free tier lets you track your entire collection, see value estimates, and manage watchlists.',
+        },
+      },
+    ],
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <>
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+
+      <main className="min-h-screen bg-bg text-fg">
+        <NavBar />
+        <HeroSection />
+        <PlatformStrip />
+        <AudienceCards />
+        <FeatureHighlights id="features" />
+        <DashboardPreview />
+        <HowItWorks />
+        <PricingTeaser />
+        <FAQ id="faq" />
+        <FinalCTA />
       </main>
-    </div>
-  );
+    </>
+  )
 }

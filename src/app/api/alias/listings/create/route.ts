@@ -1,170 +1,160 @@
 /**
- * Alias Create Listing API
- * POST /api/alias/listings/create
- * Creates a new listing on Alias (GOAT)
+ * Alias Create Listing API Route
+ * Create a new listing on Alias marketplace
+ *
+ * ⚠️ MANUAL CREATION ONLY - User must explicitly create each listing
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { isAliasEnabled, isAliasMockMode } from '@/lib/config/alias';
-import { logger } from '@/lib/logger';
+import { createAliasClient, createAliasListing } from '@/lib/services/alias';
+import { AliasAPIError, AliasAuthenticationError } from '@/lib/services/alias/errors';
 
-interface CreateListingRequest {
-  inventoryId: string;
-  sku: string;
-  size: string;
-  price: number;
-  currency?: string;
-  condition?: string;
-}
+export const dynamic = 'force-dynamic';
 
+/**
+ * Create a new Alias listing
+ * POST /api/alias/listings/create
+ */
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-
   try {
-    // 1. Check feature flag
-    if (!isAliasEnabled()) {
-      return NextResponse.json(
-        {
-          error: 'Not Implemented',
-          message: 'Alias integration is not enabled',
-          code: 'ALIAS_DISABLED',
-        },
-        { status: 501 }
-      );
+    const body = await request.json();
+
+    // Validate required fields
+    const requiredFields = [
+      'catalog_id',
+      'price_cents',
+      'size',
+      'size_unit',
+      'condition',
+      'packaging_condition',
+    ];
+
+    for (const field of requiredFields) {
+      if (!body[field]) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Missing required field: ${field}`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
-    // 2. Authenticate user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 3. Parse request body
-    const body: CreateListingRequest = await request.json();
-    const { inventoryId, sku, size, price, currency = 'GBP', condition = 'New' } = body;
-
-    if (!inventoryId || !sku || !size || !price) {
+    // Validate price (must be whole dollars)
+    if (body.price_cents % 100 !== 0) {
       return NextResponse.json(
         {
-          error: 'Bad Request',
-          message: 'Missing required fields: inventoryId, sku, size, price',
+          success: false,
+          error: 'Price must be in whole dollar increments (e.g., 25000 for $250.00)',
         },
         { status: 400 }
       );
     }
 
-    // 4. Check if mock mode is enabled
-    if (isAliasMockMode()) {
-      logger.info('[API /alias/listings/create] Mock mode active - creating mock listing', {
-        inventoryId,
-        sku,
-        size,
-        price,
-      });
+    // Get authenticated user
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-      // Generate mock listing ID
-      const mockListingId = `mock-listing-${Date.now()}`;
-      const mockProductId = `mock-prod-${sku.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
-
-      // Create mock listing in database
-      const mockListing = {
-        user_id: user.id,
-        alias_account_id: null, // No real account in mock mode
-        alias_listing_id: mockListingId,
-        alias_product_id: mockProductId,
-        sku,
-        size,
-        condition,
-        ask_price: price,
-        currency,
-        status: 'active',
-        quantity: 1,
-        views: 0,
-        favorites: 0,
-        listed_at: new Date().toISOString(),
-        synced_at: new Date().toISOString(),
-      };
-
-      // Insert to database
-      const { data: listing, error: insertError } = await supabase
-        .from('alias_listings')
-        .insert(mockListing)
-        .select()
-        .single();
-
-      if (insertError) {
-        logger.error('[API /alias/listings/create] Mock insert failed', {
-          error: insertError.message,
-        });
-        throw insertError;
-      }
-
-      // Create inventory link
-      const { error: linkError } = await supabase
-        .from('inventory_alias_links')
-        .insert({
-          inventory_id: inventoryId,
-          alias_listing_id: listing.id,
-          inventory_purchase_price: null, // Will be fetched from inventory
-          alias_ask_price: price,
-        });
-
-      if (linkError) {
-        logger.warn('[API /alias/listings/create] Failed to create inventory link', {
-          error: linkError.message,
-        });
-        // Non-fatal - listing was created
-      }
-
-      const duration = Date.now() - startTime;
-
-      return NextResponse.json({
-        success: true,
-        listing: {
-          id: listing.alias_listing_id,
-          sku,
-          size,
-          price,
-          currency,
-          status: 'active',
-          listedAt: listing.listed_at,
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Authentication required',
         },
-        _meta: {
-          duration_ms: duration,
-          source: 'alias_mock',
-          mode: 'mock',
-        },
-      });
+        { status: 401 }
+      );
     }
 
-    // 5. Live mode (not yet implemented)
-    return NextResponse.json(
-      {
-        error: 'Not Implemented',
-        message: 'Live mode listing creation not yet implemented',
-        code: 'ALIAS_LIVE_NOT_IMPLEMENTED',
-      },
-      { status: 501 }
-    );
-  } catch (error: any) {
-    const duration = Date.now() - startTime;
+    // Create Alias client
+    const client = createAliasClient();
 
-    logger.error('[API /alias/listings/create] Error', {
-      error: error.message,
-      stack: error.stack,
-      duration,
+    // Log listing data
+    console.log('[Alias Create Listing] Request body:', {
+      catalog_id: body.catalog_id,
+      price_cents: body.price_cents,
+      size: body.size,
+      size_unit: body.size_unit,
+      condition: body.condition,
+      packaging_condition: body.packaging_condition,
+      activate: body.activate || false,
+      inventory_id: body.inventory_id,
     });
 
+    // Create listing
+    const result = await createAliasListing(client, {
+      user_id: user.id,
+      catalog_id: body.catalog_id,
+      price_cents: body.price_cents,
+      size: body.size,
+      size_unit: body.size_unit,
+      condition: body.condition,
+      packaging_condition: body.packaging_condition,
+      activate: body.activate || false, // Default to inactive
+      inventory_id: body.inventory_id, // Optional
+      metadata: body.metadata,
+      defects: body.defects,
+      additional_defects: body.additional_defects,
+    });
+
+    if (!result.success) {
+      console.error('[Alias Create Listing] Service returned error:', result.error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      listing: result.listing,
+      message: result.listing?.status === 'LISTING_STATUS_ACTIVE'
+        ? 'Listing created and activated'
+        : 'Listing created (inactive)',
+    });
+
+  } catch (error) {
+    console.error('[Alias Create Listing] Error:', error);
+
+    if (error instanceof AliasAuthenticationError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Alias API authentication failed',
+          message: error.message,
+        },
+        { status: 401 }
+      );
+    }
+
+    if (error instanceof AliasAPIError) {
+      console.error('[Alias Create Listing] Alias API Error details:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        userMessage: error.getUserMessage(),
+        apiError: error.apiError,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Alias API Error',
+          message: error.getUserMessage(),
+          statusCode: error.statusCode,
+          details: error.apiError,
+        },
+        { status: error.statusCode }
+      );
+    }
+
     return NextResponse.json(
       {
+        success: false,
         error: 'Internal Server Error',
-        message: error.message || 'Failed to create listing',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
       },
       { status: 500 }
     );

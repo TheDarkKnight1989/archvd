@@ -39,10 +39,10 @@ export function TransactionsTable({ rows, loading, type, onEdit }: TransactionsT
   }
 
   return (
-    <div className="bg-elev-1 border border-border rounded-lg overflow-hidden">
+    <div className="bg-elev-1 border border-border rounded-xl overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-elev-2 border-b border-border">
+          <thead className="bg-gradient-to-r from-elev-2 to-elev-2/80 border-b border-border/50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
                 Date
@@ -97,7 +97,7 @@ export function TransactionsTable({ rows, loading, type, onEdit }: TransactionsT
               <tr
                 key={row.id}
                 className={cn(
-                  'transition-colors hover:bg-elev-2',
+                  'transition-all duration-200 hover:bg-elev-2 hover:shadow-lg hover:shadow-accent/5 group',
                   index % 2 === 0 ? 'bg-elev-1' : 'bg-bg'
                 )}
               >
@@ -182,10 +182,10 @@ export function TransactionsTable({ rows, loading, type, onEdit }: TransactionsT
                 <td className="px-4 py-3 text-center">
                   <button
                     onClick={() => onEdit(row)}
-                    className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-elev-3 transition-colors"
+                    className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent/10 hover:border hover:border-accent/30 transition-all opacity-0 group-hover:opacity-100"
                     title="Edit transaction"
                   >
-                    <MoreVertical className="h-4 w-4 text-muted" />
+                    <MoreVertical className="h-4 w-4 text-accent" />
                   </button>
                 </td>
               </tr>

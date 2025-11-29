@@ -49,6 +49,7 @@ interface TableHeadProps {
   className?: string
   align?: 'left' | 'right' | 'center'
   colSpan?: number
+  onClick?: () => void
 }
 
 interface TableCellProps {
@@ -84,14 +85,86 @@ export function TableWrapper({ children, className, title, description }: TableW
 }
 
 /**
- * TableBase - Main table element
+ * TableBase - Main table element with scrollbar at top
  */
 export function TableBase({ children, className }: TableBaseProps) {
+  const topScrollRef = React.useRef<HTMLDivElement>(null)
+  const bottomScrollRef = React.useRef<HTMLDivElement>(null)
+  const tableRef = React.useRef<HTMLTableElement>(null)
+  const [tableWidth, setTableWidth] = React.useState(0)
+
+  // Measure table width and update top scrollbar
+  React.useEffect(() => {
+    const updateWidth = () => {
+      if (tableRef.current) {
+        setTableWidth(tableRef.current.scrollWidth)
+      }
+    }
+
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+
+    // Also update on table content changes
+    const observer = new MutationObserver(updateWidth)
+    if (tableRef.current) {
+      observer.observe(tableRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      })
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateWidth)
+      observer.disconnect()
+    }
+  }, [children])
+
+  // Synchronize scroll positions
+  React.useEffect(() => {
+    const topScroll = topScrollRef.current
+    const bottomScroll = bottomScrollRef.current
+
+    if (!topScroll || !bottomScroll) return
+
+    const handleTopScroll = () => {
+      if (bottomScroll) {
+        bottomScroll.scrollLeft = topScroll.scrollLeft
+      }
+    }
+
+    const handleBottomScroll = () => {
+      if (topScroll) {
+        topScroll.scrollLeft = bottomScroll.scrollLeft
+      }
+    }
+
+    topScroll.addEventListener('scroll', handleTopScroll)
+    bottomScroll.addEventListener('scroll', handleBottomScroll)
+
+    return () => {
+      topScroll.removeEventListener('scroll', handleTopScroll)
+      bottomScroll.removeEventListener('scroll', handleBottomScroll)
+    }
+  }, [])
+
   return (
-    <div className="overflow-x-auto">
-      <table className={cn('w-full', className)}>
-        {children}
-      </table>
+    <div>
+      {/* Top scrollbar */}
+      <div
+        ref={topScrollRef}
+        className="overflow-x-auto overflow-y-hidden"
+        style={{ height: '17px' }}
+      >
+        <div style={{ width: `${tableWidth}px`, height: '1px' }} />
+      </div>
+
+      {/* Actual table */}
+      <div ref={bottomScrollRef} className="overflow-x-auto">
+        <table ref={tableRef} className={cn('w-full', className)}>
+          {children}
+        </table>
+      </div>
     </div>
   )
 }
@@ -112,7 +185,7 @@ export function TableHeader({ children, className }: TableHeaderProps) {
  */
 export function TableBody({ children, className }: TableBodyProps) {
   return (
-    <tbody className={cn('divide-y divide-border/40', className)}>
+    <tbody className={cn('divide-y divide-border/48', className)}>
       {children}
     </tbody>
   )
@@ -144,13 +217,14 @@ export function TableRow({ children, index, className, onClick }: TableRowProps)
 /**
  * TableHead - Header cell with .label-up styling
  */
-export function TableHead({ children, className, align = 'left', colSpan }: TableHeadProps) {
+export function TableHead({ children, className, align = 'left', colSpan, onClick }: TableHeadProps) {
   const alignClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
 
   return (
     <th
-      className={cn('px-4 py-3 label-up', alignClass, className)}
+      className={cn('px-4 py-2.5 label-up', alignClass, className)}
       colSpan={colSpan}
+      onClick={onClick}
     >
       {children}
     </th>
@@ -166,7 +240,7 @@ export function TableCell({ children, className, align = 'left', colSpan, mono =
 
   return (
     <td
-      className={cn('px-4 py-4', alignClass, monoClass, className)}
+      className={cn('px-4 py-3', alignClass, monoClass, className)}
       colSpan={colSpan}
     >
       {children}

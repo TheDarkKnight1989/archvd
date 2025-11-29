@@ -9,16 +9,20 @@ export interface StockxListing {
   stockx_listing_id: string
   stockx_product_id: string
   stockx_variant_id: string
-  inventory_id?: string
-  ask_price: number
-  currency: string
-  quantity: number
+  product_id: string
+  variant_id: string
+  amount: number // Price in cents
+  currency_code: string
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'MATCHED' | 'COMPLETED' | 'DELETED' | 'EXPIRED'
   expires_at?: string
   created_at: string
   updated_at: string
 
+  // Computed fields
+  ask_price?: number // Computed from amount / 100
+
   // Enriched fields
+  inventory_id?: string
   product_name?: string
   sku?: string
   size_uk?: string
@@ -58,24 +62,14 @@ export function useStockxListings(filters?: ListingFilters) {
           stockx_listing_id,
           stockx_product_id,
           stockx_variant_id,
-          ask_price,
-          currency,
-          quantity,
+          product_id,
+          variant_id,
+          amount,
+          currency_code,
           status,
           expires_at,
           created_at,
-          updated_at,
-          inventory_market_links!inner (
-            item_id,
-            Inventory (
-              sku,
-              size_uk,
-              image_url,
-              brand,
-              model,
-              colorway
-            )
-          )
+          updated_at
         `)
         .order('created_at', { ascending: false })
 
@@ -88,11 +82,32 @@ export function useStockxListings(filters?: ListingFilters) {
 
       if (fetchError) throw fetchError
 
-      // Enrich with market data and pending operations
+      // Enrich with market data, inventory, and pending operations
       const enrichedListings = await Promise.all(
         (data || []).map(async (listing: any) => {
-          const inventory = listing.inventory_market_links?.[0]?.Inventory
-          const inventoryId = listing.inventory_market_links?.[0]?.item_id
+          // Convert amount (cents) to ask_price (dollars)
+          const askPrice = listing.amount / 100
+
+          // Fetch inventory data via inventory_market_links
+          const { data: linkData } = await supabase
+            .from('inventory_market_links')
+            .select(`
+              item_id,
+              Inventory (
+                sku,
+                size_uk,
+                image_url,
+                brand,
+                model,
+                colorway
+              )
+            `)
+            .eq('stockx_product_id', listing.stockx_product_id)
+            .eq('stockx_variant_id', listing.stockx_variant_id)
+            .single()
+
+          const inventory = linkData?.Inventory
+          const inventoryId = linkData?.item_id
 
           // Fetch market price for this listing
           const { data: marketPrice } = await supabase
@@ -100,7 +115,7 @@ export function useStockxListings(filters?: ListingFilters) {
             .select('lowest_ask, highest_bid')
             .eq('stockx_product_id', listing.stockx_product_id)
             .eq('stockx_variant_id', listing.stockx_variant_id)
-            .eq('currency_code', listing.currency)
+            .eq('currency_code', listing.currency_code)
             .single()
 
           // Check for pending operations
@@ -119,6 +134,7 @@ export function useStockxListings(filters?: ListingFilters) {
 
           return {
             ...listing,
+            ask_price: askPrice,
             inventory_id: inventoryId,
             sku: inventory?.sku,
             size_uk: inventory?.size_uk,
@@ -294,16 +310,26 @@ export function useListingOperations() {
     setError(null)
 
     try {
-      const response = await fetch('/api/stockx/listings/deactivate', {
+      const response = await fetch('/api/stockx/listings/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ listingId }),
       })
 
-      const data = await response.json()
+      // Check if response has content before parsing JSON
+      const text = await response.text()
+      const data = text ? JSON.parse(text) : {}
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to deactivate listing')
+        // Provide more specific error messages
+        const errorMsg = data.error || 'Failed to delete listing'
+
+        // Check for common StockX API errors
+        if (errorMsg.includes('can not perform this action') || response.status === 400) {
+          throw new Error('This listing cannot be deleted. It may already be sold, inactive, or in a pending state. Try refreshing the page to see the current status.')
+        }
+
+        throw new Error(errorMsg)
       }
 
       return data

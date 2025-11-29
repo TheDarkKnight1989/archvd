@@ -24,13 +24,15 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-md"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-50 w-full max-w-md mx-4">
-        {children}
+      <div className="relative z-50 flex items-center justify-center w-full h-full pointer-events-none">
+        <div className="pointer-events-auto">
+          {children}
+        </div>
       </div>
     </div>
   )

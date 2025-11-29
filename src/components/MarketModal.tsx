@@ -100,7 +100,7 @@ export function MarketModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[900px] bg-elev-2 gradient-elev border-border p-0 overflow-hidden">
+      <DialogContent className="max-w-[900px] bg-elev-2/95 backdrop-blur-md gradient-elev border-border p-0 overflow-hidden shadow-xl">
         <div className="grid md:grid-cols-[300px_1fr] gap-0">
           {/* Left: Product Hero */}
           <div className="bg-elev-1 p-6 space-y-4 border-r border-border/40">

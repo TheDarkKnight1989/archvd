@@ -11,6 +11,7 @@ export type PlatformType = 'stockx' | 'alias' | 'ebay' | 'private' | 'other'
 interface PlatformBadgeProps {
   platform: string | null | undefined
   className?: string
+  compact?: boolean
 }
 
 interface PlatformConfig {
@@ -24,9 +25,9 @@ interface PlatformConfig {
 const PLATFORM_CONFIGS: Record<PlatformType, PlatformConfig> = {
   stockx: {
     label: 'StockX',
-    bg: 'bg-[#00B050]/10',
-    text: 'text-[#00B050]',
-    border: 'border-[#00B050]/30',
+    bg: 'bg-[#00FF94]/10',
+    text: 'text-[#00FF94]',
+    border: 'border-[#00FF94]/30',
     icon: 'Sx',
   },
   alias: {
@@ -34,7 +35,7 @@ const PLATFORM_CONFIGS: Record<PlatformType, PlatformConfig> = {
     bg: 'bg-[#A855F7]/10',
     text: 'text-[#A855F7]',
     border: 'border-[#A855F7]/30',
-    icon: 'AL',
+    icon: 'Al',
   },
   ebay: {
     label: 'eBay',
@@ -64,14 +65,14 @@ function normalizePlatform(platform: string | null | undefined): PlatformType {
   const platformLower = platform.toLowerCase()
 
   if (platformLower === 'stockx') return 'stockx'
-  if (platformLower === 'alias') return 'alias'
+  if (platformLower === 'alias' || platformLower === 'goat') return 'alias'
   if (platformLower === 'ebay') return 'ebay'
   if (platformLower === 'private') return 'private'
 
   return 'other'
 }
 
-export function PlatformBadge({ platform, className }: PlatformBadgeProps) {
+export function PlatformBadge({ platform, className, compact = false }: PlatformBadgeProps) {
   const platformType = normalizePlatform(platform)
   const config = PLATFORM_CONFIGS[platformType]
 
@@ -82,11 +83,12 @@ export function PlatformBadge({ platform, className }: PlatformBadgeProps) {
         config.bg,
         config.text,
         config.border,
+        compact && 'px-1.5',
         className
       )}
     >
-      <span className="opacity-70 font-bold">{config.icon}</span>
-      <span>{config.label}</span>
+      <span className={cn('font-bold', compact ? 'opacity-100' : 'opacity-70')}>{config.icon}</span>
+      {!compact && <span>{config.label}</span>}
     </div>
   )
 }

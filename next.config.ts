@@ -16,16 +16,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-
-  async redirects() {
-    return [
-      {
-        source: '/portfolio/market/:path*',
-        destination: '/portfolio?openSearch=true',
-        permanent: true, // 301 redirect
-      },
-    ];
-  },
 };
 
 export default nextConfig;

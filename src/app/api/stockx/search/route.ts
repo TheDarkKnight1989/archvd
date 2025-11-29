@@ -1,7 +1,9 @@
 /**
  * StockX Product Search API
- * GET /api/stockx/search?q=nike+dunk&currency=GBP
+ * GET /api/stockx/search?q=nike+dunk&currencyCode=GBP
  * Returns enriched sneaker results with median price, 7-day sparkline, and Δ7d
+ *
+ * Note: Uses `currencyCode` (not `currency`) to match StockX API standard
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -143,7 +145,7 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams
     const query = searchParams.get('q')
-    const currency = searchParams.get('currency') || 'USD'
+    const currencyCode = searchParams.get('currencyCode') || 'USD'
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = parseInt(searchParams.get('limit') || '20', 10)
 
@@ -156,7 +158,7 @@ export async function GET(request: NextRequest) {
 
     console.log('[API /stockx/search]', {
       query,
-      currency,
+      currencyCode,
       page,
       limit,
       mockMode: isStockxMockMode(),
@@ -176,13 +178,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         results: filtered.map((r) => ({
           ...r,
-          medianPrice: currency !== 'USD' ? convertCurrency(r.medianPrice || 0, currency) : r.medianPrice,
-          lastSale: currency !== 'USD' ? convertCurrency(r.lastSale || 0, currency) : r.lastSale,
-          lowestAsk: currency !== 'USD' ? convertCurrency(r.lowestAsk || 0, currency) : r.lowestAsk,
-          currency,
+          medianPrice: currencyCode !== 'USD' ? convertCurrency(r.medianPrice || 0, currencyCode) : r.medianPrice,
+          lastSale: currencyCode !== 'USD' ? convertCurrency(r.lastSale || 0, currencyCode) : r.lastSale,
+          lowestAsk: currencyCode !== 'USD' ? convertCurrency(r.lowestAsk || 0, currencyCode) : r.lowestAsk,
+          currency: currencyCode,
           sparkline7d: r.sparkline7d.map((s) => ({
             ...s,
-            value: currency !== 'USD' ? convertCurrency(s.value, currency) : s.value,
+            value: currencyCode !== 'USD' ? convertCurrency(s.value, currencyCode) : s.value,
           })),
         })),
         total: filtered.length,
@@ -207,7 +209,7 @@ export async function GET(request: NextRequest) {
     let searchResult: Awaited<ReturnType<typeof searchProducts>>
     try {
       searchResult = await Promise.race([
-        searchProducts(query, { page, limit, userId: user.id, currencyCode: currency }),
+        searchProducts(query, { page, limit, userId: user.id, currencyCode }),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Search timeout after 8s')), 8000)
         )
@@ -243,7 +245,7 @@ export async function GET(request: NextRequest) {
             .from('stockx_latest_prices')
             .select('last_sale, lowest_ask, highest_bid, as_of, size')
             .eq('sku', product.sku)
-            .eq('currency', currency)
+            .eq('currency', currencyCode)
             .order('as_of', { ascending: false })
             .limit(10)
 
@@ -261,7 +263,7 @@ export async function GET(request: NextRequest) {
             urlKey: product.slug,
             colorway: product.colorway,
             medianPrice: latestPrice?.last_sale || null,
-            currency,
+            currency: currencyCode,
             delta7d: null,
             sparkline7d: [],
             lastSale: latestPrice?.last_sale || null,
@@ -282,7 +284,7 @@ export async function GET(request: NextRequest) {
             urlKey: product.slug,
             colorway: product.colorway,
             medianPrice: null,
-            currency,
+            currency: currencyCode,
             delta7d: null,
             sparkline7d: [],
             lastSale: null,

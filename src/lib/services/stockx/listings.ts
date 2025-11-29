@@ -40,6 +40,7 @@ export interface ListingFilters {
 export interface ListingOperation {
   operationId: string
   status: 'pending' | 'completed' | 'failed'
+  listingId?: string | null
   result?: any
   error?: string
 }
@@ -113,9 +114,18 @@ export class StockxListingsService {
       body: payload,
     })
 
+    // Log FULL raw response to see what StockX actually returns
+    console.log('[StockX Listings] FULL RAW API RESPONSE:', JSON.stringify(response, null, 2))
+
+    // Extract listing ID - StockX returns it at top level even when operation is pending
+    const listingId = response.listingId || response.result?.id || null
+
+    console.log('[StockX Listings] Extracted listing ID:', listingId)
+
     return {
       operationId: response.operationId,
-      status: response.status || 'pending',
+      status: response.operationStatus || response.status || 'pending',
+      listingId: listingId,
       result: response.result,
     }
   }
@@ -124,6 +134,9 @@ export class StockxListingsService {
    * Get all listings for the authenticated user
    * GET /v2/selling/listings
    * Supports pagination and filtering
+   *
+   * Note: Internal params (page, limit, status) are mapped to StockX API params
+   * (pageNumber, pageSize, listingStatuses) for API compliance
    */
   static async getAllListings(
     userId: string,
@@ -132,9 +145,10 @@ export class StockxListingsService {
     const client = getStockxClient(userId)
 
     const params = new URLSearchParams()
-    if (filters.status) params.append('status', filters.status)
-    if (filters.page) params.append('page', String(filters.page))
-    if (filters.limit) params.append('limit', String(filters.limit))
+    // Map our internal param names to StockX API param names
+    if (filters.status) params.append('listingStatuses', filters.status) // StockX uses listingStatuses (plural, comma-separated)
+    if (filters.page) params.append('pageNumber', String(filters.page)) // StockX uses pageNumber
+    if (filters.limit) params.append('pageSize', String(filters.limit)) // StockX uses pageSize
 
     const queryString = params.toString()
     const endpoint = queryString
@@ -184,10 +198,8 @@ export class StockxListingsService {
 
     const payload: any = {}
     if (updates.amount !== undefined) {
-      payload.amount = {
-        amount: String(updates.amount),
-        currencyCode: updates.currencyCode || 'USD',
-      }
+      payload.amount = String(updates.amount)
+      payload.currencyCode = updates.currencyCode || 'GBP'
     }
     if (updates.expiresAt) {
       payload.expiresAt = updates.expiresAt
@@ -202,7 +214,8 @@ export class StockxListingsService {
 
     return {
       operationId: response.operationId,
-      status: response.status || 'pending',
+      status: response.operationStatus || response.status || 'pending',
+      listingId: response.listingId || listingId, // Return the listing ID
       result: response.result,
     }
   }
@@ -220,13 +233,22 @@ export class StockxListingsService {
 
     console.log('[StockX Listings] Deleting listing', { userId, listingId })
 
-    const response = await client.request(`/v2/selling/listings/${listingId}`, {
-      method: 'DELETE',
-    })
+    try {
+      const response = await client.request(`/v2/selling/listings/${listingId}`, {
+        method: 'DELETE',
+      })
 
-    return {
-      operationId: response.operationId,
-      status: response.status || 'pending',
+      return {
+        operationId: response.operationId,
+        status: response.operationStatus || response.status || 'pending',
+        listingId: listingId,
+      }
+    } catch (error: any) {
+      // Handle specific StockX errors with user-friendly messages
+      if (error.message?.includes('can not perform this action')) {
+        throw new Error('This listing cannot be deleted. It may already be sold, inactive, or in a pending state.')
+      }
+      throw error
     }
   }
 
@@ -252,7 +274,8 @@ export class StockxListingsService {
 
     return {
       operationId: response.operationId,
-      status: response.status || 'pending',
+      status: response.operationStatus || response.status || 'pending',
+      listingId: response.listingId || listingId,
       result: response.result,
     }
   }

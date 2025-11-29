@@ -3,8 +3,8 @@ export const TABLE_EXPENSES = 'expenses';
 
 export type Category = 'sneaker' | 'apparel' | 'accessory' | 'other';
 export type Status = 'active' | 'listed' | 'worn' | 'sold';
-export type Platform = 'StockX' | 'eBay' | 'Vinted' | 'Instagram' | 'Other';
-export type ExpenseCategory = 'shipping' | 'fees' | 'ads' | 'supplies' | 'misc';
+export type Platform = 'stockx' | 'goat' | 'ebay' | 'instagram' | 'tiktok' | 'vinted' | 'depop' | 'private' | 'shopify' | 'other';
+export type ExpenseCategory = 'shipping' | 'fees' | 'ads' | 'supplies' | 'subscriptions' | 'misc';
 
 export type InventoryItem = {
   id: string;
@@ -63,8 +63,8 @@ export type EnrichedLineItem = {
   size_uk?: number | string | null;
 
   // Image resolved through fallback chain
-  image: { src: string; alt: string };
-  imageSource?: 'local' | 'stockx' | null;
+  image: { url: string; alt: string };
+  imageSource?: 'alias' | 'stockx' | null;
 
   // Purchase info
   purchaseDate?: string | null;
@@ -84,12 +84,12 @@ export type EnrichedLineItem = {
     spark30d: Array<{ date: string; price: number | null }>;
   };
 
-  // Instant Sell data (highest bid)
+  // Instant Sell data (highest bid from any provider)
   instantSell: {
     gross: number | null;      // highestBid (raw)
     net: number | null;        // after fees
     currency?: 'GBP' | 'EUR' | 'USD' | null;
-    provider?: 'stockx' | null;
+    provider?: 'stockx' | 'alias' | null;  // Which provider has the best bid
     updatedAt?: string | null;
     feePct: number;            // seller fee percentage
   };
@@ -121,6 +121,24 @@ export type EnrichedLineItem = {
     highestBid?: number | null;         // Highest bid
     // PHASE 3.11: Mapping health status
     mappingStatus?: 'ok' | 'stockx_404' | 'invalid' | 'unmapped' | null;
+    lastSyncSuccessAt?: string | null;
+    lastSyncError?: string | null;
+  };
+
+  // Alias (GOAT) mapping & listing data
+  alias?: {
+    mapped: boolean;                    // Has Alias mapping in inventory_market_links
+    catalogId?: string | null;          // alias catalog_id (from Alias API)
+    listingId?: string | null;          // alias_listing_id (if listed on Alias)
+    listingStatus?: 'LISTING_STATUS_ACTIVE' | 'LISTING_STATUS_INACTIVE' | 'LISTING_STATUS_PENDING' | 'LISTING_STATUS_SOLD' | null;
+    askPrice?: number | null;           // Current ask price (price_cents in Alias API)
+    // Market data (from Alias pricing insights API)
+    lowestAsk?: number | null;          // lowest_listing_price_cents
+    highestBid?: number | null;         // highest_offer_price_cents
+    lastSoldPrice?: number | null;      // last_sold_listing_price_cents
+    globalIndicatorPrice?: number | null; // global_indicator_price_cents
+    // Mapping health status
+    mappingStatus?: 'ok' | 'alias_404' | 'invalid' | 'unmapped' | null;
     lastSyncSuccessAt?: string | null;
     lastSyncError?: string | null;
   };

@@ -126,7 +126,8 @@ export async function POST(
       sales_fee: totalFees,
       notes: notes || null,
       // FX snapshot
-      sale_date: sold_date,
+      sold_date: sold_date, // Database column is sold_date, not sale_date
+      sale_date: sold_date, // Keep for backwards compatibility if needed
       sale_currency: sale_currency,
       sale_base_ccy: baseCurrency,
       sale_fx_rate: saleFxRate,

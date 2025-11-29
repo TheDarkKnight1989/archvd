@@ -71,7 +71,7 @@ export function usePortfolioInventory() {
         const result = await supabase
           .from('stockx_listings')
           .select('id, stockx_listing_id, amount, currency_code, status, expires_at')
-          .in('id', listingIds)
+          .in('stockx_listing_id', listingIds)  // Fix: Use stockx_listing_id (TEXT) not id (UUID)
         stockxListings = result.data || []
         stockxListingsError = result.error
       }
@@ -141,7 +141,7 @@ export function usePortfolioInventory() {
       const stockxListingMap = new Map<string, any>()
       if (stockxListings) {
         for (const listing of stockxListings) {
-          stockxListingMap.set(listing.id, listing)
+          stockxListingMap.set(listing.stockx_listing_id, listing)  // Fix: Use stockx_listing_id (TEXT) as key
         }
       }
 
@@ -244,7 +244,7 @@ export function usePortfolioInventory() {
             // Add listing data
             stockx_listing_id: listing?.stockx_listing_id || null,
             stockx_listing_status: listing?.status || null,
-            stockx_ask_price: listing?.amount || null,  // BUG FIX: Amount already in major units
+            stockx_ask_price: listing?.amount ? listing.amount / 100 : null,  // Convert cents to pounds
             stockx_listing_expires_at: listing?.expires_at || null,
             stockx_listing_pending_operation: pendingJob || null,
           }

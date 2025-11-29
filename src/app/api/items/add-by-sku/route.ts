@@ -2,28 +2,25 @@
  * Add Inventory Item by SKU + Size
  * POST /api/items/add-by-sku
  *
- * NEW FLOW: SKU + Size only, all other fields autofilled from StockX
- * REUSES: Existing size conversion system (size-conversion.ts, findVariantBySize.ts)
- *
- * Process:
+ * STABILISATION MODE - SIMPLE FLOW:
  * 1. Search StockX for product by SKU
  * 2. Insert product + variants to DB (if not exists)
- * 3. Detect brand & gender from product data
- * 4. Convert user size to US size using existing size-conversion.ts
- * 5. Find correct variant using findVariantBySize helper
- * 6. Create Inventory row with ALL fields autofilled from StockX
- * 7. Create inventory_market_links row
- * 8. Return full item details
+ * 3. Find correct variant using size conversion
+ * 4. Create Inventory row with fields from StockX
+ * 5. Create inventory_market_links row
+ * 6. Return item details
+ *
+ * NO experimental sync/refresh - market data populated by next manual sync
  */
 
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@/lib/supabase/service'
-import { StockxCatalogService } from '@/lib/services/stockx/catalog'
-import { upsertStockxProduct, upsertStockxVariant } from '@/lib/market/upsert'
 import { findVariantBySize } from '@/lib/stockx/findVariantBySize'
-import { syncSingleInventoryItemFromStockx, refreshStockxMarketLatestView } from '@/lib/providers/stockx-worker'
+import { currencyToRegion, getAliasRegion, getStockxCountryCode } from '@/lib/utils/region'
+import type { Currency } from '@/hooks/useCurrency'
+// STABILISATION MODE: Using canonical createOrUpdateProductFromStockx function
 
 // Input validation schema
 const requestSchema = z.object({
@@ -38,6 +35,7 @@ const requestSchema = z.object({
   orderNumber: z.string().optional(),
   condition: z.enum(['new', 'used', 'worn', 'defect']).optional(),
   notes: z.string().max(250).optional(),
+  currency: z.enum(['GBP', 'EUR', 'USD']).optional(), // User's selected currency (determines region)
 })
 
 type RequestBody = z.infer<typeof requestSchema>
@@ -68,88 +66,76 @@ export async function POST(request: Request) {
 
     const input: RequestBody = validationResult.data
 
+    // Derive region from currency (defaults to UK if not provided)
+    const currency: Currency = input.currency || 'GBP'
+    const region = currencyToRegion(currency)
+    const aliasRegion = getAliasRegion(region)
+    const stockxCountryCode = getStockxCountryCode(region)
+
     console.log('[Add by SKU] Starting:', {
       userId: user.id,
       sku: input.sku,
       size: input.size,
       sizeSystem: input.sizeSystem,
+      currency,
+      region,
+      aliasRegion,
+      stockxCountryCode,
     })
 
-    // 3. Search StockX for product by SKU
-    const catalogService = new StockxCatalogService(user.id)
-    const searchResults = await catalogService.searchProducts(input.sku, { limit: 5 })
+    // 3. CANONICAL FUNCTION: Create/update product catalog from StockX
+    // This replaces all the old search/upsert logic - single source of truth
+    const { createOrUpdateProductFromStockx } = await import('@/lib/catalog/stockx')
 
-    if (searchResults.length === 0) {
+    console.log('[Add by SKU] Creating product catalog from StockX...')
+    const catalogResult = await createOrUpdateProductFromStockx({
+      sku: input.sku,
+      userId: user.id,
+      currency, // Use user's selected currency/region
+    })
+
+    if (!catalogResult.success) {
+      console.error('[Add by SKU] Failed to create catalog:', catalogResult.error)
       return NextResponse.json(
         {
-          code: 'NOT_FOUND',
-          message: `No StockX products found for SKU "${input.sku}". The product may not exist on StockX.`,
+          code: 'CATALOG_ERROR',
+          error: catalogResult.error || 'Failed to create product catalog from StockX',
         },
         { status: 404 }
       )
     }
 
-    console.log('[Add by SKU] Found products:', searchResults.map(p => ({
-      productId: p.productId,
-      styleId: p.styleId,
-      title: p.productName,
-    })))
+    console.log('[Add by SKU] ✅ Product catalog created:', {
+      catalogId: catalogResult.productCatalogId,
+      stockxProductId: catalogResult.stockxProductId,
+      variants: catalogResult.variantCount,
+    })
 
-    // 4. Find exact SKU match
-    const exactMatches = searchResults.filter(
-      p => p.styleId.toLowerCase() === input.sku.toLowerCase()
-    )
+    // 4. Fetch the created catalog data and variants for inventory creation
+    const serviceSupabase = createServiceClient()
 
-    let selectedProduct
-    if (exactMatches.length === 1) {
-      selectedProduct = exactMatches[0]
-      console.log('[Add by SKU] Found exact SKU match:', selectedProduct.productId)
-    } else if (exactMatches.length > 1) {
+    const { data: catalogData, error: catalogFetchError } = await serviceSupabase
+      .from('product_catalog')
+      .select('*')
+      .eq('id', catalogResult.productCatalogId)
+      .single()
+
+    if (catalogFetchError || !catalogData) {
+      console.error('[Add by SKU] Failed to fetch catalog data:', catalogFetchError)
       return NextResponse.json(
-        {
-          code: 'AMBIGUOUS_MATCH',
-          message: `Multiple StockX products found with SKU "${input.sku}". Cannot automatically determine the correct match.`,
-          matches: exactMatches.map(p => ({
-            productId: p.productId,
-            styleId: p.styleId,
-            title: p.productName,
-          })),
-        },
-        { status: 400 }
-      )
-    } else {
-      // No exact SKU match found
-      return NextResponse.json(
-        {
-          code: 'NO_EXACT_MATCH',
-          message: `Found ${searchResults.length} StockX product(s) for search term "${input.sku}", but none have an exact SKU match.`,
-          matches: searchResults.map(p => ({
-            productId: p.productId,
-            styleId: p.styleId,
-            title: p.productName,
-          })),
-        },
-        { status: 400 }
+        { error: 'Failed to fetch product data' },
+        { status: 500 }
       )
     }
 
-    // 5. Upsert product to database (idempotent)
-    await upsertStockxProduct({
-      stockxProductId: selectedProduct.productId,
-      brand: selectedProduct.brand,
-      title: selectedProduct.productName,
-      colorway: selectedProduct.colorway,
-      imageUrl: selectedProduct.image,
-      category: selectedProduct.category,
-      styleId: selectedProduct.styleId,
-    })
+    // 5. Fetch variants from database (already upserted by canonical function)
+    const { data: variantsData, error: variantsError } = await serviceSupabase
+      .from('stockx_variants')
+      .select('*')
+      .eq('stockx_product_id', catalogData.stockx_product_id)
 
-    console.log('[Add by SKU] Product upserted to DB')
-
-    // 6. Fetch variants for the selected product
-    const variants = await catalogService.getProductVariants(selectedProduct.productId)
-
-    if (variants.length === 0) {
+    if (variantsError || !variantsData || variantsData.length === 0) {
+      console.error('[Add by SKU] Failed to fetch variants:', variantsError)
       return NextResponse.json(
         {
           code: 'NOT_FOUND',
@@ -159,25 +145,23 @@ export async function POST(request: Request) {
       )
     }
 
-    // 7. Upsert all variants to database (idempotent)
-    for (const variant of variants) {
-      await upsertStockxVariant({
-        stockxVariantId: variant.variantId,
-        stockxProductId: selectedProduct.productId,
-        variantValue: variant.variantValue,
-        sizeDisplay: variant.variantName,
-      })
-    }
+    // Convert DB variant format to match expected format for findVariantBySize
+    const variants = variantsData.map(v => ({
+      variantId: v.stockx_variant_id,
+      variantName: v.size_display,
+      variantValue: v.variant_value, // StockX size value (usually US)
+      sizeChart: v.size_chart, // Size chart data with displayOptions for accurate matching
+    }))
 
-    console.log('[Add by SKU] Variants upserted to DB:', variants.length)
+    console.log('[Add by SKU] Found variants:', variants.length)
 
-    // 8. Find matching variant using size conversion system
+    // 6. Find matching variant using size conversion system
     const matchingVariant = findVariantBySize(
       input.size,
       input.sizeSystem,
       variants,
-      selectedProduct.brand,
-      selectedProduct.productName
+      catalogData.brand,
+      catalogData.model
     )
 
     if (!matchingVariant) {
@@ -186,10 +170,6 @@ export async function POST(request: Request) {
           code: 'NO_SIZE_MATCH',
           message: `Product found but size "${input.size}" (${input.sizeSystem}) is not available.`,
           availableSizes: variants.map(v => v.variantValue).sort(),
-          sizeChartInfo: variants.slice(0, 3).map(v => ({
-            variantValue: v.variantValue,
-            displayOptions: v.sizeChart?.displayOptions || [],
-          })),
         },
         { status: 400 }
       )
@@ -200,21 +180,20 @@ export async function POST(request: Request) {
       size: matchingVariant.variantValue,
     })
 
-    // 9. Create Inventory row with ALL fields autofilled from StockX
-    const serviceSupabase = createServiceClient()
+    // 7. Create Inventory row with fields from catalog
 
-    // Prepare inventory row
+    // Prepare inventory row from catalog data
     const inventoryRow = {
       user_id: user.id,
-      sku: selectedProduct.styleId,
-      brand: selectedProduct.brand,
-      model: selectedProduct.productName, // Use full product name as model
-      colorway: selectedProduct.colorway,
-      style_id: selectedProduct.styleId,
-      size: matchingVariant.variantValue, // US size from StockX (always)
+      sku: catalogData.sku,
+      brand: catalogData.brand,
+      model: catalogData.model, // Full product name from catalog
+      colorway: catalogData.colorway,
+      style_id: catalogData.sku,
+      size: matchingVariant.variantValue, // US size from StockX
       size_uk: input.sizeSystem === 'UK' ? input.size : null,
       size_alt: input.sizeSystem === 'EU' ? `${input.size} EU` : null,
-      category: selectedProduct.category === 'sneakers' ? 'sneaker' : (selectedProduct.category || 'other'),
+      category: catalogData.category === 'sneakers' ? 'sneaker' : (catalogData.category || 'other'),
       condition: input.condition ? (input.condition.charAt(0).toUpperCase() + input.condition.slice(1)) as 'New' | 'Used' | 'Worn' | 'Defect' : 'New',
       purchase_price: input.purchasePrice,
       tax: input.tax || null,
@@ -242,20 +221,18 @@ export async function POST(request: Request) {
 
     console.log('[Add by SKU] Inventory item created:', inventoryItem.id)
 
-    // 10. Create purchase transaction record
+    // 8. Create purchase transaction record
     if (input.purchasePrice && input.purchaseDate) {
-      const totalCost = input.purchasePrice + (input.tax || 0) + (input.shipping || 0)
-
       const { error: transactionError } = await serviceSupabase
         .from('transactions')
         .insert({
           user_id: user.id,
           type: 'purchase',
           inventory_id: inventoryItem.id,
-          sku: selectedProduct.styleId,
+          sku: catalogData.sku,
           size_uk: input.sizeSystem === 'UK' ? input.size : null,
-          title: selectedProduct.productName,
-          image_url: selectedProduct.image,
+          title: catalogData.model,
+          image_url: catalogData.image_url,
           qty: 1,
           unit_price: input.purchasePrice,
           fees: (input.tax || 0) + (input.shipping || 0),
@@ -270,12 +247,12 @@ export async function POST(request: Request) {
       }
     }
 
-    // 11. Create inventory_market_links row
+    // 9. Create inventory_market_links row
     const { error: linkError } = await serviceSupabase
       .from('inventory_market_links')
       .insert({
         item_id: inventoryItem.id,
-        stockx_product_id: selectedProduct.productId,
+        stockx_product_id: catalogData.stockx_product_id,
         stockx_variant_id: matchingVariant.variantId,
       })
 
@@ -284,38 +261,135 @@ export async function POST(request: Request) {
       // Don't fail the request if link creation fails
     } else {
       console.log('[Add by SKU] Market link created successfully')
-
-      // 12. Sync market data immediately after mapping
-      try {
-        await syncSingleInventoryItemFromStockx({
-          inventoryItemId: inventoryItem.id,
-          userId: user.id,
-        })
-        console.log('[Add by SKU] Market data synced successfully')
-      } catch (syncError: any) {
-        console.error('[Add by SKU] Failed to sync market data:', syncError)
-      }
-
-      // 13. Refresh materialized view
-      try {
-        await refreshStockxMarketLatestView({ dryRun: false })
-        console.log('[Add by SKU] View refreshed successfully')
-      } catch (refreshError: any) {
-        console.error('[Add by SKU] Failed to refresh view:', refreshError)
-      }
     }
 
-    // 14. Query stockx_market_latest for fresh market data
-    const { data: marketData } = await serviceSupabase
-      .from('stockx_market_latest')
-      .select('last_sale_price, lowest_ask, highest_bid, currency_code, snapshot_at')
-      .eq('stockx_product_id', selectedProduct.productId)
-      .eq('stockx_variant_id', matchingVariant.variantId)
-      .maybeSingle()
+    // 10. Search Alias and create mapping for images
+    // This ensures the inventory table shows Alias images (preferred source)
+    console.log('[Add by SKU] Searching Alias for image mapping...')
 
-    console.log('[Add by SKU] Market data retrieved:', marketData)
+    try {
+      const apiBaseUrl = process.env.ALIAS_API_BASE_URL || 'https://api.alias.org'
+      const aliasToken = process.env.ALIAS_PAT
 
-    // 15. Return success response with full item details
+      if (!aliasToken) {
+        console.warn('[Add by SKU] No ALIAS_PAT found, skipping Alias image mapping')
+        throw new Error('ALIAS_PAT not configured')
+      }
+
+      const response = await fetch(`${apiBaseUrl}/products/search?query=${encodeURIComponent(catalogData.sku)}&region=${aliasRegion}`, {
+        headers: {
+          'Authorization': `Bearer ${aliasToken}`,
+        },
+      })
+
+      if (response.ok) {
+        const aliasData = await response.json()
+        const aliasProducts = aliasData.products || []
+
+        // Find exact SKU match
+        const aliasMatch = aliasProducts.find((p: any) =>
+          p.sku?.toLowerCase() === catalogData.sku.toLowerCase()
+        )
+
+        if (aliasMatch && aliasMatch.catalog_id) {
+          console.log('[Add by SKU] ✅ Found Alias product:', {
+            catalogId: aliasMatch.catalog_id,
+            hasImage: !!aliasMatch.main_picture_url,
+          })
+
+          // Create inventory_alias_links entry
+          const { error: aliasLinkError } = await serviceSupabase
+            .from('inventory_alias_links')
+            .insert({
+              inventory_id: inventoryItem.id,
+              alias_catalog_id: aliasMatch.catalog_id,
+              match_confidence: 'high',
+              mapping_status: 'ok',
+            })
+
+          if (aliasLinkError) {
+            console.warn('[Add by SKU] Failed to create Alias link:', aliasLinkError)
+          } else {
+            console.log('[Add by SKU] ✅ Alias mapping created')
+
+            // Also upsert to alias_catalog_items if not exists
+            await serviceSupabase
+              .from('alias_catalog_items')
+              .upsert({
+                catalog_id: aliasMatch.catalog_id,
+                slug: aliasMatch.slug || null,
+                product_name: aliasMatch.name || catalogData.model,
+                brand: aliasMatch.brand || catalogData.brand,
+                sku: catalogData.sku,
+                image_url: aliasMatch.main_picture_url || null,
+                thumbnail_url: aliasMatch.thumbnail_url || null,
+              }, {
+                onConflict: 'catalog_id',
+                ignoreDuplicates: false,
+              })
+
+            console.log('[Add by SKU] ✅ Alias catalog item stored')
+          }
+        } else {
+          console.log('[Add by SKU] No Alias match found for SKU:', catalogData.sku)
+        }
+      }
+    } catch (aliasError: any) {
+      console.warn('[Add by SKU] Alias search failed:', aliasError.message)
+      // Continue - not critical for adding item
+    }
+
+    // 11. Fetch and store market data immediately after adding item
+    // This ensures the inventory table shows prices right away
+    console.log('[Add by SKU] Fetching market data for newly added item...')
+
+    try {
+      const { StockxMarketService } = await import('@/lib/services/stockx/market')
+      const marketService = new StockxMarketService(user.id)
+
+      // Fetch market data for all standard currencies
+      const currencies = ['GBP', 'USD', 'EUR']
+      for (const currency of currencies) {
+        try {
+          const marketData = await marketService.getMarketData(
+            catalogData.stockx_product_id,
+            matchingVariant.variantId,
+            { currencyCode: currency }
+          )
+
+          if (marketData.lowestAsk || marketData.highestBid) {
+            // Store in stockx_market_latest table
+            await serviceSupabase
+              .from('stockx_market_latest')
+              .upsert({
+                stockx_product_id: catalogData.stockx_product_id,
+                stockx_variant_id: matchingVariant.variantId,
+                currency_code: currency,
+                lowest_ask: marketData.lowestAsk,
+                highest_bid: marketData.highestBid,
+                sales_last_72h: marketData.salesLast72h,
+                snapshot_at: new Date().toISOString(),
+              }, {
+                onConflict: 'stockx_product_id,stockx_variant_id,currency_code',
+                ignoreDuplicates: false,
+              })
+
+            console.log(`[Add by SKU] ✅ Market data stored for ${currency}:`, {
+              lowestAsk: marketData.lowestAsk,
+              highestBid: marketData.highestBid,
+            })
+          }
+        } catch (currencyError: any) {
+          console.warn(`[Add by SKU] Failed to fetch ${currency} market data:`, currencyError.message)
+          // Continue with other currencies
+        }
+      }
+    } catch (marketError: any) {
+      console.error('[Add by SKU] Market data fetch failed:', marketError)
+      // Don't fail the entire request if market data fetch fails
+    }
+
+    // 12. Return success response
     return NextResponse.json({
       success: true,
       item: {
@@ -331,28 +405,23 @@ export async function POST(request: Request) {
         purchaseDate: inventoryItem.purchase_date,
       },
       product: {
-        productId: selectedProduct.productId,
-        styleId: selectedProduct.styleId,
-        title: selectedProduct.productName,
-        brand: selectedProduct.brand,
-        colorway: selectedProduct.colorway,
-        image: selectedProduct.image,
-        category: selectedProduct.category,
-        gender: selectedProduct.gender,
-        retailPrice: selectedProduct.retailPrice,
-        releaseDate: selectedProduct.releaseDate,
+        catalogId: catalogData.id,
+        stockxProductId: catalogData.stockx_product_id,
+        sku: catalogData.sku,
+        brand: catalogData.brand,
+        title: catalogData.model,
+        colorway: catalogData.colorway,
+        image: catalogData.image_url,
+        category: catalogData.category,
+        gender: catalogData.gender,
+        retailPrice: catalogData.retail_price,
+        releaseDate: catalogData.release_date,
       },
       variant: {
         variantId: matchingVariant.variantId,
         size: matchingVariant.variantValue,
       },
-      marketData: marketData ? {
-        lastSale: marketData.last_sale_price,
-        lowestAsk: marketData.lowest_ask,
-        highestBid: marketData.highest_bid,
-        currencyCode: marketData.currency_code,
-        snapshotAt: marketData.snapshot_at,
-      } : null,
+      // Market data will be populated by next sync/view refresh
     }, { status: 201 })
   } catch (error: any) {
     console.error('[Add by SKU] Error:', error)

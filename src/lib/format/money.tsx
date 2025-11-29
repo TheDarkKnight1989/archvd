@@ -74,7 +74,7 @@ export function PercentCell({
   const isPositive = value >= 0
 
   return (
-    <span className="text-sm font-mono font-semibold" style={{ color: isPositive ? '#22DA6E' : '#FF4D5E' }}>
+    <span className="text-sm font-mono font-semibold" style={{ color: isPositive ? '#00FF94' : '#FF4D5E' }}>
       {formatPercent(value)}
     </span>
   )

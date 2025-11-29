@@ -66,6 +66,64 @@ export async function POST(request: NextRequest) {
 
     console.log('[Delete Listing] Operation completed:', operation)
 
+    // Get variant_id from inventory_market_links before removing listing_id
+    const { data: link } = await supabase
+      .from('inventory_market_links')
+      .select('stockx_variant_id')
+      .eq('stockx_listing_id', listingId)
+      .single()
+
+    // Update local cache - remove listing ID from inventory_market_links
+    // Note: RLS will ensure user can only update their own items
+    const { error: linkUpdateError } = await supabase
+      .from('inventory_market_links')
+      .update({
+        stockx_listing_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stockx_listing_id', listingId)
+
+    if (linkUpdateError) {
+      console.warn('[Delete Listing] Failed to update inventory_market_links:', linkUpdateError.message)
+    } else {
+      console.log('[Delete Listing] ✅ Removed listing ID from inventory_market_links')
+    }
+
+    // Delete from stockx_listings table
+    // Try to delete by listing_id first, then fall back to deleting orphaned entries by variant_id
+    let deleteError = null
+
+    // First try: delete by listing_id (if the entry has it populated)
+    const { error: deleteByIdError, count: deleteByIdCount } = await supabase
+      .from('stockx_listings')
+      .delete({ count: 'exact' })
+      .eq('stockx_listing_id', listingId)
+      .eq('user_id', user.id)
+
+    if (deleteByIdError) {
+      deleteError = deleteByIdError
+      console.warn('[Delete Listing] Failed to delete by listing_id:', deleteByIdError.message)
+    } else if (deleteByIdCount && deleteByIdCount > 0) {
+      console.log('[Delete Listing] ✅ Deleted from stockx_listings cache (by listing_id)')
+    } else if (link?.stockx_variant_id) {
+      // Second try: delete orphaned entries (NULL listing_id) for this variant
+      const { error: deleteOrphanError } = await supabase
+        .from('stockx_listings')
+        .delete()
+        .eq('stockx_variant_id', link.stockx_variant_id)
+        .eq('user_id', user.id)
+        .is('stockx_listing_id', null)
+
+      if (deleteOrphanError) {
+        deleteError = deleteOrphanError
+        console.warn('[Delete Listing] Failed to delete orphaned entries:', deleteOrphanError.message)
+      } else {
+        console.log('[Delete Listing] ✅ Deleted orphaned entries from stockx_listings cache')
+      }
+    } else {
+      console.warn('[Delete Listing] Could not find variant_id, skipping stockx_listings cleanup')
+    }
+
     const duration = Date.now() - startTime
 
     return NextResponse.json({

@@ -5,18 +5,20 @@
  *
  * Columns (in exact order):
  * 0. Checkbox - bulk selection
- * 1. Name - brand + model/title with inline status badges
- * 2. Size (user's preferred system) - UK/US/EU display
- * 3. Status (Listed / Unlisted) - derived from listing mapping
- * 4. Unrealised P/L - pl field
- * 5. Purchase Price - invested (purchase_price + tax + shipping)
- * 6. Market Value - market.price
- * 7. Listed Price - stockx.askPrice (if listed)
- * 8. Highest Bid (with platform badge) - stockx.highestBid + PlatformBadge
- * 9. Performance % - performancePct
- * 10. Platform Listed (with badges) - platform if listed
- * 11. Purchase Date - purchase_date
- * 12. Actions - three-dot menu
+ * 1. Name - brand + model/title with inline status badges (sortable)
+ * 2. Size (user's preferred system) - UK/US/EU display (sortable)
+ * 3. Status (Listed / Unlisted) - derived from listing mapping (sortable)
+ * 4. Unrealised P/L - pl field (sortable)
+ * 5. Purchase Price - invested (purchase_price + tax + shipping) (sortable)
+ * 6. Market Value - market.price (sortable)
+ * 7. Last Sold (Alias only) - alias.lastSoldPrice (sortable)
+ * 8. Highest Bid (with platform badge) - stockx.highestBid + PlatformBadge (sortable)
+ * 9. Listed Price - COLORED GREEN (sortable)
+ * 10. Spread % - difference between listed and bid - COLOR CODED (sortable)
+ * 11. Performance % - performancePct (sortable)
+ * 12. Platform Listed (with badges) - platform if listed (sortable)
+ * 13. Purchase Date - purchase_date (sortable)
+ * 14. Actions - three-dot menu
  */
 
 import { useMemo } from 'react'
@@ -40,6 +42,7 @@ import { TableWrapper, TableBase, TableHeader, TableBody, TableRow, TableHead, T
 import { ProductLineItem } from '@/components/product/ProductLineItem'
 import { RowActions } from './RowActions'
 import type { EnrichedLineItem } from '@/lib/portfolio/types'
+import { generateProductSlug } from '@/lib/utils/slug'
 
 const columnHelper = createColumnHelper<EnrichedLineItem>()
 
@@ -49,20 +52,34 @@ export interface InventoryV3TableProps {
   sorting: SortingState
   onSortingChange: OnChangeFn<SortingState>
   onRowClick?: (item: EnrichedLineItem) => void
+  platform?: 'stockx' | 'alias' // Platform filter for data sources
   // Bulk selection
   selectedItems?: Set<string>
   onSelectionChange?: (selectedIds: Set<string>) => void
-  // Row actions
+  // Item actions
   onEdit?: (item: EnrichedLineItem) => void
-  onMarkSold?: (item: EnrichedLineItem) => void
-  onAddExpense?: (item: EnrichedLineItem) => void
-  onAddToWatchlist?: (item: EnrichedLineItem) => void
+  onDuplicate?: (item: EnrichedLineItem) => void
+  onAdjustTaxRate?: (item: EnrichedLineItem) => void
+  onDelete?: (item: EnrichedLineItem) => void
+  // StockX actions
   onListOnStockX?: (item: EnrichedLineItem) => void
   onRepriceListing?: (item: EnrichedLineItem) => void
   onDeactivateListing?: (item: EnrichedLineItem) => void
   onReactivateListing?: (item: EnrichedLineItem) => void
   onDeleteListing?: (item: EnrichedLineItem) => void
-  onDelete?: (item: EnrichedLineItem) => void
+  onPrintStockXLabel?: (item: EnrichedLineItem) => void
+  // Alias actions
+  onPlaceAliasListing?: (item: EnrichedLineItem) => void
+  onEditAliasListing?: (item: EnrichedLineItem) => void
+  onCancelAliasListing?: (item: EnrichedLineItem) => void
+  // Status actions
+  onAddToWatchlist?: (item: EnrichedLineItem) => void
+  onAddToSellList?: (item: EnrichedLineItem) => void
+  onMarkListed?: (item: EnrichedLineItem) => void
+  onMarkSold?: (item: EnrichedLineItem) => void
+  onMarkUnlisted?: (item: EnrichedLineItem) => void
+  onTogglePersonals?: (item: EnrichedLineItem) => void
+  onAddExpense?: (item: EnrichedLineItem) => void
 }
 
 export function InventoryV3Table({
@@ -71,18 +88,33 @@ export function InventoryV3Table({
   sorting,
   onSortingChange,
   onRowClick,
+  platform = 'stockx',
   selectedItems = new Set(),
   onSelectionChange,
+  // Item actions
   onEdit,
-  onMarkSold,
-  onAddExpense,
-  onAddToWatchlist,
+  onDuplicate,
+  onAdjustTaxRate,
+  onDelete,
+  // StockX actions
   onListOnStockX,
   onRepriceListing,
   onDeactivateListing,
   onReactivateListing,
   onDeleteListing,
-  onDelete,
+  onPrintStockXLabel,
+  // Alias actions
+  onPlaceAliasListing,
+  onEditAliasListing,
+  onCancelAliasListing,
+  // Status actions
+  onAddToWatchlist,
+  onAddToSellList,
+  onMarkListed,
+  onMarkSold,
+  onMarkUnlisted,
+  onTogglePersonals,
+  onAddExpense,
 }: InventoryV3TableProps) {
   const { convert, format, symbol, currency } = useCurrency()
 
@@ -148,102 +180,102 @@ export function InventoryV3Table({
         enableSorting: false,
       }),
 
-      // 1. Name - brand + model/title with inline status badges
-      columnHelper.display({
-        id: 'name',
-        header: 'Name',
-        cell: (info) => {
-          const item = info.row.original
-          const isListed = !!item.stockx?.listingId && item.stockx?.listingStatus === 'ACTIVE'
+      // 1. Name - brand + model/title
+      columnHelper.accessor(
+        (row) => `${row.brand || ''} ${row.model || ''}`.trim(),
+        {
+          id: 'name',
+          header: 'Name',
+          cell: (info) => {
+            const item = info.row.original
 
-          return (
-            <div className="flex items-start gap-3 min-w-[280px]">
-              {/* Product line item with image, brand, model */}
-              <ProductLineItem
-                imageUrl={item.image_url || null}
-                imageAlt={`${item.brand} ${item.model}`}
-                brand={item.brand || ''}
-                model={item.model || ''}
-                variant={item.colorway || undefined}
-                sku={item.sku}
-                href={`/portfolio/inventory/market/${item.id}`}
-                sizeUk={item.size_uk ? parseFloat(String(item.size_uk)) : undefined}
-                sizeSystem="UK"
-                category={(item.category?.toLowerCase() as any) || 'other'}
-                className="flex-1"
-              />
+            // Generate clean slug-based URL for market page with itemId for position data
+            const productName = `${item.brand || ''} ${item.model || ''}`.trim()
+            const sku = item.sku || ''
+            const slug = sku ? generateProductSlug(productName, sku) : null
+            const marketHref = slug ? `/portfolio/market/${slug}?itemId=${item.id}` : `/portfolio/inventory/market/${item.id}`
 
-              {/* Inline status badges */}
-              <div className="flex flex-col gap-1 items-end">
-                {isListed && (
-                  <Badge variant="outline" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
-                    Listed
-                  </Badge>
-                )}
-                {item.condition && item.condition !== 'New' && (
-                  <Badge variant="outline" className="text-xs">
-                    {item.condition}
-                  </Badge>
-                )}
+            return (
+              <div className="min-w-[350px]">
+                <ProductLineItem
+                  imageUrl={item.image?.url || null}
+                  imageAlt={item.image?.alt || `${item.brand} ${item.model}`}
+                  brand={item.brand || ''}
+                  model={item.model || ''}
+                  variant={item.colorway || undefined}
+                  sku={item.sku}
+                  href={marketHref}
+                  sizeUk={item.size_uk ? parseFloat(String(item.size_uk)) : undefined}
+                  sizeSystem="UK"
+                  category={(item.category?.toLowerCase() as any) || 'other'}
+                />
               </div>
-            </div>
-          )
-        },
-        enableSorting: false,
-      }),
+            )
+          },
+          enableSorting: true,
+        }
+      ),
 
       // 2. Size (user's preferred system)
       columnHelper.accessor('size_uk', {
         id: 'size',
-        header: () => <div className="text-center">Size (UK)</div>,
+        header: () => <div className="text-center w-16 opacity-70">Size (UK)</div>,
         cell: (info) => {
           const sizeUk = info.getValue()
-          if (!sizeUk) return <div className="text-center text-dim">—</div>
+          if (!sizeUk) return <div className="text-center text-dim/50 w-16">—</div>
 
           return (
-            <div className="text-center mono text-sm">
+            <div className="text-center mono text-sm w-16 tabular-nums">
               {sizeUk}
             </div>
           )
         },
         enableSorting: true,
+        size: 70,
       }),
 
       // 3. Status (Listed / Unlisted)
-      columnHelper.display({
-        id: 'status',
-        header: () => <div className="text-center">Status</div>,
-        cell: (info) => {
-          const item = info.row.original
-          const isListed = !!item.stockx?.listingId && item.stockx?.listingStatus === 'ACTIVE'
-
-          return (
-            <div className="text-center">
-              {isListed ? (
-                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
-                  Listed
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="bg-muted/10 text-muted border-muted/30">
-                  Unlisted
-                </Badge>
-              )}
-            </div>
-          )
+      columnHelper.accessor(
+        (row) => {
+          const isListed = !!row.stockx?.listingId && (row.stockx?.listingStatus === 'ACTIVE' || row.stockx?.listingStatus === 'PENDING')
+          return isListed ? 'Listed' : 'Unlisted'
         },
-        enableSorting: false,
-      }),
+        {
+          id: 'status',
+          header: () => <div className="text-center w-24 opacity-70">Status</div>,
+          cell: (info) => {
+            const item = info.row.original
+            const isListed = !!item.stockx?.listingId && (item.stockx?.listingStatus === 'ACTIVE' || item.stockx?.listingStatus === 'PENDING')
+
+            return (
+              <div className="text-center w-24">
+                {isListed ? (
+                  <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 font-semibold shadow-sm shadow-emerald-500/10 whitespace-nowrap">
+                    Listed
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-muted/10 text-muted border-muted/30 whitespace-nowrap">
+                    Unlisted
+                  </Badge>
+                )}
+              </div>
+            )
+          },
+          enableSorting: true,
+          size: 100,
+        }
+      ),
 
       // 4. Unrealised P/L
       columnHelper.accessor('pl', {
         id: 'unrealised_pl',
-        header: () => <div className="text-right">Unrealised P/L {symbol()}</div>,
+        header: () => <div className="text-right opacity-70">Unrealised P/L {symbol()}</div>,
         cell: (info) => {
           const pl = info.getValue()
           const converted = pl !== null && pl !== undefined ? convert(pl, 'GBP') : null
 
           return (
-            <div className="text-right mono">
+            <div className="text-right mono tabular-nums">
               <MoneyCell value={converted} currency={currency} />
             </div>
           )
@@ -254,13 +286,13 @@ export function InventoryV3Table({
       // 5. Purchase Price (invested = purchase_price + tax + shipping)
       columnHelper.accessor('invested', {
         id: 'purchase_price',
-        header: () => <div className="text-right">Purchase {symbol()}</div>,
+        header: () => <div className="text-right opacity-70">Purchase {symbol()}</div>,
         cell: (info) => {
           const price = info.getValue()
           const converted = price ? convert(price, 'GBP') : null
 
           return (
-            <div className="text-right mono">
+            <div className="text-right mono tabular-nums">
               <PlainMoneyCell value={converted} currency={currency} />
             </div>
           )
@@ -271,82 +303,193 @@ export function InventoryV3Table({
       // 6. Market Value
       columnHelper.accessor('market.price', {
         id: 'market_value',
-        header: () => <div className="text-right">Market {symbol()}</div>,
+        header: () => <div className="text-right opacity-70">Market {symbol()}</div>,
         cell: (info) => {
-          const price = info.getValue()
           const item = info.row.original
-          const marketCurrency = item.market?.currency || 'GBP'
-          const converted = price ? convert(price, marketCurrency) : null
+
+          // Use platform-specific market data
+          let price: number | null = null
+          let displayCurrency = currency
+
+          if (platform === 'alias') {
+            // Alias: use lowestAsk from alias data (always USD, no conversion)
+            price = item.alias?.lowestAsk ?? null
+            displayCurrency = 'USD'
+          } else {
+            // StockX: use market.price with conversion
+            const rawPrice = info.getValue()
+            const marketCurrency = item.market?.currency || 'GBP'
+            price = rawPrice ? convert(rawPrice, marketCurrency) : null
+            displayCurrency = currency
+          }
 
           return (
-            <div className="text-right mono">
-              <PlainMoneyCell value={converted} currency={currency} />
+            <div className="text-right mono tabular-nums">
+              <PlainMoneyCell value={price} currency={displayCurrency} />
             </div>
           )
         },
         enableSorting: true,
       }),
 
-      // 7. Listing Price (if listed)
-      columnHelper.display({
-        id: 'listing_price',
-        header: () => <div className="text-right">Listed {symbol()}</div>,
-        cell: (info) => {
-          const item = info.row.original
-          const askPrice = item.stockx?.askPrice
-          const isListed = !!item.stockx?.listingId
+      // 7. Last Sold (Alias only)
+      ...(platform === 'alias' ? [
+        columnHelper.accessor(
+          (row) => row.alias?.lastSoldPrice ?? null,
+          {
+            id: 'last_sold',
+            header: () => <div className="text-right opacity-70">Last Sold</div>,
+            cell: (info) => {
+              const item = info.row.original
+              const lastSold = item.alias?.lastSoldPrice ?? null
 
-          if (!isListed || !askPrice) {
-            return <div className="text-right text-dim">—</div>
+              if (!lastSold) {
+                return <div className="text-right text-dim/50">—</div>
+              }
+
+              return (
+                <div className="text-right mono tabular-nums">
+                  <PlainMoneyCell value={lastSold} currency="USD" />
+                </div>
+              )
+            },
+            enableSorting: true,
+            sortUndefined: 1,
           }
-
-          const converted = convert(askPrice, 'USD') // StockX prices are USD
-
-          return (
-            <div className="text-right mono">
-              <PlainMoneyCell value={converted} currency={currency} />
-            </div>
-          )
-        },
-        enableSorting: false,
-      }),
+        )
+      ] : []),
 
       // 8. Highest Bid (with platform badge)
-      columnHelper.display({
-        id: 'highest_bid',
-        header: () => <div className="text-right">Highest Bid</div>,
-        cell: (info) => {
-          const item = info.row.original
-
-          // Use instantSell which has currency info, or fallback to stockx.highestBid
-          const highestBid = item.instantSell?.gross ?? item.stockx?.highestBid
-          const sourceCurrency = item.instantSell?.currency
-
-          if (!highestBid) {
-            return <div className="text-right text-dim">—</div>
+      columnHelper.accessor(
+        (row) => {
+          if (platform === 'alias') {
+            return row.alias?.highestBid ?? null
           }
-
-          // Only convert if source currency differs from display currency
-          const converted = sourceCurrency && sourceCurrency !== currency
-            ? convert(highestBid, sourceCurrency)
-            : highestBid
-
-          return (
-            <div className="flex items-center justify-end gap-2">
-              <div className="text-right mono">
-                <PlainMoneyCell value={converted} currency={currency} />
-              </div>
-              <PlatformBadge platform="stockx" />
-            </div>
-          )
+          return row.instantSell?.gross ?? row.stockx?.highestBid ?? null
         },
-        enableSorting: false,
-      }),
+        {
+          id: 'highest_bid',
+          header: () => <div className="text-right opacity-70">Highest Bid</div>,
+          cell: (info) => {
+            const item = info.row.original
+            let highestBid: number | null = null
+            let displayCurrency = currency
 
-      // 9. Performance %
+            if (platform === 'alias') {
+              // Alias: use highestBid from alias data (always USD, no conversion)
+              highestBid = item.alias?.highestBid ?? null
+              displayCurrency = 'USD'
+            } else {
+              // StockX: use instantSell/highestBid with conversion
+              const rawBid = item.instantSell?.gross ?? item.stockx?.highestBid ?? null
+              const sourceCurrency = item.instantSell?.currency || 'GBP'
+              highestBid = rawBid && sourceCurrency !== currency
+                ? convert(rawBid, sourceCurrency)
+                : rawBid
+              displayCurrency = currency
+            }
+
+            if (!highestBid) {
+              return <div className="text-right text-dim/50">—</div>
+            }
+
+            return (
+              <div className="flex items-center justify-end gap-2">
+                <div className="text-right mono tabular-nums">
+                  <PlainMoneyCell value={highestBid} currency={displayCurrency} />
+                </div>
+                <PlatformBadge platform={platform} compact />
+              </div>
+            )
+          },
+          enableSorting: true,
+          sortUndefined: 1, // Push undefined/null values to the end
+        }
+      ),
+
+      // 9. Listed Price (if listed) - with color
+      columnHelper.accessor(
+        (row) => platform === 'alias' ? (row.alias?.askPrice ?? null) : (row.stockx?.askPrice ?? null),
+        {
+          id: 'listing_price',
+          header: () => <div className="text-right opacity-70">Listed {symbol()}</div>,
+          cell: (info) => {
+            const item = info.row.original
+            let askPrice: number | null = null
+            let isListed = false
+            let displayCurrency = currency
+
+            if (platform === 'alias') {
+              // Alias: listings are in USD, no conversion
+              askPrice = item.alias?.askPrice ?? null
+              isListed = !!item.alias?.listingId
+              displayCurrency = 'USD'
+            } else {
+              // StockX: listings are in GBP, no conversion needed
+              askPrice = item.stockx?.askPrice ?? null
+              isListed = !!item.stockx?.listingId
+              displayCurrency = currency
+            }
+
+            if (!isListed || !askPrice) {
+              return <div className="text-right text-dim/50">—</div>
+            }
+
+            return (
+              <div className="text-right mono tabular-nums text-emerald-500">
+                <PlainMoneyCell value={askPrice} currency={displayCurrency} />
+              </div>
+            )
+          },
+          enableSorting: true,
+          sortUndefined: 1, // Push undefined/null values to the end
+        }
+      ),
+
+      // 10. Spread % (difference between listed price and highest bid)
+      columnHelper.accessor(
+        (row) => {
+          const askPrice = platform === 'alias' ? (row.alias?.askPrice ?? null) : (row.stockx?.askPrice ?? null)
+          const highestBid = platform === 'alias' ? (row.alias?.highestBid ?? null) : (row.instantSell?.gross ?? row.stockx?.highestBid ?? null)
+
+          if (!askPrice || !highestBid) return null
+
+          // Calculate spread as percentage: ((listed - bid) / bid) * 100
+          return ((askPrice - highestBid) / highestBid) * 100
+        },
+        {
+          id: 'spread',
+          header: () => <div className="text-right opacity-70">Spread</div>,
+          cell: (info) => {
+            const spreadPct = info.getValue()
+
+            if (spreadPct === null || spreadPct === undefined) {
+              return <div className="text-right text-dim/50">—</div>
+            }
+
+            // Color code: green if <5%, red if >25%, yellow otherwise
+            let colorClass = 'text-yellow-500'
+            if (spreadPct < 5) {
+              colorClass = 'text-emerald-500'
+            } else if (spreadPct >= 25) {
+              colorClass = 'text-red-500'
+            }
+
+            return (
+              <div className={cn("text-right mono tabular-nums", colorClass)}>
+                {spreadPct > 0 ? '+' : ''}{spreadPct.toFixed(1)}%
+              </div>
+            )
+          },
+          enableSorting: true,
+          sortUndefined: 1,
+        }
+      ),
+
+      // 11. Performance %
       columnHelper.accessor('performancePct', {
         id: 'performance',
-        header: () => <div className="text-right">Performance</div>,
+        header: () => <div className="text-right opacity-70">Performance</div>,
         cell: (info) => {
           const pct = info.getValue()
 
@@ -359,35 +502,42 @@ export function InventoryV3Table({
         enableSorting: true,
       }),
 
-      // 10. Platform Listed (with badges)
-      columnHelper.display({
-        id: 'platform_listed',
-        header: () => <div className="text-center">Platform</div>,
-        cell: (info) => {
-          const item = info.row.original
-          const isListed = !!item.stockx?.listingId && item.stockx?.listingStatus === 'ACTIVE'
-
-          if (!isListed) {
-            return <div className="text-center text-dim">—</div>
-          }
-
-          // Currently only StockX, but designed for future platforms
-          return (
-            <div className="flex justify-center">
-              <PlatformBadge platform="stockx" />
-            </div>
-          )
+      // 12. Platform Listed (with badges)
+      columnHelper.accessor(
+        (row) => {
+          const isListed = !!row.stockx?.listingId && (row.stockx?.listingStatus === 'ACTIVE' || row.stockx?.listingStatus === 'PENDING')
+          return isListed ? 'StockX' : ''
         },
-        enableSorting: false,
-      }),
+        {
+          id: 'platform_listed',
+          header: () => <div className="text-center w-28 opacity-70">Platform</div>,
+          cell: (info) => {
+            const item = info.row.original
+            const isListed = !!item.stockx?.listingId && (item.stockx?.listingStatus === 'ACTIVE' || item.stockx?.listingStatus === 'PENDING')
 
-      // 11. Purchase Date
+            if (!isListed) {
+              return <div className="text-center text-dim/50 w-28">—</div>
+            }
+
+            // Currently only StockX, but designed for future platforms
+            return (
+              <div className="flex justify-center w-28">
+                <PlatformBadge platform="stockx" />
+              </div>
+            )
+          },
+          enableSorting: true,
+          size: 110,
+        }
+      ),
+
+      // 13. Purchase Date
       columnHelper.accessor('purchase_date', {
         id: 'purchase_date',
-        header: () => <div className="text-center">Purchase Date</div>,
+        header: () => <div className="text-center opacity-70">Purchase Date</div>,
         cell: (info) => {
           const date = info.getValue()
-          if (!date) return <div className="text-center text-dim">—</div>
+          if (!date) return <div className="text-center text-dim/50">—</div>
 
           const formatted = new Date(date).toLocaleDateString('en-GB', {
             day: '2-digit',
@@ -404,30 +554,46 @@ export function InventoryV3Table({
         enableSorting: true,
       }),
 
-      // 12. Actions column (three-dot menu)
+      // 14. Actions column (three-dot menu)
       columnHelper.display({
         id: 'actions',
-        header: () => <div className="text-center">Actions</div>,
+        header: () => <div className="text-center opacity-70">Actions</div>,
         cell: (info) => {
           const item = info.row.original
           const stockxMapped = !!item.stockx?.mapped && !!item.stockx?.productId && !!item.stockx?.variantId
           const stockxListingStatus = item.stockx?.listingStatus || null
+          const aliasListingStatus = item.alias?.listingStatus || null
 
           return (
             <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
               <RowActions
                 status={item.status || 'active'}
+                // Item actions
                 onEdit={() => onEdit?.(item)}
-                onToggleSold={() => onMarkSold?.(item)}
-                onAddExpense={() => onAddExpense?.(item)}
-                onAddToWatchlist={() => onAddToWatchlist?.(item)}
+                onDuplicate={onDuplicate ? () => onDuplicate(item) : undefined}
+                onAdjustTaxRate={onAdjustTaxRate ? () => onAdjustTaxRate(item) : undefined}
+                onDelete={onDelete ? () => onDelete(item) : undefined}
+                // StockX actions
                 stockxMapped={stockxMapped}
                 stockxListingStatus={stockxListingStatus}
-                onListOnStockX={() => onListOnStockX?.(item)}
-                onRepriceListing={() => onRepriceListing?.(item)}
-                onDeactivateListing={() => onDeactivateListing?.(item)}
-                onReactivateListing={() => onReactivateListing?.(item)}
-                onDeleteListing={() => onDeleteListing?.(item)}
+                onListOnStockX={onListOnStockX ? () => onListOnStockX(item) : undefined}
+                onRepriceListing={onRepriceListing ? () => onRepriceListing(item) : undefined}
+                onDeactivateListing={onDeactivateListing ? () => onDeactivateListing(item) : undefined}
+                onReactivateListing={onReactivateListing ? () => onReactivateListing(item) : undefined}
+                onDeleteListing={onDeleteListing ? () => onDeleteListing(item) : undefined}
+                onPrintStockXLabel={onPrintStockXLabel ? () => onPrintStockXLabel(item) : undefined}
+                // Alias actions
+                aliasListingStatus={aliasListingStatus}
+                onPlaceAliasListing={onPlaceAliasListing ? () => onPlaceAliasListing(item) : undefined}
+                onEditAliasListing={onEditAliasListing ? () => onEditAliasListing(item) : undefined}
+                onCancelAliasListing={onCancelAliasListing ? () => onCancelAliasListing(item) : undefined}
+                // Status actions
+                onAddToWatchlist={onAddToWatchlist ? () => onAddToWatchlist(item) : undefined}
+                onAddToSellList={onAddToSellList ? () => onAddToSellList(item) : undefined}
+                onMarkListed={onMarkListed ? () => onMarkListed(item) : undefined}
+                onMarkSold={() => onMarkSold?.(item)}
+                onMarkUnlisted={onMarkUnlisted ? () => onMarkUnlisted(item) : undefined}
+                onTogglePersonals={onTogglePersonals ? () => onTogglePersonals(item) : undefined}
               />
             </div>
           )
@@ -435,14 +601,50 @@ export function InventoryV3Table({
         enableSorting: false,
       }),
     ],
-    [convert, format, symbol, currency, selectedItems, allSelected, someSelected, onSelectionChange, onEdit, onMarkSold, onAddExpense, onAddToWatchlist, onListOnStockX, onRepriceListing, onDeactivateListing, onReactivateListing, onDeleteListing]
+    [
+      convert,
+      format,
+      symbol,
+      currency,
+      selectedItems,
+      allSelected,
+      someSelected,
+      onSelectionChange,
+      // Item actions
+      onEdit,
+      onDuplicate,
+      onAdjustTaxRate,
+      onDelete,
+      // StockX actions
+      onListOnStockX,
+      onRepriceListing,
+      onDeactivateListing,
+      onReactivateListing,
+      onDeleteListing,
+      onPrintStockXLabel,
+      // Alias actions
+      onPlaceAliasListing,
+      onEditAliasListing,
+      onCancelAliasListing,
+      // Status actions
+      onAddToWatchlist,
+      onAddToSellList,
+      onMarkListed,
+      onMarkSold,
+      onMarkUnlisted,
+      onTogglePersonals,
+      onAddExpense,
+    ]
   )
 
   const table = useReactTable({
     data: items,
     columns,
     state: { sorting },
-    onSortingChange,
+    onSortingChange: (updater) => {
+      console.log('[InventoryV3Table] Sort change triggered', { currentSorting: sorting, updater })
+      onSortingChange(updater)
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   })
@@ -492,25 +694,35 @@ export function InventoryV3Table({
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className={cn(
-                    header.column.getCanSort() && 'cursor-pointer select-none',
-                    'whitespace-nowrap'
-                  )}
-                  onClick={header.column.getToggleSortingHandler()}
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                  {header.column.getIsSorted() && (
-                    <span className="ml-1">
-                      {header.column.getIsSorted() === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </TableHead>
-              ))}
+              {headerGroup.headers.map((header) => {
+                const isSorted = header.column.getIsSorted()
+                const canSort = header.column.getCanSort()
+
+                return (
+                  <TableHead
+                    key={header.id}
+                    className={cn(
+                      canSort && 'cursor-pointer select-none hover:bg-soft/30 transition-colors',
+                      'whitespace-nowrap group'
+                    )}
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      {canSort && (
+                        <span className={cn(
+                          'text-xs transition-opacity',
+                          isSorted ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'
+                        )}>
+                          {isSorted === 'asc' ? '↑' : isSorted === 'desc' ? '↓' : '↕'}
+                        </span>
+                      )}
+                    </div>
+                  </TableHead>
+                )
+              })}
             </TableRow>
           ))}
         </TableHeader>

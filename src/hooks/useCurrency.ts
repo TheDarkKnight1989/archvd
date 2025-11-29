@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { currencyToRegion, type Region } from '@/lib/utils/region'
 
 export type Currency = 'GBP' | 'EUR' | 'USD'
 
@@ -18,6 +19,7 @@ export interface FxRates {
 
 export interface CurrencyContext {
   currency: Currency
+  region: Region
   fxRates: FxRates | null
   loading: boolean
   setCurrency: (currency: Currency) => Promise<void>
@@ -208,6 +210,7 @@ export function useCurrency(): CurrencyContext {
 
   return {
     currency,
+    region: currencyToRegion(currency),
     fxRates,
     loading,
     setCurrency,

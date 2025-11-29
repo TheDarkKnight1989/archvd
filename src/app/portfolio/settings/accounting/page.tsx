@@ -7,9 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Loader2, Check, AlertCircle } from 'lucide-react'
+import { Loader2, Check, AlertCircle, Info, TrendingUp } from 'lucide-react'
 
 type Currency = 'GBP' | 'EUR' | 'USD'
 
@@ -98,68 +96,86 @@ export default function AccountingSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-fg">
+    <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-6 text-fg">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-fg relative inline-block">
-          Accounting Settings
-          <span className="absolute bottom-0 left-0 w-16 h-0.5 bg-accent opacity-40"></span>
+      <div className="p-6 rounded-2xl bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10 shadow-lg">
+        <h1 className="font-display text-3xl font-semibold text-fg tracking-tight mb-2">
+          Accounting
         </h1>
+        <p className="text-sm text-fg/70 max-w-2xl">
+          Configure your base currency and manage accounting preferences
+        </p>
       </div>
 
-      {/* Success/Error Alerts */}
+      {/* Success Message */}
       {success && (
-        <Alert variant="default" className="bg-success/10 border-success/30">
-          <Check className="h-4 w-4 text-success" />
-          <AlertTitle className="text-success">Success</AlertTitle>
-          <AlertDescription className="text-success/80">{success}</AlertDescription>
-        </Alert>
+        <div className="p-4 rounded-xl bg-[#00FF94]/10 border border-[#00FF94]/30 flex items-start gap-3">
+          <Check className="h-5 w-5 text-[#00FF94] shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-[#00FF94]">Success</p>
+            <p className="text-sm text-[#00FF94]/80">{success}</p>
+          </div>
+        </div>
       )}
 
+      {/* Error Message */}
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-400">Error</p>
+            <p className="text-sm text-red-400/80">{error}</p>
+          </div>
+        </div>
       )}
 
       {/* Base Currency Card */}
-      <Card elevation="soft" className="border border-border rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-fg">Base Currency</CardTitle>
-          <CardDescription className="text-sm text-muted">
-            Select your accounting base currency. All transactions will be converted to this currency for P&L and VAT calculations.
-          </CardDescription>
+      <Card elevation="soft" className="border border-border/40 rounded-xl bg-elev-1">
+        <CardHeader className="p-6 pb-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-lg bg-accent/10 border border-accent/20">
+              <TrendingUp className="h-5 w-5 text-accent" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-lg font-semibold text-fg mb-1">Base Currency</CardTitle>
+              <CardDescription className="text-sm text-muted leading-relaxed">
+                Select your accounting base currency. All transactions will be converted to this currency for P&L and VAT calculations.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
+        <CardContent className="p-6 pt-2 space-y-6">
+          <div className="space-y-3">
             <Label htmlFor="base-currency" className="text-sm font-medium text-fg">
               Currency
             </Label>
             <Select
               value={baseCurrency}
               onValueChange={(value) => setBaseCurrency(value as Currency)}
+              disabled={saving}
             >
-              <SelectTrigger id="base-currency" className="w-full md:w-64 bg-elev-1 border-border">
+              <SelectTrigger
+                id="base-currency"
+                className="w-full md:w-80 bg-elev-0 border-border hover:border-accent/50 transition-colors"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-elev-2 border-border">
                 <SelectItem value="GBP">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono">GBP</span>
+                    <span className="font-mono font-semibold">GBP</span>
                     <span className="text-muted">— British Pound</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="EUR">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono">EUR</span>
+                    <span className="font-mono font-semibold">EUR</span>
                     <span className="text-muted">— Euro</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="USD">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono">USD</span>
+                    <span className="font-mono font-semibold">USD</span>
                     <span className="text-muted">— US Dollar</span>
                   </div>
                 </SelectItem>
@@ -167,30 +183,28 @@ export default function AccountingSettingsPage() {
             </Select>
           </div>
 
-          <div className="pt-2 space-y-3 text-xs text-muted">
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-accent/40 text-accent shrink-0">
-                INFO
-              </Badge>
-              <p>
-                All new transactions will be automatically converted to {baseCurrency} using the exchange rate on the transaction date.
+          {/* Info Notices */}
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-start gap-3">
+              <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-400/90 leading-relaxed">
+                All new transactions will be automatically converted to <span className="font-semibold">{baseCurrency}</span> using the exchange rate on the transaction date.
               </p>
             </div>
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 border-warning/40 text-warning shrink-0">
-                NOTE
-              </Badge>
-              <p>
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-400/90 leading-relaxed">
                 Changing your base currency will not retroactively convert existing transactions. Existing transactions will retain their stored base amounts.
               </p>
             </div>
           </div>
 
-          <div className="pt-4">
+          {/* Save Button */}
+          <div className="pt-2">
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-accent text-black hover:bg-accent-600 glow-accent-hover"
+              className="bg-accent text-black hover:bg-[#00E085] transition-all shadow-lg hover:shadow-accent/20"
             >
               {saving ? (
                 <>
@@ -198,7 +212,10 @@ export default function AccountingSettingsPage() {
                   Saving...
                 </>
               ) : (
-                'Save Changes'
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
               )}
             </Button>
           </div>
@@ -206,31 +223,31 @@ export default function AccountingSettingsPage() {
       </Card>
 
       {/* FX Rates Info Card */}
-      <Card elevation="soft" className="border border-border rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-fg">Exchange Rates</CardTitle>
+      <Card elevation="soft" className="border border-border/40 rounded-xl bg-elev-1">
+        <CardHeader className="p-6 pb-4">
+          <CardTitle className="text-lg font-semibold text-fg mb-1">Exchange Rates</CardTitle>
           <CardDescription className="text-sm text-muted">
             How currency conversion works in your accounting
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="p-6 pt-2 space-y-5">
           <div className="space-y-2">
-            <h3 className="font-medium text-fg">Automatic Conversion</h3>
-            <p className="text-muted">
+            <h3 className="text-sm font-semibold text-fg">Automatic Conversion</h3>
+            <p className="text-sm text-muted leading-relaxed">
               When you record a transaction in a different currency, the system automatically converts it to your base currency ({baseCurrency}) using the exchange rate from the transaction date.
             </p>
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-medium text-fg">Exchange Rate Source</h3>
-            <p className="text-muted">
-              Exchange rates are stored in the <code className="text-xs bg-elev-2 px-1.5 py-0.5 rounded font-mono">fx_rates</code> table with GBP as the pivot currency. Historical rates ensure accurate conversion for past transactions.
+            <h3 className="text-sm font-semibold text-fg">Exchange Rate Source</h3>
+            <p className="text-sm text-muted leading-relaxed">
+              Exchange rates are stored in the <code className="text-xs bg-elev-2 px-1.5 py-0.5 rounded font-mono text-accent">fx_rates</code> table with GBP as the pivot currency. Historical rates ensure accurate conversion for past transactions.
             </p>
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-medium text-fg">Audit Trail</h3>
-            <p className="text-muted">
+            <h3 className="text-sm font-semibold text-fg">Audit Trail</h3>
+            <p className="text-sm text-muted leading-relaxed">
               Every currency conversion is logged in the audit trail, showing the original amount, currency, exchange rate used, and the converted base amount.
             </p>
           </div>
