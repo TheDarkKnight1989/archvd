@@ -484,21 +484,21 @@ export function Sidebar() {
               )}
             </Link>
 
-            {/* Profile */}
+            {/* Settings */}
             <Link
-              href="/profile"
+              href="/settings"
               className={cn(
                 "group rounded-lg flex items-center transition-all duration-200",
                 "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                 "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
-                pathname === '/profile' ? 'text-accent' : 'text-muted hover:text-fg',
+                pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
               )}
-              title={!isExpanded ? 'Profile' : undefined}
+              title={!isExpanded ? 'Settings' : undefined}
             >
               <User className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
               {isExpanded && (
-                <span className="text-xs font-medium truncate">Profile</span>
+                <span className="text-xs font-medium truncate">Settings</span>
               )}
             </Link>
 
