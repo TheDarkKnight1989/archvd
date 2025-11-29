@@ -16,8 +16,6 @@ import {
   PinOff,
   UploadCloud,
   Search,
-  Moon,
-  Sun,
   Package,
   Eye,
   FileText,
@@ -68,15 +66,7 @@ export function Sidebar() {
   const searchParams = useSearchParams()
   const { pinned, setPinned } = useSidebar()
   const [expanded, setExpanded] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    // Initialize from localStorage or system preference
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme')
-      if (saved === 'light' || saved === 'dark') return saved
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
-    return 'light'
-  })
+  const [theme] = useState<'dark'>('dark')
   const [commandSearchOpen, setCommandSearchOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
@@ -84,17 +74,12 @@ export function Sidebar() {
   const leaveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const navRef = useRef<HTMLElement>(null)
 
-  // Apply theme to document root
+  // Force dark mode
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark')
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.removeAttribute('data-theme')
-      document.documentElement.classList.remove('dark')
-    }
-    localStorage.setItem('theme', theme)
-  }, [theme])
+    document.documentElement.setAttribute('data-theme', 'dark')
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
+  }, [])
 
   // Determine if sidebar should be expanded
   const isExpanded = pinned || expanded
@@ -405,31 +390,6 @@ export function Sidebar() {
               isExpanded ? "space-y-1" : "flex flex-col items-center justify-center gap-1 py-2"
             )}
           >
-            {/* Theme Toggle - Always visible */}
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className={cn(
-                "group rounded-lg flex items-center transition-all duration-200",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
-                theme === 'dark' ? 'text-accent' : 'text-muted hover:text-fg',
-                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
-              )}
-              title={!isExpanded ? (theme === 'dark' ? 'Dark Mode' : 'Light Mode') : undefined}
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? (
-                <Moon className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-              ) : (
-                <Sun className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-              )}
-              {isExpanded && (
-                <span className="text-xs font-medium flex-1 text-left">
-                  {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
-                </span>
-              )}
-            </button>
-
             {/* Settings */}
             <Link
               href="/settings"
