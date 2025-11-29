@@ -141,19 +141,29 @@ export async function searchProducts(
     // Map StockX v2 response to our format
     // V2 uses: products[], productId, styleId, title, productAttributes{}
     const items = response.products || response.data || []
-    const products: StockxProduct[] = items.map((item: any) => ({
-      id: item.productId || item.id || item.uuid,
-      sku: item.styleId || item.sku,
-      slug: item.urlKey || item.slug,
-      brand: item.brand,
-      name: item.title || item.name,
-      model: item.model || item.productAttributes?.model,
-      colorway: item.productAttributes?.colorway || item.colorway,
-      imageUrl: item.media?.imageUrl || item.image,
-      retailPrice: item.productAttributes?.retailPrice || item.retailPrice,
-      releaseDate: item.productAttributes?.releaseDate || item.releaseDate,
-      meta: item,
-    }))
+    const products: StockxProduct[] = items.map((item: any) => {
+      // Build image URL from urlKey if media not available
+      let imageUrl = item.media?.imageUrl || item.media?.thumbUrl || item.image
+      if (!imageUrl && item.urlKey) {
+        // StockX image pattern: https://images.stockx.com/images/{url-key}.jpg
+        const slug = item.urlKey.split('?')[0] // Remove query params if any
+        imageUrl = `https://images.stockx.com/images/${slug}.jpg`
+      }
+
+      return {
+        id: item.productId || item.id || item.uuid,
+        sku: item.styleId || item.sku,
+        slug: item.urlKey || item.slug,
+        brand: item.brand,
+        name: item.title || item.name,
+        model: item.model || item.productAttributes?.model,
+        colorway: item.productAttributes?.colorway || item.colorway,
+        imageUrl,
+        retailPrice: item.productAttributes?.retailPrice || item.retailPrice,
+        releaseDate: item.productAttributes?.releaseDate || item.releaseDate,
+        meta: item,
+      }
+    })
 
     return {
       products,
