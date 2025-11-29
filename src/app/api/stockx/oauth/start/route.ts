@@ -47,11 +47,28 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.error('[StockX OAuth Start] Authentication failed', {
+        hasError: !!authError,
+        errorMessage: authError?.message,
+        errorStatus: authError?.status,
+        hasUser: !!user,
+        cookies: request.cookies.getAll().map(c => c.name),
+      });
+
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        {
+          error: 'Unauthorized',
+          message: 'Please ensure you are logged in to Archvd before connecting StockX',
+          details: authError?.message || 'No active session found'
+        },
         { status: 401 }
       );
     }
+
+    console.log('[StockX OAuth Start] User authenticated', {
+      userId: user.id,
+      email: user.email,
+    });
 
     // Generate PKCE parameters
     const { codeVerifier, codeChallenge } = generatePKCE();
