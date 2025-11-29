@@ -8,6 +8,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
+// Force dynamic rendering - never cache this route
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // OAuth configuration
 const STOCKX_OAUTH_TOKEN_URL = process.env.STOCKX_OAUTH_TOKEN_URL || 'https://accounts.stockx.com/oauth/token';
 const STOCKX_CLIENT_ID = process.env.STOCKX_CLIENT_ID;

@@ -36,7 +36,10 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-// exclude Next static assets/images and favicon
+// exclude Next static assets/images, favicon, and OAuth routes
+// OAuth routes handle their own cookies and shouldn't have Supabase middleware interference
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|api/stockx/oauth|api/stockx/internal).*)',
+  ],
 };

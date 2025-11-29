@@ -14,6 +14,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
+// Force dynamic rendering - never cache this route
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // OAuth configuration
 const STOCKX_OAUTH_AUTHORIZE_URL = process.env.STOCKX_OAUTH_AUTHORIZE_URL || 'https://accounts.stockx.com/oauth/authorize';
 const STOCKX_CLIENT_ID = process.env.STOCKX_CLIENT_ID;
