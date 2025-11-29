@@ -1,7 +1,8 @@
 'use client'
 
-import { Calculator, Camera, Search } from 'lucide-react'
+import { Calculator, Camera, Search, Bell } from 'lucide-react'
 import { AppLogoButton } from './AppLogoButton'
+import { UserProfileMenu } from './UserProfileMenu'
 import { cn } from '@/lib/utils/cn'
 
 interface AppTopBarProps {
@@ -22,6 +23,11 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
   const handleCameraClick = () => {
     // TODO: Wire up barcode scanner
     console.log('TODO: open barcode scanner')
+  }
+
+  const handleNotificationsClick = () => {
+    // TODO: Wire up notifications system
+    console.log('TODO: open notifications')
   }
 
   return (
@@ -114,8 +120,9 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
             </kbd>
           </button>
 
-          {/* Icon Buttons */}
+          {/* Right Side Controls */}
           <div className="flex items-center gap-2">
+            {/* Utility Icons */}
             <button
               onClick={handleCalculatorClick}
               aria-label="Open profit calculator"
@@ -143,6 +150,27 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
             >
               <Camera className="h-4 w-4" strokeWidth={1.75} />
             </button>
+
+            {/* Separator */}
+            <div className="h-6 w-px bg-white/10 mx-1" />
+
+            {/* Notifications */}
+            <button
+              onClick={handleNotificationsClick}
+              aria-label="Notifications"
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-full",
+                "border border-white/10 text-muted",
+                "hover:border-white/20 hover:bg-white/5 hover:text-fg",
+                "transition-all duration-200",
+                "active:scale-95"
+              )}
+            >
+              <Bell className="h-4 w-4" strokeWidth={1.75} />
+            </button>
+
+            {/* User Profile */}
+            <UserProfileMenu />
           </div>
         </div>
       </div>

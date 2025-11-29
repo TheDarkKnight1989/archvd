@@ -110,17 +110,34 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
       {/* Wrapper */}
       <div className="flex h-full flex-col overflow-y-auto">
         {/* Top Block: Logo + Wordmark + Search */}
-        <div className="px-3 sm:px-4 py-3 sm:py-4">
+        <div className={cn(
+          "transition-all duration-200",
+          isExpanded ? "px-3 sm:px-4 py-3 sm:py-4" : "px-0 py-4"
+        )}>
           {/* Logo + App Name */}
-          <div className="mb-4 flex items-center gap-3 px-2">
+          <div className={cn(
+            "mb-4 flex items-center gap-3 transition-all duration-200",
+            isExpanded ? "px-2" : "flex-col px-0 justify-center"
+          )}>
             <div
-              className="h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
+              className={cn(
+                "rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200",
+                isExpanded ? "h-8 w-8" : "h-10 w-10 rounded-2xl bg-accent/15"
+              )}
               style={{
-                background: '#00FF94',
-                boxShadow: '0 0 20px rgba(0, 255, 148, 0.4), 0 0 40px rgba(0, 255, 148, 0.2)'
+                background: isExpanded ? '#00FF94' : undefined,
+                boxShadow: isExpanded ? '0 0 20px rgba(0, 255, 148, 0.4), 0 0 40px rgba(0, 255, 148, 0.2)' : 'none'
               }}
             >
-              <span className="font-bold text-sm" style={{ color: '#0E1A15' }}>A</span>
+              <span
+                className={cn(
+                  "font-bold transition-all duration-200",
+                  isExpanded ? "text-sm" : "text-base text-accent"
+                )}
+                style={{ color: isExpanded ? '#0E1A15' : undefined }}
+              >
+                A
+              </span>
             </div>
             <span
               className={cn(
@@ -173,8 +190,14 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-3 sm:px-4 pb-3">
-          <div className="flex flex-col gap-2 sm:gap-3 pt-3.5">
+        <div className={cn(
+          "flex-1 overflow-y-auto pb-3 transition-all duration-200",
+          isExpanded ? "px-3 sm:px-4" : "px-0"
+        )}>
+          <div className={cn(
+            "flex flex-col pt-3.5",
+            isExpanded ? "gap-2 sm:gap-3" : "gap-1"
+          )}>
             {/* 📦 Manage */}
             <div>
               <h3
@@ -190,7 +213,10 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
                 <span className="text-xs">📦</span>
                 Manage
               </h3>
-              <ul className="flex flex-col gap-0.5">
+              <ul className={cn(
+                "flex flex-col transition-all duration-200",
+                isExpanded ? "gap-0.5" : "gap-1 items-center px-[15px]"
+              )}>
                 {manageNav.map((item, index) => (
                   <NavItem
                     key={item.id}
@@ -204,8 +230,11 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               </ul>
             </div>
 
+            {/* Separator */}
+            {!isExpanded && <div className="h-px bg-white/5 mx-[15px] my-1" />}
+
             {/* 💸 Sell */}
-            <div className="mt-1">
+            <div className={cn(isExpanded && "mt-1")}>
               <h3
                 className={cn(
                   "text-[10px] font-bold tracking-widest uppercase px-3 pt-2 pb-1.5 transition-boutique flex items-center gap-1.5",
@@ -219,7 +248,10 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
                 <span className="text-xs">💸</span>
                 Sell
               </h3>
-              <ul className="flex flex-col gap-0.5">
+              <ul className={cn(
+                "flex flex-col transition-all duration-200",
+                isExpanded ? "gap-0.5" : "gap-1 items-center px-[15px]"
+              )}>
                 {sellNav.map((item, index) => (
                   <NavItem
                     key={item.id}
@@ -233,8 +265,11 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               </ul>
             </div>
 
+            {/* Separator */}
+            {!isExpanded && <div className="h-px bg-white/5 mx-[15px] my-1" />}
+
             {/* 📊 Finance */}
-            <div className="mt-1">
+            <div className={cn(isExpanded && "mt-1")}>
               <h3
                 className={cn(
                   "text-[10px] font-bold tracking-widest uppercase px-3 pt-2 pb-1.5 transition-boutique flex items-center gap-1.5",
@@ -248,7 +283,10 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
                 <span className="text-xs">📊</span>
                 Finance
               </h3>
-              <ul className="flex flex-col gap-0.5">
+              <ul className={cn(
+                "flex flex-col transition-all duration-200",
+                isExpanded ? "gap-0.5" : "gap-1 items-center px-[15px]"
+              )}>
                 {financeNav.map((item, index) => (
                   <NavItem
                     key={item.id}
@@ -262,8 +300,11 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               </ul>
             </div>
 
+            {/* Separator */}
+            {!isExpanded && <div className="h-px bg-white/5 mx-[15px] my-1" />}
+
             {/* 🔍 Market */}
-            <div className="mt-1">
+            <div className={cn(isExpanded && "mt-1")}>
               <h3
                 className={cn(
                   "text-[10px] font-bold tracking-widest uppercase px-3 pt-2 pb-1.5 transition-boutique flex items-center gap-1.5",
@@ -277,7 +318,10 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
                 <span className="text-xs">🔍</span>
                 Market
               </h3>
-              <ul className="flex flex-col gap-0.5">
+              <ul className={cn(
+                "flex flex-col transition-all duration-200",
+                isExpanded ? "gap-0.5" : "gap-1 items-center px-[15px]"
+              )}>
                 {marketNav.map((item, index) => (
                   <NavItem
                     key={item.id}
@@ -301,11 +345,11 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
             background: 'linear-gradient(to top, rgba(0, 255, 148, 0.05), transparent)'
           }}
         >
-          {/* Quick Actions - Vertical stack when expanded, horizontal when collapsed */}
+          {/* Quick Actions - Vertical stack when expanded, centered icons when collapsed */}
           <div
             className={cn(
-              "px-3 pt-3",
-              isExpanded ? "space-y-1" : "flex flex-col items-center justify-center gap-1 py-2"
+              "pt-3",
+              isExpanded ? "px-3 space-y-1" : "flex flex-col items-center justify-center gap-2 px-[15px]"
             )}
           >
             {/* Settings */}
@@ -313,11 +357,20 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               href="/settings"
               onClick={isMobile ? onClose : undefined}
               className={cn(
-                "group rounded-lg flex items-center transition-all duration-200",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
+                "group flex items-center transition-all duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                 pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
-                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
+                isExpanded ? (
+                  cn(
+                    "h-9 gap-2 px-2 w-full rounded-lg hover:bg-elev-2/80",
+                    "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]"
+                  )
+                ) : (
+                  cn(
+                    "h-10 w-10 rounded-2xl justify-center border border-transparent",
+                    "hover:border-white/10 hover:bg-white/5 active:scale-95"
+                  )
+                )
               )}
               title={!isExpanded ? 'Settings' : undefined}
             >
@@ -332,11 +385,20 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               href="/portfolio/settings/accounting"
               onClick={isMobile ? onClose : undefined}
               className={cn(
-                "group rounded-lg flex items-center transition-all duration-200",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
+                "group flex items-center transition-all duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                 pathname === '/portfolio/settings/accounting' ? 'text-accent' : 'text-muted hover:text-fg',
-                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
+                isExpanded ? (
+                  cn(
+                    "h-9 gap-2 px-2 w-full rounded-lg hover:bg-elev-2/80",
+                    "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]"
+                  )
+                ) : (
+                  cn(
+                    "h-10 w-10 rounded-2xl justify-center border border-transparent",
+                    "hover:border-white/10 hover:bg-white/5 active:scale-95"
+                  )
+                )
               )}
               title={!isExpanded ? 'Accounting' : undefined}
             >
@@ -351,11 +413,20 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               href="/portfolio/import"
               onClick={isMobile ? onClose : undefined}
               className={cn(
-                "group rounded-lg flex items-center transition-all duration-200",
-                "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
+                "group flex items-center transition-all duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
                 pathname === '/portfolio/import' ? 'text-accent' : 'text-muted hover:text-fg',
-                isExpanded ? "h-9 gap-2 px-2 w-full" : "h-9 w-9 justify-center"
+                isExpanded ? (
+                  cn(
+                    "h-9 gap-2 px-2 w-full rounded-lg hover:bg-elev-2/80",
+                    "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]"
+                  )
+                ) : (
+                  cn(
+                    "h-10 w-10 rounded-2xl justify-center border border-transparent",
+                    "hover:border-white/10 hover:bg-white/5 active:scale-95"
+                  )
+                )
               )}
               title={!isExpanded ? 'Import' : undefined}
             >
@@ -501,8 +572,8 @@ export function Sidebar() {
       data-pinned={pinned || undefined}
       className={cn(
         'fixed left-0 top-0 h-dvh z-40 max-md:hidden',
-        'border-r-2 transition-[width,background,box-shadow,border] duration-120 ease-terminal',
-        isExpanded ? 'w-[320px]' : 'w-16'
+        'border-r-2 transition-[width,background,box-shadow,border,border-radius] duration-120 ease-terminal',
+        isExpanded ? 'w-[320px] rounded-none' : 'w-20 rounded-tr-3xl rounded-br-3xl'
       )}
       style={{
         background: isExpanded
@@ -546,7 +617,7 @@ function NavItem({ item, pathname, isExpanded, index = 0, onClick }: NavItemProp
   const staggerDelay = isExpanded ? index * 20 : 0
 
   return (
-    <li>
+    <li className={cn(!isExpanded && "w-full")}>
       <Link
         href={item.href}
         onClick={onClick}
@@ -554,37 +625,48 @@ function NavItem({ item, pathname, isExpanded, index = 0, onClick }: NavItemProp
         title={!isExpanded ? item.label : undefined}
         onMouseEnter={(e) => {
           setIsHovered(true)
-          if (!isActive) {
+          if (!isActive && isExpanded) {
             e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 255, 148, 0.1) 0%, rgba(0, 255, 148, 0.05) 100%)'
             e.currentTarget.style.boxShadow = '0 0 12px rgba(0, 255, 148, 0.2)'
           }
         }}
         onMouseLeave={(e) => {
           setIsHovered(false)
-          if (!isActive) {
+          if (!isActive && isExpanded) {
             e.currentTarget.style.background = 'transparent'
             e.currentTarget.style.boxShadow = 'none'
           }
         }}
         className={cn(
-          'group relative h-11 px-3 rounded-xl',
-          'flex items-center gap-3',
-          'whitespace-nowrap overflow-hidden',
-          'transition-all duration-200',
+          'group relative flex items-center transition-all duration-200',
           'focus-visible:outline-none focus-visible:ring-2',
-          isActive ? 'font-semibold border' : ''
+          isExpanded ? (
+            cn(
+              'h-11 px-3 rounded-xl gap-3 whitespace-nowrap overflow-hidden',
+              isActive && 'font-semibold border'
+            )
+          ) : (
+            cn(
+              'h-10 w-10 rounded-2xl justify-center border border-transparent',
+              isActive
+                ? 'bg-accent/25 border-accent'
+                : 'hover:border-white/10 hover:bg-white/5'
+            )
+          )
         )}
-        style={isActive ? {
+        style={isActive && isExpanded ? {
           background: 'linear-gradient(135deg, #00FF94 0%, #00E085 100%)',
           borderColor: '#00FF94',
           color: '#0E1A15',
           boxShadow: '0 0 20px rgba(0, 255, 148, 0.5), 0 0 40px rgba(0, 255, 148, 0.2)'
+        } : isActive && !isExpanded ? {
+          // Solid pill for collapsed active state
         } : {
           color: '#E8F6EE',
         }}
       >
-        {/* Active indicator bar with hover animation */}
-        {(isActive || isHovered) && (
+        {/* Active indicator bar - only show in expanded mode */}
+        {isExpanded && (isActive || isHovered) && (
           <span
             className={cn(
               "absolute left-0 top-1.5 w-[3px] bg-accent rounded-r transition-all duration-200 ease-out",
@@ -602,50 +684,52 @@ function NavItem({ item, pathname, isExpanded, index = 0, onClick }: NavItemProp
         {/* Icon */}
         <Icon
           className={cn(
-            'h-5 w-5 flex-shrink-0 transition-all duration-200',
-            isActive ? 'text-accent' : 'text-muted group-hover:text-accent'
+            'flex-shrink-0 transition-all duration-200',
+            isExpanded ? 'h-5 w-5' : 'h-5 w-5',
+            isExpanded && isActive ? 'text-[#0E1A15]' :
+            !isExpanded && isActive ? 'text-accent-foreground' :
+            'text-muted group-hover:text-accent'
           )}
           strokeWidth={isActive ? 2 : 1.75}
         />
 
-        {/* Label - opacity transition with translateX */}
-        <span
-          className={cn(
-            "flex-1 min-w-0 text-sm truncate transition-all duration-120",
-            isActive ? "font-semibold" : "font-medium",
-            isExpanded
-              ? "opacity-100 translate-x-0"
-              : "opacity-0 translate-x-1 pointer-events-none"
-          )}
-          style={{
-            transitionDelay: isExpanded ? `${staggerDelay}ms` : '0ms',
-            textShadow: isActive ? '0 0 12px rgba(var(--archvd-accent-rgb), 0.3)' : undefined,
-          }}
-          title={item.label}
-        >
-          {item.label}
-        </span>
+        {/* Label - only show when expanded */}
+        {isExpanded && (
+          <>
+            <span
+              className={cn(
+                "flex-1 min-w-0 text-sm truncate transition-all duration-120",
+                isActive ? "font-semibold" : "font-medium",
+                "opacity-100 translate-x-0"
+              )}
+              style={{
+                transitionDelay: `${staggerDelay}ms`,
+                textShadow: isActive ? '0 0 12px rgba(var(--archvd-accent-rgb), 0.3)' : undefined,
+              }}
+              title={item.label}
+            >
+              {item.label}
+            </span>
 
-        {/* Badge - hidden when collapsed, enhanced styling */}
-        {item.badge && (
-          <span
-            className={cn(
-              "flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider",
-              "transition-all duration-120 border",
-              isExpanded
-                ? "opacity-100 translate-x-0"
-                : "opacity-0 translate-x-1 pointer-events-none",
-              // Badge color variants
-              item.badge === 'BETA' && "bg-blue-500/10 text-blue-400 border-blue-500/30",
-              item.badge === 'ALPHA' && "bg-purple-500/10 text-purple-400 border-purple-500/30",
-              item.badge === 'NEW' && "bg-green-500/10 text-green-400 border-green-500/30"
+            {/* Badge - only show when expanded */}
+            {item.badge && (
+              <span
+                className={cn(
+                  "flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider",
+                  "transition-all duration-120 border opacity-100 translate-x-0",
+                  // Badge color variants
+                  item.badge === 'BETA' && "bg-blue-500/10 text-blue-400 border-blue-500/30",
+                  item.badge === 'ALPHA' && "bg-purple-500/10 text-purple-400 border-purple-500/30",
+                  item.badge === 'NEW' && "bg-green-500/10 text-green-400 border-green-500/30"
+                )}
+                style={{
+                  transitionDelay: `${staggerDelay + 40}ms`,
+                }}
+              >
+                {item.badge}
+              </span>
             )}
-            style={{
-              transitionDelay: isExpanded ? `${staggerDelay + 40}ms` : '0ms',
-            }}
-          >
-            {item.badge}
-          </span>
+          </>
         )}
       </Link>
     </li>
