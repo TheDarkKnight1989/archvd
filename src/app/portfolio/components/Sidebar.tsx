@@ -137,11 +137,11 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
             </span>
           </div>
 
-          {/* Command Search Trigger */}
+          {/* Command Search Trigger - Hidden on desktop (top bar has search), shown on mobile */}
           <button
             onClick={() => setCommandSearchOpen(true)}
             className={cn(
-              "relative transition-boutique w-full",
+              "relative transition-boutique w-full md:hidden",
               isExpanded ? "flex" : "hidden",
               "h-8 pl-7 pr-2 rounded-lg border",
               "text-sm focus:outline-none focus:ring-2",

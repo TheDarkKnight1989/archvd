@@ -26,7 +26,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
           {/* App Top Bar - visible on all pages */}
           <AppTopBar onMenuClick={() => setDrawerOpen(true)} />
 
-          <div className="pt-6 pb-20 sm:pb-0">
+          <div className="pt-4 pb-20 sm:pb-0">
             {children}
           </div>
         </main>

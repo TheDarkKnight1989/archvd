@@ -260,8 +260,8 @@ export default function DashboardPage() {
       </header>
 
       {/* Content */}
-      <section className="px-4 sm:px-8 py-4 sm:py-6 md:py-8">
-        <div className="mx-auto max-w-[1440px] space-y-4 sm:space-y-6 md:space-y-8">
+      <section className="px-4 sm:px-8 py-4 sm:py-6">
+        <div className="mx-auto max-w-[1440px] space-y-4 sm:space-y-5">
           {/* Tab Navigation */}
           <TabBar activeView={activeView} onViewChange={handleViewChange} />
 

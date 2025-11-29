@@ -3,15 +3,12 @@
 import { Calculator, Camera, Search } from 'lucide-react'
 import { AppLogoButton } from './AppLogoButton'
 import { cn } from '@/lib/utils/cn'
-import { useState } from 'react'
 
 interface AppTopBarProps {
   onMenuClick?: () => void
 }
 
 export function AppTopBar({ onMenuClick }: AppTopBarProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-
   const handleSearchClick = () => {
     // TODO: Wire up to existing command palette / product search
     console.log('TODO: open product search')
@@ -28,82 +25,86 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
   }
 
   return (
-    <div
-      className="sticky top-0 z-30 border-b border-border/50"
-      style={{
-        background: 'linear-gradient(135deg, #0E1A15 0%, #0B1510 50%, rgba(0, 255, 148, 0.03) 100%)',
-        backdropFilter: 'blur(8px)'
-      }}
-    >
-      <div className="px-4 sm:px-8 py-3">
-        {/* Mobile: Two-row layout */}
-        <div className="flex flex-col gap-2 sm:hidden">
-          {/* Row 1: Logo + Icons */}
-          <div className="flex items-center justify-between">
-            <AppLogoButton onClick={onMenuClick} />
+    <>
+      {/* Mobile: Two-row layout with gradient background */}
+      <div
+        className="sticky top-0 z-30 border-b border-border/50 sm:hidden"
+        style={{
+          background: 'linear-gradient(135deg, #0E1A15 0%, #0B1510 50%, rgba(0, 255, 148, 0.03) 100%)',
+          backdropFilter: 'blur(8px)'
+        }}
+      >
+        <div className="px-4 py-3">
+          <div className="flex flex-col gap-2">
+            {/* Row 1: Logo + Icons */}
+            <div className="flex items-center justify-between">
+              <AppLogoButton onClick={onMenuClick} />
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleCalculatorClick}
-                aria-label="Open profit calculator"
-                className={cn(
-                  "h-9 w-9 rounded-lg flex items-center justify-center",
-                  "bg-elev-1/50 border border-border/30",
-                  "text-muted hover:text-fg hover:bg-elev-2/80",
-                  "transition-all duration-200",
-                  "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
-                  "active:scale-95"
-                )}
-              >
-                <Calculator className="h-5 w-5" strokeWidth={1.75} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCalculatorClick}
+                  aria-label="Open profit calculator"
+                  className={cn(
+                    "h-9 w-9 rounded-lg flex items-center justify-center",
+                    "bg-elev-1/50 border border-border/30",
+                    "text-muted hover:text-fg hover:bg-elev-2/80",
+                    "transition-all duration-200",
+                    "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
+                    "active:scale-95"
+                  )}
+                >
+                  <Calculator className="h-5 w-5" strokeWidth={1.75} />
+                </button>
 
-              <button
-                onClick={handleCameraClick}
-                aria-label="Open barcode scanner"
-                className={cn(
-                  "h-9 w-9 rounded-lg flex items-center justify-center",
-                  "bg-elev-1/50 border border-border/30",
-                  "text-muted hover:text-fg hover:bg-elev-2/80",
-                  "transition-all duration-200",
-                  "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
-                  "active:scale-95"
-                )}
-              >
-                <Camera className="h-5 w-5" strokeWidth={1.75} />
-              </button>
+                <button
+                  onClick={handleCameraClick}
+                  aria-label="Open barcode scanner"
+                  className={cn(
+                    "h-9 w-9 rounded-lg flex items-center justify-center",
+                    "bg-elev-1/50 border border-border/30",
+                    "text-muted hover:text-fg hover:bg-elev-2/80",
+                    "transition-all duration-200",
+                    "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
+                    "active:scale-95"
+                  )}
+                >
+                  <Camera className="h-5 w-5" strokeWidth={1.75} />
+                </button>
+              </div>
             </div>
+
+            {/* Row 2: Search Bar */}
+            <button
+              onClick={handleSearchClick}
+              className={cn(
+                "w-full h-10 rounded-lg px-3",
+                "bg-elev-1/50 border border-border/30",
+                "flex items-center gap-2",
+                "text-muted hover:text-fg hover:bg-elev-2/80",
+                "transition-all duration-200",
+                "hover:border-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              )}
+            >
+              <Search className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
+              <span className="text-sm">Search products...</span>
+            </button>
           </div>
-
-          {/* Row 2: Search Bar */}
-          <button
-            onClick={handleSearchClick}
-            className={cn(
-              "w-full h-10 rounded-lg px-3",
-              "bg-elev-1/50 border border-border/30",
-              "flex items-center gap-2",
-              "text-muted hover:text-fg hover:bg-elev-2/80",
-              "transition-all duration-200",
-              "hover:border-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            )}
-          >
-            <Search className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
-            <span className="text-sm">Search products...</span>
-          </button>
         </div>
+      </div>
 
-        {/* Desktop: Single-row layout - no logo (sidebar has it) */}
-        <div className="hidden sm:flex items-center gap-4">
-          {/* Search Bar (flex-grow) */}
+      {/* Desktop: Slim utility strip */}
+      <div className="hidden sm:block sticky top-0 z-30 bg-elev-1/95 border-b border-white/5">
+        <div className="mx-auto max-w-6xl px-4 lg:px-8 h-12 flex items-center gap-3">
+          {/* Search Bar */}
           <button
             onClick={handleSearchClick}
             className={cn(
-              "flex-1 max-w-2xl h-10 rounded-lg px-3",
-              "bg-elev-1/50 border border-border/30",
+              "flex-1 max-w-2xl h-9 rounded-lg px-3",
+              "bg-elev-1/50 border border-white/10",
               "flex items-center gap-2",
-              "text-muted hover:text-fg hover:bg-elev-2/80",
+              "text-muted hover:text-fg hover:bg-white/5 hover:border-white/20",
               "transition-all duration-200",
-              "hover:border-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             )}
           >
             <Search className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
@@ -119,34 +120,32 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
               onClick={handleCalculatorClick}
               aria-label="Open profit calculator"
               className={cn(
-                "h-9 w-9 rounded-lg flex items-center justify-center",
-                "bg-elev-1/50 border border-border/30",
-                "text-muted hover:text-fg hover:bg-elev-2/80",
+                "flex h-9 w-9 items-center justify-center rounded-full",
+                "border border-white/10 text-muted",
+                "hover:border-white/20 hover:bg-white/5 hover:text-fg",
                 "transition-all duration-200",
-                "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
                 "active:scale-95"
               )}
             >
-              <Calculator className="h-5 w-5" strokeWidth={1.75} />
+              <Calculator className="h-4 w-4" strokeWidth={1.75} />
             </button>
 
             <button
               onClick={handleCameraClick}
               aria-label="Open barcode scanner"
               className={cn(
-                "h-9 w-9 rounded-lg flex items-center justify-center",
-                "bg-elev-1/50 border border-border/30",
-                "text-muted hover:text-fg hover:bg-elev-2/80",
+                "flex h-9 w-9 items-center justify-center rounded-full",
+                "border border-white/10 text-muted",
+                "hover:border-white/20 hover:bg-white/5 hover:text-fg",
                 "transition-all duration-200",
-                "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
                 "active:scale-95"
               )}
             >
-              <Camera className="h-5 w-5" strokeWidth={1.75} />
+              <Camera className="h-4 w-4" strokeWidth={1.75} />
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
