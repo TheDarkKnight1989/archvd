@@ -418,7 +418,7 @@ export default function IntegrationsPage() {
               )}
 
               {aliasEnabled && !aliasStatus?.connected && !loading && (
-                <Button onClick={handleConnect} variant="default" size="sm">
+                <Button onClick={handleConnect} variant="default" size="sm" className="bg-[#00FF94] text-black hover:bg-[#00E085] font-semibold">
                   Connect Account
                 </Button>
               )}
@@ -660,7 +660,7 @@ export default function IntegrationsPage() {
               {/* Connection Actions */}
               <div className="flex items-center gap-2 flex-wrap mb-6">
                 {!stockxStatus?.connected && !stockxLoading && (
-                  <Button onClick={handleStockxConnect} variant="default" size="sm" className="bg-accent text-black hover:bg-[#00E085]">
+                  <Button onClick={handleStockxConnect} variant="default" size="sm" className="bg-[#00FF94] text-black hover:bg-[#00E085] font-semibold">
                     Connect Account
                   </Button>
                 )}

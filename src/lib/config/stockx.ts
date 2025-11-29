@@ -16,6 +16,7 @@ const stockxConfigSchema = z.object({
   clientId: z.string().optional(),
   clientSecret: z.string().optional(),
   accessToken: z.string().optional(),
+  refreshToken: z.string().optional(), // App-level refresh token for all users
   apiKey: z.string().optional(),
 })
 
@@ -38,6 +39,7 @@ function loadConfig(): StockxConfig {
       clientId: process.env.STOCKX_CLIENT_ID,
       clientSecret: process.env.STOCKX_CLIENT_SECRET,
       accessToken: process.env.STOCKX_ACCESS_TOKEN,
+      refreshToken: process.env.STOCKX_REFRESH_TOKEN, // App-level refresh token
       apiKey: process.env.STOCKX_API_KEY,
     })
 
@@ -50,6 +52,7 @@ function loadConfig(): StockxConfig {
         hasClientId: !!config.clientId,
         hasClientSecret: !!config.clientSecret,
         hasAccessToken: !!config.accessToken,
+        hasRefreshToken: !!config.refreshToken,
         hasApiKey: !!config.apiKey,
       })
 
@@ -136,6 +139,14 @@ export function getStockxClientSecret(): string {
 export function getStockxAccessToken(): string | undefined {
   const cfg = loadConfig()
   return cfg.accessToken
+}
+
+/**
+ * Get StockX refresh token (app-level token for all users)
+ */
+export function getStockxRefreshToken(): string | undefined {
+  const cfg = loadConfig()
+  return cfg.refreshToken
 }
 
 /**

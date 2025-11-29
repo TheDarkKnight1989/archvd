@@ -9,12 +9,20 @@ import {
   getStockxClientId,
   getStockxClientSecret,
   getStockxAccessToken,
+  getStockxRefreshToken,
   getStockxApiKey,
   maskStockxToken,
   isStockxMockMode,
 } from '@/lib/config/stockx'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@/lib/supabase/service'
+
+// ============================================================================
+// App-Level Token Cache (shared across all instances)
+// ============================================================================
+
+let appLevelAccessToken: string | null = null
+let appLevelTokenExpiresAt: number = 0
 
 // ============================================================================
 // Types
@@ -168,6 +176,65 @@ export class StockxClient {
   }
 
   /**
+   * Refresh app-level access token using refresh token from env
+   * This provides StockX access for ALL users without requiring individual connections
+   */
+  private async refreshAppLevelToken(): Promise<string | null> {
+    const appRefreshToken = getStockxRefreshToken()
+
+    if (!appRefreshToken) {
+      return null
+    }
+
+    console.log('[StockX App-Level] Refreshing access token using refresh_token grant')
+
+    try {
+      const tokenUrl = process.env.STOCKX_OAUTH_TOKEN_URL || 'https://accounts.stockx.com/oauth/token'
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: appRefreshToken,
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          audience: 'gateway.stockx.com',
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        console.error('[StockX App-Level] Token refresh failed', {
+          status: response.status,
+          error,
+        })
+        return null
+      }
+
+      const data = await response.json()
+      const newAccessToken = data.access_token
+      const expiresIn = data.expires_in || 3600
+
+      // Cache the token module-wide (shared across all client instances)
+      appLevelAccessToken = newAccessToken
+      appLevelTokenExpiresAt = Date.now() + (expiresIn * 1000)
+
+      console.log('[StockX App-Level] Access token refreshed successfully', {
+        token: maskStockxToken(newAccessToken),
+        expiresIn: `${expiresIn}s (${Math.floor(expiresIn / 3600)}h)`,
+        expiresAt: new Date(appLevelTokenExpiresAt).toISOString(),
+      })
+
+      return newAccessToken
+    } catch (error) {
+      console.error('[StockX App-Level] Token refresh error', error)
+      return null
+    }
+  }
+
+  /**
    * Get valid access token (refresh if needed)
    * Supports both user OAuth tokens and client credentials
    */
@@ -241,10 +308,36 @@ export class StockxClient {
       return this.accessToken!
     }
 
-    // Client credentials flow (app-level)
+    // App-level refresh token flow (uses env STOCKX_REFRESH_TOKEN)
+    // This provides StockX access for ALL users without requiring individual connections
+    const appRefreshToken = getStockxRefreshToken()
+    if (appRefreshToken) {
+      console.log('[StockX Auth] App-level refresh token flow')
+
+      // Check if cached app-level token is still valid
+      const now = Date.now()
+      if (appLevelAccessToken && appLevelTokenExpiresAt > now + 60000) {
+        console.log('[StockX Auth] Using cached app-level token', {
+          token: maskStockxToken(appLevelAccessToken),
+          expiresAt: new Date(appLevelTokenExpiresAt).toISOString(),
+        })
+        return appLevelAccessToken
+      }
+
+      // Refresh app-level token
+      console.log('[StockX Auth] App-level token expired or missing, refreshing...')
+      const refreshedToken = await this.refreshAppLevelToken()
+      if (refreshedToken) {
+        return refreshedToken
+      } else {
+        console.error('[StockX Auth] App-level token refresh failed, falling back to client credentials')
+      }
+    }
+
+    // Client credentials flow (app-level fallback)
     // Check if current token is still valid
-    const now = Date.now()
-    if (this.tokenExpiresAt > now + 60000) {
+    const now2 = Date.now()
+    if (this.tokenExpiresAt > now2 + 60000) {
       // Token valid for at least 1 more minute
       return this.accessToken!
     }
