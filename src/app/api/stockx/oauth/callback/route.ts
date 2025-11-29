@@ -50,14 +50,34 @@ export async function GET(request: NextRequest) {
     const userId = request.cookies.get('stockx_oauth_user_id')?.value;
     const isInternalCapture = request.cookies.get('stockx_internal_capture')?.value === 'true';
 
+    // Debug logging for cookies
+    console.log('[StockX OAuth Callback] Cookie debug', {
+      hasStoredState: !!storedState,
+      hasCodeVerifier: !!codeVerifier,
+      hasUserId: !!userId,
+      isInternalCapture,
+      receivedState: state,
+      storedState: storedState?.substring(0, 8) + '...',
+      allCookies: request.cookies.getAll().map(c => c.name),
+    });
+
     if (!storedState || storedState !== state) {
       logger.error('[StockX OAuth Callback] State mismatch', {
-        storedState,
-        receivedState: state,
+        storedState: storedState?.substring(0, 8) + '...',
+        receivedState: state?.substring(0, 8) + '...',
+        statesMatch: storedState === state,
+        allCookies: request.cookies.getAll().map(c => ({ name: c.name, hasValue: !!c.value })),
       });
 
       return NextResponse.json(
-        { error: 'Invalid state parameter' },
+        {
+          error: 'Invalid state parameter',
+          debug: {
+            hasStoredState: !!storedState,
+            receivedState: !!state,
+            hint: 'Cookies may not be persisting across OAuth redirect. Try using desktop browser instead of PWA.',
+          }
+        },
         { status: 400 }
       );
     }
