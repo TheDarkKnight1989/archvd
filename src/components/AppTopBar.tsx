@@ -92,11 +92,8 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
           </button>
         </div>
 
-        {/* Desktop: Single-row layout */}
+        {/* Desktop: Single-row layout - no logo (sidebar has it) */}
         <div className="hidden sm:flex items-center gap-4">
-          {/* Logo */}
-          <AppLogoButton onClick={onMenuClick} />
-
           {/* Search Bar (flex-grow) */}
           <button
             onClick={handleSearchClick}
