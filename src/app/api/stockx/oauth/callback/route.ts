@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     const storedState = request.cookies.get('stockx_oauth_state')?.value;
     const codeVerifier = request.cookies.get('stockx_oauth_verifier')?.value;
     const userId = request.cookies.get('stockx_oauth_user_id')?.value;
+    const isInternalCapture = request.cookies.get('stockx_internal_capture')?.value === 'true';
 
     if (!storedState || storedState !== state) {
       logger.error('[StockX OAuth Callback] State mismatch', {
@@ -61,9 +62,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!codeVerifier || !userId) {
+    if (!codeVerifier) {
       return NextResponse.json(
-        { error: 'Missing PKCE verifier or user ID' },
+        { error: 'Missing PKCE verifier' },
+        { status: 400 }
+      );
+    }
+
+    // For regular OAuth flow, userId is required
+    // For internal capture, userId is NOT needed
+    if (!isInternalCapture && !userId) {
+      return NextResponse.json(
+        { error: 'Missing user ID' },
         { status: 400 }
       );
     }
@@ -161,6 +171,62 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       logger.warn('[StockX OAuth Callback] Failed to fetch userinfo', { error });
     }
+
+    // ========================================================================
+    // INTERNAL CAPTURE MODE: Display tokens instead of storing
+    // ========================================================================
+    if (isInternalCapture) {
+      console.log('');
+      console.log('='.repeat(80));
+      console.log('🎉 StockX App-Level Refresh Token Obtained!');
+      console.log('='.repeat(80));
+      console.log('');
+      console.log('IMPORTANT: Copy this refresh token and add it to your Vercel environment variables:');
+      console.log('');
+      console.log(`STOCKX_REFRESH_TOKEN=${refresh_token || '(MISSING - Check scope!)'}`);
+      console.log('');
+      console.log('Token Details:');
+      console.log(`  - Type: ${token_type}`);
+      console.log(`  - Expires In: ${expires_in} seconds (${Math.floor(expires_in / 3600)} hours)`);
+      console.log(`  - Scope: ${scope || 'default'}`);
+      console.log(`  - Access Token: ${access_token.substring(0, 20)}...`);
+      console.log('');
+      console.log('='.repeat(80));
+      console.log('');
+
+      // Return JSON response with token (not a redirect)
+      const response = NextResponse.json(
+        {
+          success: true,
+          message: '🎉 StockX app-level refresh token obtained!',
+          instructions: [
+            'Copy the refresh_token value below',
+            'Add it to Vercel environment variables as: STOCKX_REFRESH_TOKEN=...',
+            'Redeploy your application',
+            'Delete the /api/stockx/internal/start route for security',
+            'Test StockX search with a user who has no StockX connection',
+          ],
+          refresh_token: refresh_token || null,
+          access_token_preview: access_token ? `${access_token.substring(0, 20)}...` : null,
+          token_type,
+          expires_in,
+          scope: scope || null,
+          warning: !refresh_token ? 'No refresh token received - check if offline_access scope was granted' : null,
+        },
+        { status: 200 }
+      );
+
+      // Clear OAuth cookies
+      response.cookies.delete('stockx_oauth_state');
+      response.cookies.delete('stockx_oauth_verifier');
+      response.cookies.delete('stockx_internal_capture');
+
+      return response;
+    }
+
+    // ========================================================================
+    // REGULAR FLOW: Store tokens in database for user
+    // ========================================================================
 
     // Store tokens in database
     const supabase = await createClient();

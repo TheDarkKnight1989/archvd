@@ -18,8 +18,8 @@ import crypto from 'crypto';
 const STOCKX_OAUTH_AUTHORIZE_URL = process.env.STOCKX_OAUTH_AUTHORIZE_URL || 'https://accounts.stockx.com/oauth/authorize';
 const STOCKX_CLIENT_ID = process.env.STOCKX_CLIENT_ID;
 
-// Use special redirect URI for internal flow
-const INTERNAL_REDIRECT_URI = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/stockx/internal/callback`;
+// Use the SAME redirect URI as regular OAuth flow
+const INTERNAL_REDIRECT_URI = process.env.STOCKX_REDIRECT_URI || `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/stockx/oauth/callback`;
 
 // Generate PKCE code verifier and challenge
 function generatePKCE() {
@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
       `&code_challenge_method=S256`
     );
 
-    // Set secure cookies for PKCE (internal flow)
-    response.cookies.set('stockx_internal_oauth_state', state, {
+    // Set secure cookies for PKCE - using SAME cookie names as regular flow
+    response.cookies.set('stockx_oauth_state', state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -78,7 +78,16 @@ export async function GET(request: NextRequest) {
       path: '/',
     });
 
-    response.cookies.set('stockx_internal_oauth_verifier', codeVerifier, {
+    response.cookies.set('stockx_oauth_verifier', codeVerifier, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+      path: '/',
+    });
+
+    // Special flag to indicate this is for internal token capture (not storage)
+    response.cookies.set('stockx_internal_capture', 'true', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
