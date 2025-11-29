@@ -130,8 +130,8 @@ export async function searchProducts(
   const client = getStockxClient(userId)
 
   try {
-    // Build URL with optional currencyCode parameter
-    let url = `/v2/catalog/search?query=${encodeURIComponent(query)}&pageNumber=${page}&pageSize=${limit}`
+    // Build URL with optional currencyCode parameter and includes for media/images
+    let url = `/v2/catalog/search?query=${encodeURIComponent(query)}&pageNumber=${page}&pageSize=${limit}&includes=media,attributes`
     if (currencyCode) {
       url += `&currencyCode=${currencyCode}`
     }
@@ -208,8 +208,8 @@ export async function getProductBySku(
   const client = getStockxClient(userId)
 
   try {
-    // Search by SKU (v2 search supports styleId)
-    let url = `/v2/catalog/search?query=${encodeURIComponent(sku)}&pageSize=1`
+    // Search by SKU (v2 search supports styleId) with media includes
+    let url = `/v2/catalog/search?query=${encodeURIComponent(sku)}&pageSize=1&includes=media,attributes`
     if (currencyCode) {
       url += `&currencyCode=${currencyCode}`
     }
@@ -325,9 +325,9 @@ export async function getProductBySlug(
   const client = getStockxClient(userId)
 
   try {
-    // Search by slug (convert slug to search query)
+    // Search by slug (convert slug to search query) with media includes
     const searchQuery = slug.replace(/-/g, ' ')
-    let url = `/v2/catalog/search?query=${encodeURIComponent(searchQuery)}&pageSize=5`
+    let url = `/v2/catalog/search?query=${encodeURIComponent(searchQuery)}&pageSize=5&includes=media,attributes`
     if (currencyCode) {
       url += `&currencyCode=${currencyCode}`
     }
