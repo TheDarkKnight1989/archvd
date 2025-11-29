@@ -23,6 +23,7 @@ export default withPWA({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
   register: true,
+  // @ts-expect-error - skipWaiting is valid but not in types
   skipWaiting: true,
   runtimeCaching: [
     {
@@ -125,7 +126,7 @@ export default withPWA({
       },
     },
     {
-      urlPattern: ({ url }) => {
+      urlPattern: ({ url }: { url: URL }) => {
         const isSameOrigin = self.origin === url.origin;
         if (!isSameOrigin) return false;
         const pathname = url.pathname;

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -9,7 +9,6 @@ import {
   BarChart3,
   User,
   Plus,
-  Menu,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
@@ -24,16 +23,17 @@ const dockItems = [
 
 interface MobileDockProps {
   onQuickAdd?: () => void
+  drawerOpen: boolean
+  setDrawerOpen: (open: boolean) => void
 }
 
-export function MobileDock({ onQuickAdd }: MobileDockProps) {
+export function MobileDock({ onQuickAdd, drawerOpen, setDrawerOpen }: MobileDockProps) {
   const pathname = usePathname()
-  const [drawerOpen, setDrawerOpen] = useState(false)
 
   // Close drawer on route change
   useEffect(() => {
     setDrawerOpen(false)
-  }, [pathname])
+  }, [pathname, setDrawerOpen])
 
   // Prevent body scroll when drawer is open
   useEffect(() => {
@@ -57,18 +57,10 @@ export function MobileDock({ onQuickAdd }: MobileDockProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [drawerOpen])
+  }, [drawerOpen, setDrawerOpen])
 
   return (
     <>
-      {/* Burger Menu Button */}
-      <button
-        onClick={() => setDrawerOpen(true)}
-        className="fixed top-4 left-4 z-50 h-10 w-10 rounded-lg bg-elev-1 border border-border flex items-center justify-center text-fg hover:bg-elev-2 transition-colors duration-120 md:hidden"
-        aria-label="Open menu"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
 
       {/* Bottom Navigation */}
       <nav

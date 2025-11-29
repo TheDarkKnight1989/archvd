@@ -1,15 +1,18 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { MobileDock } from './components/MobileDock'
 import { SidebarStateProvider } from '@/contexts/SidebarContext'
+import { AppTopBar } from '@/components/AppTopBar'
 
 interface PortfolioLayoutProps {
   children: ReactNode
 }
 
 export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
   return (
     <SidebarStateProvider>
       <div className="min-h-screen bg-bg" data-theme="matrix">
@@ -20,13 +23,16 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
           className="pl-16 md:pl-16 transition-[padding-left] duration-120 ease-terminal"
           id="main"
         >
+          {/* App Top Bar - visible on all pages */}
+          <AppTopBar onMenuClick={() => setDrawerOpen(true)} />
+
           <div className="pb-20 sm:pb-0">
             {children}
           </div>
         </main>
 
         {/* Mobile Navigation */}
-        <MobileDock />
+        <MobileDock drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} />
 
         {/* CSS for pinned state - shifts content when sidebar is pinned */}
         <style jsx global>{`
