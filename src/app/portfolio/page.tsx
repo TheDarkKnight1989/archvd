@@ -240,21 +240,18 @@ export default function DashboardPage() {
         <div className="absolute inset-0 bg-bg/80 backdrop-blur-md -z-10" />
 
         <div className="relative mx-auto max-w-[1440px]">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
-            <div>
-              <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-fg tracking-tight">
-                  Dashboard
-                </h1>
-                <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-accent/10 border border-accent/20 rounded-full text-[10px] sm:text-xs font-semibold text-accent">
-                  Live Data
-                </div>
+          <div>
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
+              <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-fg tracking-tight">
+                Dashboard
+              </h1>
+              <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-accent/10 border border-accent/20 rounded-full text-[10px] sm:text-xs font-semibold text-accent">
+                Live Data
               </div>
-              <p className="text-muted text-xs sm:text-sm md:text-base">
-                Your Inventory & Profit Command Centre
-              </p>
             </div>
-            <CurrencySwitcher />
+            <p className="text-muted text-xs sm:text-sm md:text-base">
+              Your Inventory & Profit Command Centre
+            </p>
           </div>
         </div>
       </header>
@@ -262,8 +259,16 @@ export default function DashboardPage() {
       {/* Content */}
       <section className="px-4 sm:px-8 py-4 sm:py-6">
         <div className="mx-auto max-w-[1440px] space-y-4 sm:space-y-5">
-          {/* Tab Navigation */}
-          <TabBar activeView={activeView} onViewChange={handleViewChange} />
+          {/* Currency + Tab Navigation */}
+          <div className="space-y-3">
+            {/* Currency Selector - Own row on mobile, right-aligned on desktop */}
+            <div className="flex justify-start sm:justify-end">
+              <CurrencySwitcher />
+            </div>
+
+            {/* Tab Navigation */}
+            <TabBar activeView={activeView} onViewChange={handleViewChange} />
+          </div>
 
           {/* Portfolio View (Original Dashboard) */}
           {activeView === 'portfolio' && (

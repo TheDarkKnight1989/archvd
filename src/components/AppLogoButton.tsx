@@ -24,7 +24,7 @@ export function AppLogoButton({ onClick, className }: AppLogoButtonProps) {
         boxShadow: '0 0 20px rgba(0, 255, 148, 0.4), 0 0 40px rgba(0, 255, 148, 0.2)'
       }}
     >
-      <span className="font-display text-xl font-bold text-[#050608]">
+      <span className="font-cinzel text-xl font-bold text-[#050608]">
         A
       </span>
     </button>

@@ -32,58 +32,24 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
 
   return (
     <>
-      {/* Mobile: Two-row layout with gradient background */}
+      {/* Mobile: Single-row header with logo, search, and utility icons */}
       <div
-        className="sticky top-0 z-30 border-b border-border/50 sm:hidden"
+        className="block md:hidden sticky top-0 z-30 border-b border-border/50"
         style={{
           background: 'linear-gradient(135deg, #0E1A15 0%, #0B1510 50%, rgba(0, 255, 148, 0.03) 100%)',
           backdropFilter: 'blur(8px)'
         }}
       >
         <div className="px-4 py-3">
-          <div className="flex flex-col gap-2">
-            {/* Row 1: Logo + Icons */}
-            <div className="flex items-center justify-between">
-              <AppLogoButton onClick={onMenuClick} />
+          <div className="flex items-center gap-3">
+            {/* Logo Button */}
+            <AppLogoButton onClick={onMenuClick} />
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCalculatorClick}
-                  aria-label="Open profit calculator"
-                  className={cn(
-                    "h-9 w-9 rounded-lg flex items-center justify-center",
-                    "bg-elev-1/50 border border-border/30",
-                    "text-muted hover:text-fg hover:bg-elev-2/80",
-                    "transition-all duration-200",
-                    "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
-                    "active:scale-95"
-                  )}
-                >
-                  <Calculator className="h-5 w-5" strokeWidth={1.75} />
-                </button>
-
-                <button
-                  onClick={handleCameraClick}
-                  aria-label="Open barcode scanner"
-                  className={cn(
-                    "h-9 w-9 rounded-lg flex items-center justify-center",
-                    "bg-elev-1/50 border border-border/30",
-                    "text-muted hover:text-fg hover:bg-elev-2/80",
-                    "transition-all duration-200",
-                    "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
-                    "active:scale-95"
-                  )}
-                >
-                  <Camera className="h-5 w-5" strokeWidth={1.75} />
-                </button>
-              </div>
-            </div>
-
-            {/* Row 2: Search Bar */}
+            {/* Search Bar */}
             <button
               onClick={handleSearchClick}
               className={cn(
-                "w-full h-10 rounded-lg px-3",
+                "flex-1 h-10 rounded-lg px-3",
                 "bg-elev-1/50 border border-border/30",
                 "flex items-center gap-2",
                 "text-muted hover:text-fg hover:bg-elev-2/80",
@@ -94,15 +60,46 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
               <Search className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
               <span className="text-sm">Search products...</span>
             </button>
+
+            {/* Utility Icons */}
+            <button
+              onClick={handleCalculatorClick}
+              aria-label="Open profit calculator"
+              className={cn(
+                "h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                "bg-elev-1/50 border border-border/30",
+                "text-muted hover:text-fg hover:bg-elev-2/80",
+                "transition-all duration-200",
+                "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
+                "active:scale-95"
+              )}
+            >
+              <Calculator className="h-5 w-5" strokeWidth={1.75} />
+            </button>
+
+            <button
+              onClick={handleCameraClick}
+              aria-label="Open barcode scanner"
+              className={cn(
+                "h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                "bg-elev-1/50 border border-border/30",
+                "text-muted hover:text-fg hover:bg-elev-2/80",
+                "transition-all duration-200",
+                "hover:shadow-[0_0_12px_rgba(0,255,148,0.2)]",
+                "active:scale-95"
+              )}
+            >
+              <Camera className="h-5 w-5" strokeWidth={1.75} />
+            </button>
           </div>
         </div>
       </div>
 
       {/* Desktop: Slim utility strip */}
-      <div className="hidden sm:block sticky top-0 z-30 bg-elev-1/95 border-b border-white/5">
-        <div className="mx-auto max-w-6xl px-4 lg:px-8 h-12 flex items-center justify-between gap-4">
-          {/* Left Side: Search + Utility Icons */}
-          <div className="flex items-center gap-3">
+      <div className="hidden md:block sticky top-0 z-30 bg-elev-1/95 border-b border-white/5">
+        <div className="h-12 flex items-center justify-between gap-4">
+          {/* Left Side: Search + Utility Icons (constrained width) */}
+          <div className="flex items-center gap-3 px-4 lg:px-8">
             {/* Search Bar */}
             <button
               onClick={handleSearchClick}
@@ -152,8 +149,8 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
             </button>
           </div>
 
-          {/* Right Side: Notifications + Profile */}
-          <div className="flex items-center gap-2">
+          {/* Right Side: Notifications + Profile (at edge of screen) */}
+          <div className="flex items-center gap-2 pr-4 lg:pr-8">
             {/* Notifications */}
             <button
               onClick={handleNotificationsClick}

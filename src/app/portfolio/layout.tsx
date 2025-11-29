@@ -20,13 +20,13 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
 
         {/* Main content with dynamic padding based on sidebar pinned state */}
         <main
-          className="pl-16 md:pl-16 transition-[padding-left] duration-120 ease-terminal"
+          className="pl-0 md:pl-20 transition-[padding-left] duration-120 ease-terminal"
           id="main"
         >
           {/* App Top Bar - visible on all pages */}
           <AppTopBar onMenuClick={() => setDrawerOpen(true)} />
 
-          <div className="pt-4 pb-20 sm:pb-0">
+          <div className="pt-4 pb-4">
             {children}
           </div>
         </main>
@@ -34,15 +34,17 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
         {/* Mobile Navigation */}
         <MobileDock drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} />
 
-        {/* CSS for pinned state - shifts content when sidebar is pinned */}
+        {/* CSS for sidebar states - shifts content when sidebar is expanded or pinned */}
         <style jsx global>{`
-          /* When sidebar is pinned, shift content to make room */
+          /* When sidebar is expanded (hover) or pinned, shift content to make room */
+          body[data-sidebar='expanded'] main,
           body[data-sidebar='pinned'] main {
             padding-left: 336px; /* 320px sidebar + 16px gutter */
           }
 
           /* Mobile: no sidebar padding */
           @media (max-width: 768px) {
+            body[data-sidebar='expanded'] main,
             body[data-sidebar='pinned'] main {
               padding-left: 0;
             }

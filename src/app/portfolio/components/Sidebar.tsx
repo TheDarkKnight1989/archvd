@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutGrid,
   Boxes,
@@ -21,13 +21,15 @@ import {
   FileText,
   ArrowLeftRight,
   List,
+  MessageSquare,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { useSidebar } from '@/contexts/SidebarContext'
-import { CurrencySwitcher } from '@/components/CurrencySwitcher'
 import { MarketQuickAdd } from '@/components/MarketQuickAdd'
 import { AddFromSearchModal } from '@/components/modals/AddFromSearchModal'
 import { useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
 
 // Navigation structure - Reorganized into logical groups
 const manageNav = [
@@ -70,6 +72,7 @@ interface SidebarContentProps {
 
 export function SidebarContent({ isExpanded, onClose, isMobile = false }: SidebarContentProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { pinned, setPinned } = useSidebar()
   const [commandSearchOpen, setCommandSearchOpen] = useState(false)
@@ -82,6 +85,16 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
       setCommandSearchOpen(true)
     }
   }, [searchParams])
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      router.push('/auth/sign-in')
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+  }
 
   // Market Quick-Add handlers
   const handleSelectProduct = (product: any) => {
@@ -348,18 +361,18 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
           {/* Quick Actions - Vertical stack when expanded, centered icons when collapsed */}
           <div
             className={cn(
-              "pt-3",
+              "pt-3 pb-3",
               isExpanded ? "px-3 space-y-1" : "flex flex-col items-center justify-center gap-2 px-[15px]"
             )}
           >
-            {/* Settings */}
+            {/* Import */}
             <Link
-              href="/settings"
+              href="/portfolio/import"
               onClick={isMobile ? onClose : undefined}
               className={cn(
                 "group flex items-center transition-all duration-200",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
+                pathname === '/portfolio/import' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? (
                   cn(
                     "h-9 gap-2 px-2 w-full rounded-lg hover:bg-elev-2/80",
@@ -372,11 +385,11 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
                   )
                 )
               )}
-              title={!isExpanded ? 'Settings' : undefined}
+              title={!isExpanded ? 'Import' : undefined}
             >
-              <Settings className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              <UploadCloud className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
               {isExpanded && (
-                <span className="text-xs font-medium truncate">Settings</span>
+                <span className="text-xs font-medium truncate">Import</span>
               )}
             </Link>
 
@@ -408,14 +421,14 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               )}
             </Link>
 
-            {/* Import */}
+            {/* Settings */}
             <Link
-              href="/portfolio/import"
+              href="/settings"
               onClick={isMobile ? onClose : undefined}
               className={cn(
                 "group flex items-center transition-all duration-200",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                pathname === '/portfolio/import' ? 'text-accent' : 'text-muted hover:text-fg',
+                pathname === '/settings' ? 'text-accent' : 'text-muted hover:text-fg',
                 isExpanded ? (
                   cn(
                     "h-9 gap-2 px-2 w-full rounded-lg hover:bg-elev-2/80",
@@ -428,61 +441,99 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
                   )
                 )
               )}
-              title={!isExpanded ? 'Import' : undefined}
+              title={!isExpanded ? 'Settings' : undefined}
             >
-              <UploadCloud className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              <Settings className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
               {isExpanded && (
-                <span className="text-xs font-medium truncate">Import</span>
+                <span className="text-xs font-medium truncate">Settings</span>
               )}
             </Link>
 
+            {/* Discord */}
+            <a
+              href="https://discord.gg/YOUR_INVITE_CODE"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={isMobile ? onClose : undefined}
+              className={cn(
+                "group flex items-center transition-all duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                "text-muted hover:text-fg",
+                isExpanded ? (
+                  cn(
+                    "h-9 gap-2 px-2 w-full rounded-lg hover:bg-elev-2/80",
+                    "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]"
+                  )
+                ) : (
+                  cn(
+                    "h-10 w-10 rounded-2xl justify-center border border-transparent",
+                    "hover:border-white/10 hover:bg-white/5 active:scale-95"
+                  )
+                )
+              )}
+              title={!isExpanded ? 'Discord' : undefined}
+            >
+              <MessageSquare className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              {isExpanded && (
+                <span className="text-xs font-medium truncate">Discord</span>
+              )}
+            </a>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className={cn(
+                "group flex items-center transition-all duration-200",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                "text-muted hover:text-red-400",
+                isExpanded ? (
+                  cn(
+                    "h-9 gap-2 px-2 w-full rounded-lg hover:bg-red-500/10",
+                    "active:scale-[0.96]"
+                  )
+                ) : (
+                  cn(
+                    "h-10 w-10 rounded-2xl justify-center border border-transparent",
+                    "hover:border-red-400/20 hover:bg-red-500/10 active:scale-95"
+                  )
+                )
+              )}
+              title={!isExpanded ? 'Logout' : undefined}
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              {isExpanded && (
+                <span className="text-xs font-medium truncate">Logout</span>
+              )}
+            </button>
+
             {/* Pin Toggle - Only when expanded and not mobile */}
             {isExpanded && !isMobile && (
-              <button
-                onClick={() => setPinned(!pinned)}
-                className={cn(
-                  "h-9 w-full rounded-lg flex items-center gap-2 px-2 transition-all duration-200",
-                  "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
-                  "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
-                  pinned ? 'text-accent' : 'text-muted hover:text-fg'
-                )}
-                title={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-                aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
-              >
-                {pinned ? (
-                  <Pin className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-                ) : (
-                  <PinOff className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
-                )}
-                <span className="text-xs font-medium flex-1 text-left">
-                  {pinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
-                </span>
-              </button>
+              <>
+                {/* Separator */}
+                <div className="h-px bg-white/5 my-1" />
+                <button
+                  onClick={() => setPinned(!pinned)}
+                  className={cn(
+                    "h-9 w-full rounded-lg flex items-center gap-2 px-2 transition-all duration-200",
+                    "hover:bg-elev-2/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+                    "active:scale-[0.96] active:shadow-[0_0_15px_rgba(var(--archvd-accent-rgb),0.3),0_0_30px_rgba(var(--archvd-accent-rgb),0.15)]",
+                    pinned ? 'text-accent' : 'text-muted hover:text-fg'
+                  )}
+                  title={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                  aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                >
+                  {pinned ? (
+                    <Pin className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+                  ) : (
+                    <PinOff className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+                  )}
+                  <span className="text-xs font-medium flex-1 text-left">
+                    {pinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+                  </span>
+                </button>
+              </>
             )}
           </div>
-
-          {/* Bottom Section: Currency (only when expanded) */}
-          {isExpanded && (
-            <div className="px-3 pb-3 pt-3 border-t-2 space-y-2" style={{ borderColor: 'rgba(0, 255, 148, 0.1)' }}>
-              <h3
-                className="label-uppercase px-1 pb-1"
-                style={{
-                  color: '#00FF94',
-                  textShadow: '0 0 15px rgba(0, 255, 148, 0.3)'
-                }}
-              >
-                Preferences
-              </h3>
-
-              {/* Currency Switcher */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted flex-shrink-0 w-16">Currency</span>
-                <div className="flex-1 min-w-0">
-                  <CurrencySwitcher />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -521,6 +572,17 @@ export function Sidebar() {
 
   // Determine if sidebar should be expanded
   const isExpanded = pinned || expanded
+
+  // Update body attribute when sidebar expands/collapses for content shifting
+  useEffect(() => {
+    if (isExpanded && !pinned) {
+      document.body.setAttribute('data-sidebar', 'expanded')
+    } else if (pinned) {
+      document.body.setAttribute('data-sidebar', 'pinned')
+    } else {
+      document.body.removeAttribute('data-sidebar')
+    }
+  }, [isExpanded, pinned])
 
   // Hover handlers with debounce
   const handleMouseEnter = () => {
