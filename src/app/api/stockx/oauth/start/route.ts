@@ -102,26 +102,27 @@ export async function GET(request: NextRequest) {
     );
 
     // Set secure cookies for PKCE
+    // Use sameSite: 'none' to allow cross-site cookies (required for OAuth redirects)
     response.cookies.set('stockx_oauth_state', state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // Required with sameSite: 'none'
+      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
       maxAge: 600, // 10 minutes
       path: '/',
     });
 
     response.cookies.set('stockx_oauth_verifier', codeVerifier, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // Required with sameSite: 'none'
+      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
       maxAge: 600, // 10 minutes
       path: '/',
     });
 
     response.cookies.set('stockx_oauth_user_id', user.id, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // Required with sameSite: 'none'
+      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
       maxAge: 600, // 10 minutes
       path: '/',
     });

@@ -70,18 +70,19 @@ export async function GET(request: NextRequest) {
     );
 
     // Set secure cookies for PKCE - using SAME cookie names as regular flow
+    // Use sameSite: 'none' to allow cross-site cookies (required for OAuth redirects)
     response.cookies.set('stockx_oauth_state', state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // Required with sameSite: 'none'
+      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
       maxAge: 600, // 10 minutes
       path: '/',
     });
 
     response.cookies.set('stockx_oauth_verifier', codeVerifier, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // Required with sameSite: 'none'
+      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
       maxAge: 600, // 10 minutes
       path: '/',
     });
@@ -89,8 +90,8 @@ export async function GET(request: NextRequest) {
     // Special flag to indicate this is for internal token capture (not storage)
     response.cookies.set('stockx_internal_capture', 'true', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true, // Required with sameSite: 'none'
+      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
       maxAge: 600, // 10 minutes
       path: '/',
     });
