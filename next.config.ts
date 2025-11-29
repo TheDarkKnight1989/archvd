@@ -139,8 +139,9 @@ export default withPWA({
         cacheName: "pages",
         expiration: {
           maxEntries: 32,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+          maxAgeSeconds: 60 * 60, // 1 hour (reduced from 24h for faster updates)
         },
+        networkTimeoutSeconds: 3, // Fallback to cache after 3s if network slow
       },
     },
   ],

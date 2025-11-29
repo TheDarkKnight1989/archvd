@@ -1,6 +1,7 @@
 {
   "name": "Archvd",
   "short_name": "Archvd",
+  "version": "1.1.0",
   "description": "Track your collection and know your profit across marketplaces.",
   "start_url": "/",
   "display": "standalone",
