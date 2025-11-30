@@ -8,16 +8,16 @@
  * - Size
  * - Ask price
  * - Market price (bid/ask)
- * - Position (e.g., "#3 of 14")
+ * - Position (vs lowest ask)
  * - Age ("Listed 5d ago")
- * - Actions (Edit, Lower price, Cancel listing)
+ * - Actions (dropdown menu)
  */
 
 import { useState } from 'react'
 import type { StockxListing } from '@/hooks/useStockxListings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, Edit, TrendingDown, XCircle, Loader2 } from 'lucide-react'
+import { Search, MoreVertical, Edit, TrendingDown, XCircle, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import {
   Table,
@@ -27,6 +27,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import Image from 'next/image'
 
 export interface ActiveListingsSectionProps {
@@ -62,13 +68,14 @@ export function ActiveListingsSection({
     const diffHours = Math.floor(diffMs / 3600000)
     const diffDays = Math.floor(diffMs / 86400000)
 
-    if (diffMinutes < 60) return `Listed ${diffMinutes}m ago`
-    if (diffHours < 24) return `Listed ${diffHours}h ago`
-    return `Listed ${diffDays}d ago`
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    return `${diffDays}d ago`
   }
 
   // Format currency
-  const formatPrice = (amount: number, currency: string = 'GBP'): string => {
+  const formatPrice = (amount: number | undefined, currency: string = 'GBP'): string => {
+    if (!amount || amount === 0) return '—'
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency,
@@ -92,7 +99,7 @@ export function ActiveListingsSection({
     if (!confirm('Are you sure you want to cancel this listing?')) return
 
     try {
-      await fetch('/api/stockx/listings/deactivate', {
+      await fetch('/api/stockx/listings/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ listingId: listing.stockx_listing_id }),
@@ -113,7 +120,7 @@ export function ActiveListingsSection({
 
   return (
     <div className="space-y-4">
-      {/* Search */}
+      {/* Search Bar - Match Inventory styling */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
@@ -121,42 +128,45 @@ export function ActiveListingsSection({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by product, SKU, or size..."
-            className="pl-9"
+            className={cn(
+              'pl-9 bg-elev-0 border-border transition-all duration-120 text-fg',
+              searchQuery && 'ring-2 ring-[#00FF94]/35 border-[#00FF94]/35'
+            )}
           />
         </div>
-        <div className="text-sm text-muted">
+        <div className="text-sm text-fg/70">
           {filteredListings.length} of {listings.length} listings
         </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border bg-soft/30 overflow-hidden">
+      <div className="rounded-xl border-2 border-border/40 bg-elev-1 overflow-hidden shadow-lg">
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent border-border">
-              <TableHead className="w-[350px]">Product</TableHead>
-              <TableHead className="w-[100px]">Size</TableHead>
-              <TableHead className="w-[120px]">Ask Price</TableHead>
-              <TableHead className="w-[180px]">Market Price</TableHead>
-              <TableHead className="w-[120px]">Position</TableHead>
-              <TableHead className="w-[140px]">Age</TableHead>
-              <TableHead className="w-[240px] text-right">Actions</TableHead>
+            <TableRow className="hover:bg-transparent border-b border-border bg-elev-0/50">
+              <TableHead className="w-[350px] font-semibold text-fg/80">Product</TableHead>
+              <TableHead className="w-[100px] font-semibold text-fg/80">Size</TableHead>
+              <TableHead className="w-[120px] font-semibold text-fg/80">Ask Price</TableHead>
+              <TableHead className="w-[160px] font-semibold text-fg/80">Market</TableHead>
+              <TableHead className="w-[110px] font-semibold text-fg/80">Position</TableHead>
+              <TableHead className="w-[100px] font-semibold text-fg/80">Age</TableHead>
+              <TableHead className="w-[60px] text-right font-semibold text-fg/80">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredListings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted">
+                <TableCell colSpan={7} className="h-32 text-center text-muted/70">
                   {searchQuery ? 'No listings match your search' : 'No active listings'}
                 </TableCell>
               </TableRow>
             ) : (
               filteredListings.map((listing) => (
-                <TableRow key={listing.id} className="border-border hover:bg-soft/40">
+                <TableRow key={listing.id} className="border-b border-border hover:bg-elev-0/50 transition-all duration-120">
                   {/* Product */}
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="relative h-12 w-12 rounded border border-border bg-soft overflow-hidden flex-shrink-0">
+                      <div className="relative h-12 w-12 rounded-lg border-2 border-border/40 bg-elev-0 overflow-hidden flex-shrink-0 shadow-sm">
                         {listing.image_url ? (
                           <Image
                             src={listing.image_url}
@@ -165,16 +175,16 @@ export function ActiveListingsSection({
                             className="object-cover"
                           />
                         ) : (
-                          <div className="h-full w-full flex items-center justify-center text-xs text-muted">
+                          <div className="h-full w-full flex items-center justify-center text-xs text-muted/50">
                             No image
                           </div>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-fg truncate">
+                        <div className="text-sm font-semibold text-fg truncate">
                           {listing.product_name || 'Unknown Product'}
                         </div>
-                        <div className="text-xs text-muted mono truncate">
+                        <div className="text-xs text-muted/70 mono truncate">
                           {listing.sku || listing.stockx_product_id}
                         </div>
                       </div>
@@ -188,37 +198,50 @@ export function ActiveListingsSection({
                     </span>
                   </TableCell>
 
-                  {/* Ask Price */}
+                  {/* Ask Price - Show "—" if £0 or missing */}
                   <TableCell>
-                    <span className="text-sm font-medium text-fg mono">
-                      {formatPrice(listing.ask_price, listing.currency)}
+                    <span className={cn(
+                      "text-sm mono font-medium",
+                      listing.ask_price && listing.ask_price > 0 ? "text-fg" : "text-muted"
+                    )}>
+                      {formatPrice(listing.ask_price, listing.currency_code)}
                     </span>
                   </TableCell>
 
                   {/* Market Price */}
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
-                      {listing.market_lowest_ask && (
+                      {listing.market_lowest_ask && listing.market_lowest_ask > 0 ? (
                         <div className="text-xs text-muted">
-                          Ask: <span className="mono">{formatPrice(listing.market_lowest_ask, listing.currency)}</span>
+                          Ask: <span className="mono font-medium text-fg">{formatPrice(listing.market_lowest_ask, listing.currency_code)}</span>
                         </div>
-                      )}
-                      {listing.market_highest_bid && (
+                      ) : null}
+                      {listing.market_highest_bid && listing.market_highest_bid > 0 ? (
                         <div className="text-xs text-muted">
-                          Bid: <span className="mono">{formatPrice(listing.market_highest_bid, listing.currency)}</span>
+                          Bid: <span className="mono font-medium text-fg">{formatPrice(listing.market_highest_bid, listing.currency_code)}</span>
                         </div>
-                      )}
-                      {!listing.market_lowest_ask && !listing.market_highest_bid && (
-                        <div className="text-xs text-muted">No data</div>
+                      ) : null}
+                      {(!listing.market_lowest_ask || listing.market_lowest_ask === 0) &&
+                       (!listing.market_highest_bid || listing.market_highest_bid === 0) && (
+                        <div className="text-xs text-muted">—</div>
                       )}
                     </div>
                   </TableCell>
 
-                  {/* Position */}
+                  {/* Position - Use computed position from hook */}
                   <TableCell>
-                    <span className="text-sm text-muted mono">
-                      {listing.status === 'PENDING' ? 'Pending' : '-'}
-                    </span>
+                    {listing.position ? (
+                      <span className={cn(
+                        "text-sm mono font-medium",
+                        listing.position === 'Best ask' && "text-[#00FF94]",
+                        listing.position.startsWith('+') && "text-orange-400",
+                        listing.position.startsWith('-') && "text-blue-400"
+                      )}>
+                        {listing.position}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted">—</span>
+                    )}
                   </TableCell>
 
                   {/* Age */}
@@ -228,37 +251,42 @@ export function ActiveListingsSection({
                     </span>
                   </TableCell>
 
-                  {/* Actions */}
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        onClick={() => handleEdit(listing)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1.5 text-xs"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        onClick={() => handleLowerPrice(listing)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1.5 text-xs text-[#FFA500]"
-                      >
-                        <TrendingDown className="h-3.5 w-3.5" />
-                        Lower
-                      </Button>
-                      <Button
-                        onClick={() => handleCancel(listing)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1.5 text-xs text-red-400"
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                        Cancel
-                      </Button>
-                    </div>
+                  {/* Actions - Dropdown Menu */}
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 hover:bg-elev-0 transition-all duration-120"
+                        >
+                          <MoreVertical className="h-4 w-4 text-fg/60" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40 bg-elev-1 border-2 border-border/40 shadow-lg">
+                        <DropdownMenuItem
+                          onClick={() => handleEdit(listing)}
+                          className="text-fg hover:bg-elev-0 cursor-pointer transition-colors"
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleLowerPrice(listing)}
+                          className="text-orange-400 hover:bg-elev-0 cursor-pointer transition-colors"
+                        >
+                          <TrendingDown className="mr-2 h-4 w-4" />
+                          Lower Price
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleCancel(listing)}
+                          className="text-red-400 hover:bg-elev-0 focus:text-red-400 cursor-pointer transition-colors"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Cancel
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

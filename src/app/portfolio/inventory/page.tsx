@@ -1149,11 +1149,11 @@ export default function PortfolioPage() {
                 // Use different endpoint based on platform
                 const endpoint = platform === 'alias'
                   ? '/api/alias/sync/inventory'
-                  : '/api/stockx/sync/inventory'
+                  : '/api/stockx/sync-all'
 
                 const requestBody = platform === 'alias'
                   ? { limit: 100 }
-                  : { mode: 'mapped-only', limit: 100 }
+                  : {} // StockX: send empty body for default quick mode
 
                 const response = await fetch(endpoint, {
                   method: 'POST',

@@ -238,17 +238,110 @@ export class StockxListingsService {
         method: 'DELETE',
       })
 
+      // Successful deletion - mark local listing as MISSING
+      await this.markListingAsMissing(userId, listingId)
+
       return {
         operationId: response.operationId,
-        status: response.operationStatus || response.status || 'pending',
+        status: response.operationStatus || response.status || 'completed',
         listingId: listingId,
       }
     } catch (error: any) {
-      // Handle specific StockX errors with user-friendly messages
-      if (error.message?.includes('can not perform this action')) {
-        throw new Error('This listing cannot be deleted. It may already be sold, inactive, or in a pending state.')
+      // Extract status code from error
+      const statusCode = error.statusCode || error.status || error.response?.status
+
+      // Check error message patterns
+      const errorMessage = error.message || ''
+      const isNotFoundError =
+        statusCode === 404 ||
+        statusCode === 410 ||
+        statusCode === 422 ||
+        errorMessage.includes('can not perform this action') ||
+        errorMessage.includes('not found') ||
+        errorMessage.includes('already completed') ||
+        errorMessage.includes('inactive')
+
+      // Handle graceful failures (listing already gone)
+      if (isNotFoundError) {
+        console.warn('[StockX Listings] Listing already gone on StockX:', {
+          listingId,
+          statusCode,
+          errorMessage: errorMessage.substring(0, 200),
+        })
+
+        // Mark as MISSING locally even though StockX returned error
+        await this.markListingAsMissing(userId, listingId)
+
+        // Return success with warning
+        return {
+          operationId: 'ghost-deletion',
+          status: 'completed',
+          listingId: listingId,
+          error: 'Listing not found on StockX (already deleted/sold/expired). Local state updated.',
+        }
       }
+
+      // Handle 401 errors (real auth failure - DO NOT mark as missing)
+      if (statusCode === 401) {
+        console.error('[StockX Listings] Auth error during delete:', {
+          listingId,
+          statusCode,
+          errorMessage: errorMessage.substring(0, 200),
+        })
+        throw new Error('StockX authentication failed. Please reconnect your account.')
+      }
+
+      // Other errors - propagate
+      console.error('[StockX Listings] Delete failed with error:', {
+        listingId,
+        statusCode,
+        errorMessage: errorMessage.substring(0, 200),
+      })
       throw error
+    }
+  }
+
+  /**
+   * Helper: Mark a listing as MISSING in local database
+   * Used when StockX confirms listing no longer exists
+   */
+  private static async markListingAsMissing(
+    userId: string,
+    listingId: string
+  ): Promise<void> {
+    try {
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
+
+      const nowIso = new Date().toISOString()
+
+      // Update via items join to ensure RLS compliance
+      const { error } = await supabase
+        .from('inventory_market_links')
+        .update({
+          stockx_listing_status: 'MISSING',
+          stockx_last_listing_sync_at: nowIso,
+          stockx_listing_payload: null,
+        })
+        .eq('stockx_listing_id', listingId)
+
+      if (error) {
+        console.error('[StockX Listings] Failed to mark listing as MISSING:', {
+          listingId,
+          error: error.message,
+        })
+        // Don't throw - deletion already succeeded on StockX
+      } else {
+        console.log('[StockX Listings] Marked listing as MISSING locally:', {
+          listingId,
+        })
+      }
+    } catch (error: any) {
+      console.error('[StockX Listings] Exception marking listing as MISSING:', {
+        listingId,
+        error: error.message,
+      })
+      // Don't throw - deletion already succeeded on StockX
     }
   }
 

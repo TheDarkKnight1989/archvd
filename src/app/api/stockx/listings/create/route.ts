@@ -135,12 +135,16 @@ export async function POST(request: NextRequest) {
     const listingStatus = operation.status === 'completed' ? 'ACTIVE' : 'PENDING'
     console.log('[Create Listing] Listing created:', listingId, `(${listingStatus})`)
 
-    // 1. Save listing ID to inventory_market_links (needed for updates/deletes)
+    // 1. Save listing ID and status to inventory_market_links (needed for updates/deletes)
+    const nowIso = new Date().toISOString()
     const { error: linkError } = await supabase
       .from('inventory_market_links')
       .update({
         stockx_listing_id: listingId,
-        updated_at: new Date().toISOString()
+        stockx_listing_status: listingStatus, // FIX: Set status so UI can find this listing
+        stockx_last_listing_sync_at: nowIso,
+        stockx_listing_payload: operation, // Store full StockX response for audit trail
+        updated_at: nowIso,
       })
       .eq('item_id', inventoryItemId)
 
@@ -149,7 +153,10 @@ export async function POST(request: NextRequest) {
       throw new Error(`Database error: ${linkError.message}`)
     }
 
-    console.log('[Create Listing] ✅ Listing ID saved to inventory_market_links')
+    console.log('[Create Listing] ✅ Listing ID and status saved to inventory_market_links:', {
+      listingId,
+      status: listingStatus,
+    })
 
     // 2. Look up internal catalog IDs for stockx_listings table
     const { data: product, error: productError } = await supabase

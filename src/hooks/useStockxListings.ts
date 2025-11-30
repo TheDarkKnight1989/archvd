@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
+import { calculateStockxNetPayout } from '@/lib/market/fees'
 
 export interface StockxListing {
   id: string
@@ -30,6 +31,7 @@ export interface StockxListing {
   market_price?: number | null
   market_lowest_ask?: number
   market_highest_bid?: number
+  position?: string | null // Position vs market: "Best ask", "+£50", "-£20", or null
   pending_operation?: {
     job_id: string
     job_type: string
@@ -53,105 +55,231 @@ export function useStockxListings(filters?: ListingFilters) {
       setLoading(true)
       setError(null)
 
-      // Fetch user's listings with enrichment
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setListings([])
+        return
+      }
+
+      // Fetch listings from inventory_market_links (source of truth)
+      // Only show listings that:
+      // 1. Have a stockx_listing_id (are listed on StockX)
+      // 2. Have an active status (not MISSING or UNKNOWN)
       let query = supabase
-        .from('stockx_listings')
+        .from('inventory_market_links')
         .select(`
           id,
           user_id,
+          item_id,
           stockx_listing_id,
           stockx_product_id,
           stockx_variant_id,
-          product_id,
-          variant_id,
-          amount,
-          currency_code,
-          status,
-          expires_at,
+          stockx_listing_status,
+          stockx_last_listing_sync_at,
+          stockx_listing_payload,
           created_at,
-          updated_at
+          updated_at,
+          Inventory (
+            id,
+            sku,
+            size_uk,
+            image_url,
+            brand,
+            model,
+            colorway
+          )
         `)
-        .order('created_at', { ascending: false })
+        .eq('user_id', user.id)
+        .not('stockx_listing_id', 'is', null)
+        .order('updated_at', { ascending: false })
 
-      // Apply filters
+      // Apply status filter - exclude MISSING listings
       if (filters?.status && filters.status.length > 0) {
-        query = query.in('status', filters.status)
+        // Map UI status to StockX API statuses
+        const stockxStatuses = filters.status.map(s => {
+          if (s === 'ACTIVE') return 'ACTIVE'
+          if (s === 'PENDING') return 'PENDING'
+          if (s === 'SOLD') return 'SOLD'
+          if (s === 'EXPIRED') return 'EXPIRED'
+          if (s === 'CANCELLED') return 'CANCELLED'
+          return s
+        })
+        query = query.in('stockx_listing_status', stockxStatuses)
+      } else {
+        // By default, exclude MISSING and UNKNOWN listings
+        query = query.not('stockx_listing_status', 'in', '(MISSING,UNKNOWN)')
       }
 
       const { data, error: fetchError } = await query
 
       if (fetchError) throw fetchError
 
-      // Enrich with market data, inventory, and pending operations
-      const enrichedListings = await Promise.all(
-        (data || []).map(async (listing: any) => {
-          // Convert amount (cents) to ask_price (dollars)
-          const askPrice = listing.amount / 100
+      if (!data || data.length === 0) {
+        setListings([])
+        return
+      }
 
-          // Fetch inventory data via inventory_market_links
-          const { data: linkData } = await supabase
-            .from('inventory_market_links')
-            .select(`
-              item_id,
-              Inventory (
-                sku,
-                size_uk,
-                image_url,
-                brand,
-                model,
-                colorway
-              )
-            `)
-            .eq('stockx_product_id', listing.stockx_product_id)
-            .eq('stockx_variant_id', listing.stockx_variant_id)
-            .single()
+      // Manual inventory fetch (workaround until FK constraint is added)
+      const itemIds = [...new Set(data.map(l => l.item_id).filter(Boolean))]
+      const { data: inventoryItems } = await supabase
+        .from('Inventory')
+        .select('id, sku, size_uk, image_url, brand, model, colorway')
+        .in('id', itemIds)
 
-          const inventory = linkData?.Inventory
-          const inventoryId = linkData?.item_id
+      // Build inventory lookup map
+      const inventoryMap = new Map()
+      inventoryItems?.forEach(item => {
+        inventoryMap.set(item.id, item)
+      })
 
-          // Fetch market price for this listing
-          const { data: marketPrice } = await supabase
-            .from('stockx_market_latest')
-            .select('lowest_ask, highest_bid')
-            .eq('stockx_product_id', listing.stockx_product_id)
-            .eq('stockx_variant_id', listing.stockx_variant_id)
-            .eq('currency_code', listing.currency_code)
-            .single()
+      // BATCH QUERY 1: Fetch all market prices at once
+      const { data: allMarketPrices } = await supabase
+        .from('stockx_market_latest')
+        .select('stockx_product_id, stockx_variant_id, currency_code, lowest_ask, highest_bid')
+        .in('stockx_product_id', [...new Set(data.map(l => l.stockx_product_id))])
 
-          // Check for pending operations
-          const { data: pendingJob } = await supabase
-            .from('stockx_batch_jobs')
-            .select('id, job_type, status, error_message')
-            .eq('user_id', listing.user_id)
-            .in('status', ['PENDING', 'IN_PROGRESS'])
-            .contains('metadata', { listingId: listing.stockx_listing_id })
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-
-          // PHASE 3.3: Market price = highest_bid ?? lowest_ask ?? null
-          const computedMarketPrice = marketPrice?.highest_bid ?? marketPrice?.lowest_ask ?? null
-
-          return {
-            ...listing,
-            ask_price: askPrice,
-            inventory_id: inventoryId,
-            sku: inventory?.sku,
-            size_uk: inventory?.size_uk,
-            image_url: inventory?.image_url,
-            product_name: inventory ? `${inventory.brand || ''} ${inventory.model || ''}`.trim() : undefined,
-            market_price: computedMarketPrice,
-            market_lowest_ask: marketPrice?.lowest_ask,
-            market_highest_bid: marketPrice?.highest_bid,
-            pending_operation: pendingJob ? {
-              job_id: pendingJob.id,
-              job_type: pendingJob.job_type,
-              status: pendingJob.status,
-              error_message: pendingJob.error_message,
-            } : undefined,
-          }
+      // Build lookup map: "productId:variantId:currency" -> market data
+      const marketMap = new Map<string, any>()
+      allMarketPrices?.forEach(market => {
+        // Use GBP as default currency for now
+        const key = `${market.stockx_product_id}:${market.stockx_variant_id}:${market.currency_code}`
+        marketMap.set(key, {
+          lowest_ask: market.lowest_ask,
+          highest_bid: market.highest_bid,
         })
-      )
+      })
+
+      // BATCH QUERY 2: Fetch all pending jobs for this user
+      const { data: allJobs } = await supabase
+        .from('stockx_batch_jobs')
+        .select('id, job_type, status, error_message, metadata')
+        .eq('user_id', user.id)
+        .in('status', ['PENDING', 'IN_PROGRESS'])
+        .order('created_at', { ascending: false })
+
+      // Build lookup map: listingId -> pending job
+      const jobsMap = new Map<string, any>()
+      allJobs?.forEach(job => {
+        const listingId = job.metadata?.listingId
+        if (listingId && !jobsMap.has(listingId)) {
+          jobsMap.set(listingId, {
+            job_id: job.id,
+            job_type: job.job_type,
+            status: job.status,
+            error_message: job.error_message,
+          })
+        }
+      })
+
+      // Transform data to match expected format
+      const enrichedListings = data.map((link: any) => {
+        // Extract price from payload if available
+        const payload = link.stockx_listing_payload
+
+        // DEBUG: Log payload structure to understand the data
+        console.log('[useStockxListings] DEBUG - Listing:', {
+          listingId: link.stockx_listing_id,
+          hasPayload: !!payload,
+          payloadType: typeof payload,
+          payload: payload
+        })
+
+        if (payload) {
+          console.log('[useStockxListings] Payload structure:', {
+            listingId: link.stockx_listing_id,
+            keys: Object.keys(payload),
+            amount: payload?.amount,
+            ask: payload?.ask,
+            fullPayload: payload
+          })
+        } else {
+          console.warn('[useStockxListings] WARNING: No payload for listing:', link.stockx_listing_id)
+        }
+
+        const amount = payload?.amount || payload?.ask?.amount || 0
+        // Amount is already in base currency units (pounds), not pence
+        // Calculate net payout after StockX 10% seller fee
+        const grossPrice = parseFloat(amount)
+        const askPrice = calculateStockxNetPayout(grossPrice)
+        const currencyCode = payload?.currencyCode || payload?.ask?.currencyCode || 'GBP'
+
+        console.log('[useStockxListings] Extracted price:', {
+          listingId: link.stockx_listing_id,
+          amount,
+          grossPrice,
+          askPrice,
+          currencyCode,
+          note: 'askPrice is net payout after 10% StockX fee'
+        })
+
+        // Get inventory details (use manual lookup map as workaround for FK join issue)
+        const inventory = inventoryMap.get(link.item_id) || link.Inventory
+        const productName = inventory ? `${inventory.brand || ''} ${inventory.model || ''}`.trim() : 'Unknown Product'
+
+        // Lookup market price (try GBP first, fall back to USD)
+        let marketKey = `${link.stockx_product_id}:${link.stockx_variant_id}:GBP`
+        let marketPrice = marketMap.get(marketKey)
+        if (!marketPrice) {
+          marketKey = `${link.stockx_product_id}:${link.stockx_variant_id}:USD`
+          marketPrice = marketMap.get(marketKey)
+        }
+
+        // Lookup pending job
+        const pendingJob = jobsMap.get(link.stockx_listing_id)
+
+        // Market price = highest_bid ?? lowest_ask ?? null
+        const computedMarketPrice = marketPrice?.highest_bid ?? marketPrice?.lowest_ask ?? null
+
+        // Calculate position: Compare my ask vs current lowest ask
+        let position: string | null = null
+        if (askPrice > 0 && marketPrice?.lowest_ask > 0) {
+          if (askPrice === marketPrice.lowest_ask) {
+            position = 'Best ask'
+          } else if (askPrice > marketPrice.lowest_ask) {
+            const diff = askPrice - marketPrice.lowest_ask
+            position = `+£${diff.toFixed(0)}`
+          } else {
+            const diff = marketPrice.lowest_ask - askPrice
+            position = `-£${diff.toFixed(0)}`
+          }
+        }
+
+        return {
+          id: link.id,
+          user_id: link.user_id,
+          stockx_listing_id: link.stockx_listing_id,
+          stockx_product_id: link.stockx_product_id,
+          stockx_variant_id: link.stockx_variant_id,
+          product_id: link.stockx_product_id, // For compatibility
+          variant_id: link.stockx_variant_id, // For compatibility
+          amount,
+          currency_code: currencyCode,
+          status: link.stockx_listing_status,
+          expires_at: payload?.expiresAt,
+          created_at: link.created_at,
+          updated_at: link.updated_at,
+
+          // Computed fields
+          ask_price: askPrice,
+
+          // Enriched fields from inventory
+          inventory_id: link.item_id,
+          sku: inventory?.sku,
+          size_uk: inventory?.size_uk,
+          image_url: inventory?.image_url,
+          product_name: productName,
+
+          // Market data
+          market_price: computedMarketPrice,
+          market_lowest_ask: marketPrice?.lowest_ask,
+          market_highest_bid: marketPrice?.highest_bid,
+          position, // Position vs market (e.g., "Best ask", "+£50", "-£20")
+
+          // Pending operations
+          pending_operation: pendingJob,
+        }
+      })
 
       // Apply search filter if provided
       let filtered = enrichedListings
@@ -166,6 +294,7 @@ export function useStockxListings(filters?: ListingFilters) {
 
       setListings(filtered)
     } catch (err: any) {
+      console.error('[useStockxListings] Error:', err)
       setError(err.message || 'Failed to fetch listings')
       setListings([])
     } finally {
