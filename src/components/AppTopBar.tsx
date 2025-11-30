@@ -1,15 +1,23 @@
 'use client'
 
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Calculator, Camera, Search, Bell } from 'lucide-react'
+import { toast } from 'sonner'
 import { AppLogoButton } from './AppLogoButton'
 import { UserProfileMenu } from './UserProfileMenu'
+import { BarcodeScannerModal } from './BarcodeScannerModal'
 import { cn } from '@/lib/utils/cn'
+import { generateProductSlug } from '@/lib/utils/slug'
 
 interface AppTopBarProps {
   onMenuClick?: () => void
 }
 
 export function AppTopBar({ onMenuClick }: AppTopBarProps) {
+  const router = useRouter()
+  const [scannerOpen, setScannerOpen] = useState(false)
+
   const handleSearchClick = () => {
     // TODO: Wire up to existing command palette / product search
     console.log('TODO: open product search')
@@ -21,13 +29,50 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
   }
 
   const handleCameraClick = () => {
-    // TODO: Wire up barcode scanner
-    console.log('TODO: open barcode scanner')
+    setScannerOpen(true)
   }
 
   const handleNotificationsClick = () => {
     // TODO: Wire up notifications system
     console.log('TODO: open notifications')
+  }
+
+  const handleBarcodeDetected = async (gtin: string) => {
+    try {
+      setScannerOpen(false) // Close modal immediately
+
+      const loadingToast = toast.loading('Finding market data...')
+
+      const res = await fetch(`/api/stockx/lookup/gtin?gtin=${encodeURIComponent(gtin)}`)
+
+      if (!res.ok) {
+        throw new Error('Lookup failed')
+      }
+
+      const data = await res.json()
+
+      // Get SKU from response (respecting existing API shape)
+      const sku = data.product?.sku
+      const productName = data.product?.name || data.product?.brand || 'Product'
+
+      if (!sku) {
+        throw new Error('No SKU in GTIN response')
+      }
+
+      // Use the same slug generation logic as inventory "View Market" action
+      const slug = generateProductSlug(productName, sku)
+
+      console.log('[Barcode] Navigating to market:', { gtin, sku, slug })
+
+      toast.dismiss(loadingToast)
+      toast.success('Product found!')
+
+      // Navigate to market page
+      router.push(`/portfolio/market/${slug}`)
+    } catch (err) {
+      console.error('[Barcode Lookup] Failed', err)
+      toast.error("Couldn't find this product on StockX")
+    }
   }
 
   return (
@@ -171,6 +216,13 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
           </div>
         </div>
       </div>
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onBarcodeDetected={handleBarcodeDetected}
+      />
     </>
   )
 }
