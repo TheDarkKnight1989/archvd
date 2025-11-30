@@ -439,26 +439,16 @@ export function useListingOperations() {
     setError(null)
 
     try {
-      const response = await fetch('/api/stockx/listings/delete', {
+      const response = await fetch('/api/stockx/listings/deactivate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ listingId }),
       })
 
-      // Check if response has content before parsing JSON
-      const text = await response.text()
-      const data = text ? JSON.parse(text) : {}
+      const data = await response.json()
 
       if (!response.ok) {
-        // Provide more specific error messages
-        const errorMsg = data.error || 'Failed to delete listing'
-
-        // Check for common StockX API errors
-        if (errorMsg.includes('can not perform this action') || response.status === 400) {
-          throw new Error('This listing cannot be deleted. It may already be sold, inactive, or in a pending state. Try refreshing the page to see the current status.')
-        }
-
-        throw new Error(errorMsg)
+        throw new Error(data.error || 'Failed to deactivate listing')
       }
 
       return data

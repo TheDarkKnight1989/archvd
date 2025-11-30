@@ -15,10 +15,12 @@
 
 import { useState } from 'react'
 import type { StockxListing } from '@/hooks/useStockxListings'
+import { useListingOperations } from '@/hooks/useStockxListings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, MoreVertical, Edit, TrendingDown, XCircle, Loader2 } from 'lucide-react'
+import { Search, MoreVertical, Edit, TrendingDown, Pause, XCircle, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import { toast } from 'sonner'
 import {
   Table,
   TableBody,
@@ -47,6 +49,7 @@ export function ActiveListingsSection({
   onRefresh,
 }: ActiveListingsSectionProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const { deactivateListing } = useListingOperations()
 
   // Filter listings based on search
   const filteredListings = listings.filter(listing => {
@@ -95,8 +98,27 @@ export function ActiveListingsSection({
     // TODO: Open lower price modal
   }
 
+  const handlePause = async (listing: StockxListing) => {
+    if (!confirm('Pause this listing? You can reactivate it later.')) return
+
+    const loadingToast = toast.loading('Pausing listing...')
+
+    try {
+      await deactivateListing(listing.stockx_listing_id)
+      toast.dismiss(loadingToast)
+      toast.success('Listing paused successfully')
+      await onRefresh()
+    } catch (error: any) {
+      toast.dismiss(loadingToast)
+      toast.error(error.message || 'Failed to pause listing')
+      console.error('Failed to pause listing:', error)
+    }
+  }
+
   const handleCancel = async (listing: StockxListing) => {
     if (!confirm('Are you sure you want to cancel this listing?')) return
+
+    const loadingToast = toast.loading('Canceling listing...')
 
     try {
       await fetch('/api/stockx/listings/delete', {
@@ -104,8 +126,12 @@ export function ActiveListingsSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ listingId: listing.stockx_listing_id }),
       })
+      toast.dismiss(loadingToast)
+      toast.success('Listing canceled successfully')
       await onRefresh()
-    } catch (error) {
+    } catch (error: any) {
+      toast.dismiss(loadingToast)
+      toast.error(error.message || 'Failed to cancel listing')
       console.error('Failed to cancel listing:', error)
     }
   }
@@ -277,6 +303,13 @@ export function ActiveListingsSection({
                         >
                           <TrendingDown className="mr-2 h-4 w-4" />
                           Lower Price
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handlePause(listing)}
+                          className="text-yellow-400 hover:bg-elev-0 cursor-pointer transition-colors"
+                        >
+                          <Pause className="mr-2 h-4 w-4" />
+                          Pause
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleCancel(listing)}
