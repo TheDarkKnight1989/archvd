@@ -10,16 +10,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    // Persist session in localStorage (survives PWA close/reopen)
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    storageKey: 'archvd-auth',
-    // Auto refresh tokens
-    autoRefreshToken: true,
-    // Persist session across tabs
-    persistSession: true,
-    // Detect session from URL hash (OAuth redirect)
-    detectSessionInUrl: true,
-  },
-});
+// Browser client handles cookies automatically - no custom handlers needed
+// @supabase/ssr will use standard cookie names (sb-{project-ref}-auth-token)
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
