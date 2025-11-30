@@ -142,55 +142,77 @@ export function BulkListOnStockXModal({
     }))
     setResults(initialResults)
 
-    // Process each item sequentially
-    for (let i = 0; i < itemsToList.length; i++) {
-      const item = itemsToList[i]
-      const price = parseFloat(itemPrices[item.id])
+    try {
+      // Use batch API for efficiency (10-100x faster than one-by-one)
+      const batchPayload = {
+        listings: itemsToList.map(item => ({
+          inventoryItemId: item.id,
+          askPrice: parseFloat(itemPrices[item.id]),
+          currencyCode: item.market?.currency || 'GBP',
+        }))
+      }
 
-      // Update status to processing
-      setResults(prev => prev.map((r, idx) =>
-        idx === i ? { ...r, status: 'processing' } : r
-      ))
+      console.log('[Bulk List] Creating', batchPayload.listings.length, 'listings via batch API')
 
-      try {
-        const currency = item.market?.currency || 'GBP'
+      // Mark all as processing
+      setResults(prev => prev.map(r => ({ ...r, status: 'processing' })))
 
-        const response = await fetch('/api/stockx/listings/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            inventoryItemId: item.id,
-            askPrice: price,
-            currencyCode: currency,
-          }),
+      const response = await fetch('/api/stockx/listings/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(batchPayload),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.details || 'Batch creation failed')
+      }
+
+      console.log('[Bulk List] Batch completed:', data.summary)
+
+      // Update results based on batch response
+      setResults(prev => prev.map(result => {
+        // Find this item in batch results
+        const batchResult = data.results.find((r: any) => {
+          // Match by looking up the item's StockX mapping
+          const item = itemsToList.find(i => i.id === result.itemId)
+          return item &&
+            r.productId === item.stockx?.productId &&
+            r.variantId === item.stockx?.variantId
         })
 
-        const data = await response.json()
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || data.details || 'Failed to create listing')
+        if (!batchResult) {
+          return {
+            ...result,
+            status: 'error',
+            error: 'Not found in batch results'
+          }
         }
 
-        // Update status to success
-        setResults(prev => prev.map((r, idx) =>
-          idx === i ? {
-            ...r,
+        if (batchResult.status === 'SUCCESS') {
+          return {
+            ...result,
             status: 'success',
-            listingId: data.listingId
-          } : r
-        ))
-      } catch (error: any) {
-        console.error(`[Bulk List] Failed to list ${item.sku}:`, error)
-
-        // Update status to error
-        setResults(prev => prev.map((r, idx) =>
-          idx === i ? {
-            ...r,
+            listingId: batchResult.listingId
+          }
+        } else {
+          return {
+            ...result,
             status: 'error',
-            error: error.message
-          } : r
-        ))
-      }
+            error: batchResult.error || 'Failed'
+          }
+        }
+      }))
+    } catch (error: any) {
+      console.error('[Bulk List] Batch failed:', error)
+
+      // Mark all as error
+      setResults(prev => prev.map(r => ({
+        ...r,
+        status: 'error',
+        error: error.message || 'Batch creation failed'
+      })))
     }
 
     setLoading(false)
