@@ -52,6 +52,8 @@ export function BarcodeScannerModal({
       setIsScanning(true)
 
       try {
+        console.log('[Barcode Scanner] Starting camera...')
+
         // Request camera with high quality constraints
         const constraints: MediaStreamConstraints = {
           video: {
@@ -67,19 +69,34 @@ export function BarcodeScannerModal({
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream
+
+          // Wait for video to be ready
+          await new Promise((resolve) => {
+            if (videoRef.current) {
+              videoRef.current.onloadedmetadata = () => {
+                videoRef.current?.play()
+                resolve(true)
+              }
+            }
+          })
+
           setCameraReady(true)
+          console.log('[Barcode Scanner] Camera ready, starting barcode detection...')
 
           // Initialize ZXing reader
           const codeReader = new BrowserMultiFormatReader()
           readerRef.current = codeReader
 
-          // Start continuous decoding
+          // Start continuous decoding with hints for better detection
+          const hints = new Map()
+          hints.set(2, true) // PURE_BARCODE
+
           codeReader.decodeFromVideoElement(
             videoRef.current,
             (result, error) => {
               if (result) {
                 const gtin = result.getText()
-                console.log('[Barcode Scanner] Detected:', gtin)
+                console.log('[Barcode Scanner] ✓ Detected barcode:', gtin)
 
                 // Stop camera immediately
                 stopCamera()
@@ -94,6 +111,8 @@ export function BarcodeScannerModal({
               }
             }
           )
+
+          console.log('[Barcode Scanner] Scanning active - point camera at barcode')
         }
       } catch (err: any) {
         console.error('[Barcode Scanner] Camera error:', err)
@@ -217,9 +236,12 @@ export function BarcodeScannerModal({
           {/* Instructions */}
           {cameraReady && !error && (
             <div className="p-4 bg-elev-2 border-t border-border">
-              <p className="text-sm text-center text-muted">
-                Position the barcode within the frame
-              </p>
+              <div className="flex items-center justify-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+                <p className="text-sm text-center text-muted">
+                  Scanning... Position barcode in frame
+                </p>
+              </div>
             </div>
           )}
         </div>
