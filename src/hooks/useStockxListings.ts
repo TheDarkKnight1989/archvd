@@ -340,7 +340,11 @@ export function useListingOperations() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create listing')
+        // Include details from API response for better error messages
+        const errorMessage = data.details
+          ? `${data.error}: ${data.details}`
+          : (data.error || 'Failed to create listing')
+        throw new Error(errorMessage)
       }
 
       return data
@@ -370,7 +374,11 @@ export function useListingOperations() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to update listing')
+        // Include details from API response for better error messages
+        const errorMessage = data.details
+          ? `${data.error}: ${data.details}`
+          : (data.error || 'Failed to update listing')
+        throw new Error(errorMessage)
       }
 
       return data
@@ -396,7 +404,11 @@ export function useListingOperations() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete listing')
+        // Include details from API response for better error messages
+        const errorMessage = data.details
+          ? `${data.error}: ${data.details}`
+          : (data.error || 'Failed to delete listing')
+        throw new Error(errorMessage)
       }
 
       return data
@@ -422,7 +434,11 @@ export function useListingOperations() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to activate listing')
+        // Include details from API response for better error messages
+        const errorMessage = data.details
+          ? `${data.error}: ${data.details}`
+          : (data.error || 'Failed to activate listing')
+        throw new Error(errorMessage)
       }
 
       return data
@@ -448,7 +464,11 @@ export function useListingOperations() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to deactivate listing')
+        // Include details from API response for better error messages
+        const errorMessage = data.details
+          ? `${data.error}: ${data.details}`
+          : (data.error || 'Failed to deactivate listing')
+        throw new Error(errorMessage)
       }
 
       return data
