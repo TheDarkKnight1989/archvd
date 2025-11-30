@@ -374,6 +374,34 @@ export class StockxListingsService {
   }
 
   /**
+   * Deactivate an active listing (pause without deleting)
+   * POST /v2/selling/listings/{listingId}/deactivate
+   * Returns operationId for async polling
+   */
+  static async deactivateListing(
+    userId: string,
+    listingId: string
+  ): Promise<ListingOperation> {
+    const client = getStockxClient(userId)
+
+    console.log('[StockX Listings] Deactivating listing', { userId, listingId })
+
+    const response = await client.request(
+      `/v2/selling/listings/${listingId}/deactivate`,
+      {
+        method: 'POST',
+      }
+    )
+
+    return {
+      operationId: response.operationId,
+      status: response.operationStatus || response.status || 'pending',
+      listingId: response.listingId || listingId,
+      result: response.result,
+    }
+  }
+
+  /**
    * Get status of a specific listing operation
    * GET /v2/selling/listings/{listingId}/operations/{operationId}
    */
