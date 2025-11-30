@@ -5,10 +5,9 @@
  */
 
 import { mockAdapter } from './mockAdapter'
-import { stockxAdapter } from './stockxAdapter'
 import { aliasAdapter } from './aliasAdapter'
 
-export { mockAdapter, stockxAdapter, aliasAdapter }
+export { mockAdapter, aliasAdapter }
 export type { MarketDataProvider, MarketPrice, ProductInfo } from './types'
 
 /**
@@ -21,8 +20,6 @@ export function getMarketProvider() {
   const provider = process.env.NEXT_PUBLIC_MARKET_PROVIDER || 'mock'
 
   switch (provider) {
-    case 'stockx':
-      return stockxAdapter
     case 'alias':
       return aliasAdapter
     case 'mock':
