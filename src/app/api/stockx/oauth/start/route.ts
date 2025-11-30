@@ -15,7 +15,19 @@ export const runtime = 'nodejs';
 // OAuth configuration
 const STOCKX_OAUTH_AUTHORIZE_URL = process.env.STOCKX_OAUTH_AUTHORIZE_URL || 'https://accounts.stockx.com/oauth/authorize';
 const STOCKX_CLIENT_ID = process.env.STOCKX_CLIENT_ID;
-const STOCKX_REDIRECT_URI = process.env.STOCKX_REDIRECT_URI || `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/stockx/oauth/callback`;
+
+// Auto-detect localhost for development
+function getRedirectUri(request: NextRequest): string {
+  const host = request.headers.get('host') || '';
+  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+
+  if (isLocalhost) {
+    return `http://${host}/api/stockx/oauth/callback`;
+  }
+
+  // Use configured redirect URI or fallback to site URL
+  return process.env.STOCKX_REDIRECT_URI || `${process.env.NEXT_PUBLIC_SITE_URL}/api/stockx/oauth/callback`;
+}
 
 // Generate PKCE code verifier and challenge
 function generatePKCE() {
@@ -30,6 +42,9 @@ function generatePKCE() {
 
 export async function GET(request: NextRequest) {
   try {
+    // Get the correct redirect URI based on environment
+    const STOCKX_REDIRECT_URI = getRedirectUri(request);
+
     // Check if StockX is enabled
     if (process.env.NEXT_PUBLIC_STOCKX_ENABLE !== 'true') {
       return NextResponse.json(
@@ -106,43 +121,28 @@ export async function GET(request: NextRequest) {
     );
 
     // Set secure cookies for PKCE
-    // Use sameSite: 'none' to allow cross-site cookies (required for OAuth redirects)
-    response.cookies.set('stockx_oauth_state', state, {
+    // On localhost (HTTP), use secure: false and sameSite: 'lax'
+    // In production (HTTPS), use secure: true and sameSite: 'none'
+    const isLocalhost = STOCKX_REDIRECT_URI.includes('localhost') || STOCKX_REDIRECT_URI.includes('127.0.0.1');
+    const cookieOptions = {
       httpOnly: true,
-      secure: true, // Required with sameSite: 'none'
-      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
+      secure: !isLocalhost, // false on localhost, true in production
+      sameSite: isLocalhost ? ('lax' as const) : ('none' as const), // 'lax' on localhost, 'none' in production
       maxAge: 600, // 10 minutes
       path: '/',
-    });
+    };
 
-    response.cookies.set('stockx_oauth_verifier', codeVerifier, {
-      httpOnly: true,
-      secure: true, // Required with sameSite: 'none'
-      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
-      maxAge: 600, // 10 minutes
-      path: '/',
-    });
-
-    response.cookies.set('stockx_oauth_user_id', user.id, {
-      httpOnly: true,
-      secure: true, // Required with sameSite: 'none'
-      sameSite: 'none', // Allow cross-site (OAuth redirect from StockX)
-      maxAge: 600, // 10 minutes
-      path: '/',
-    });
+    response.cookies.set('stockx_oauth_state', state, cookieOptions);
+    response.cookies.set('stockx_oauth_verifier', codeVerifier, cookieOptions);
+    response.cookies.set('stockx_oauth_user_id', user.id, cookieOptions);
 
     console.log('[StockX OAuth Start] Cookies set, redirecting to StockX', {
       state: state.substring(0, 8) + '...',
       verifier: codeVerifier.substring(0, 8) + '...',
       userId: user.id,
       redirectUrl: `${STOCKX_OAUTH_AUTHORIZE_URL}?...`,
-      cookieSettings: {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge: 600,
-        path: '/',
-      },
+      isLocalhost,
+      cookieSettings: cookieOptions,
     });
 
     return response;

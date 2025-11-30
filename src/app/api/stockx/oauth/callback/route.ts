@@ -16,13 +16,40 @@ export const runtime = 'nodejs';
 const STOCKX_OAUTH_TOKEN_URL = process.env.STOCKX_OAUTH_TOKEN_URL || 'https://accounts.stockx.com/oauth/token';
 const STOCKX_CLIENT_ID = process.env.STOCKX_CLIENT_ID;
 const STOCKX_CLIENT_SECRET = process.env.STOCKX_CLIENT_SECRET;
-const STOCKX_REDIRECT_URI = process.env.STOCKX_REDIRECT_URI || `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/stockx/oauth/callback`;
 const STOCKX_USERINFO_URL = process.env.STOCKX_USERINFO_URL || 'https://accounts.stockx.com/oauth/userinfo';
+
+// Auto-detect localhost for development
+function getRedirectUri(request: NextRequest): string {
+  const host = request.headers.get('host') || '';
+  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+
+  if (isLocalhost) {
+    return `http://${host}/api/stockx/oauth/callback`;
+  }
+
+  // Use configured redirect URI or fallback to site URL
+  return process.env.STOCKX_REDIRECT_URI || `${process.env.NEXT_PUBLIC_SITE_URL}/api/stockx/oauth/callback`;
+}
+
+function getSiteUrl(request: NextRequest): string {
+  const host = request.headers.get('host') || '';
+  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+
+  if (isLocalhost) {
+    return `http://${host}`;
+  }
+
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+}
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    // Get the correct redirect URI and site URL based on environment
+    const STOCKX_REDIRECT_URI = getRedirectUri(request);
+    const siteUrl = getSiteUrl(request);
+
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
     const state = searchParams.get('state');
@@ -37,7 +64,7 @@ export async function GET(request: NextRequest) {
       });
 
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/portfolio/settings/integrations?error=oauth_failed&provider=stockx`
+        `${siteUrl}/portfolio/settings/integrations?error=oauth_failed&provider=stockx`
       );
     }
 

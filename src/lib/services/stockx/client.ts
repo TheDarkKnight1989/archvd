@@ -334,52 +334,16 @@ export class StockxClient {
       }
     }
 
-    // Client credentials flow (app-level fallback)
-    // Check if current token is still valid
-    const now2 = Date.now()
-    if (this.tokenExpiresAt > now2 + 60000) {
-      // Token valid for at least 1 more minute
-      return this.accessToken!
-    }
-
-    // Request new token via OAuth client credentials flow
-    console.log('[StockX] Requesting new access token')
-
-    try {
-      // Use OAuth token URL (accounts.stockx.com) not API URL (api.stockx.com)
-      const tokenUrl = process.env.STOCKX_OAUTH_TOKEN_URL || 'https://accounts.stockx.com/oauth/token'
-      const response = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: this.clientId,
-          client_secret: this.clientSecret,
-          audience: 'gateway.stockx.com',
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.text()
-        throw new Error(`StockX OAuth failed: ${response.status} ${response.statusText} - ${error}`)
-      }
-
-      const data: StockxAuthToken = await response.json()
-      this.accessToken = data.access_token
-      this.tokenExpiresAt = Date.now() + (data.expires_in * 1000)
-
-      console.log('[StockX] Access token obtained', {
-        expires_in: data.expires_in,
-        token: maskStockxToken(this.accessToken),
-      })
-
-      return this.accessToken
-    } catch (error) {
-      console.error('[StockX] OAuth error:', error)
-      throw error
-    }
+    // ❌ CLIENT CREDENTIALS NOT SUPPORTED
+    // StockX does not allow client_credentials grant type for this client
+    // Error: "Grant type 'client_credentials' not allowed for the client"
+    //
+    // If we reach here, we have no valid token source
+    throw new Error(
+      'StockX authentication failed: No valid token source available. ' +
+      'Please ensure STOCKX_REFRESH_TOKEN is set in environment variables, ' +
+      'or connect your StockX account via OAuth.'
+    )
   }
 
   /**
