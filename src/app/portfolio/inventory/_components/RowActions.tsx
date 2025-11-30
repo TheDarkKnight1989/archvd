@@ -189,10 +189,10 @@ export function RowActions({
               {hasActiveStockXListing && onDeactivateListing && (
                 <button
                   onClick={() => handleAction(onDeactivateListing)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-yellow-400 hover:bg-yellow-500/10 transition-all duration-120"
                 >
                   <PauseCircle className="h-4 w-4" />
-                  Cancel Listing
+                  Pause Listing
                 </button>
               )}
 
