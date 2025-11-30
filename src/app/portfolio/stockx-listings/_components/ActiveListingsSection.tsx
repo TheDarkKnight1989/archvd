@@ -18,7 +18,7 @@ import type { StockxListing } from '@/hooks/useStockxListings'
 import { useListingOperations } from '@/hooks/useStockxListings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, MoreVertical, Edit, TrendingDown, Pause, XCircle, Loader2 } from 'lucide-react'
+import { Search, MoreVertical, Edit, TrendingDown, PauseCircle, XCircle, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { toast } from 'sonner'
 import {
@@ -98,20 +98,20 @@ export function ActiveListingsSection({
     // TODO: Open lower price modal
   }
 
-  const handlePause = async (listing: StockxListing) => {
-    if (!confirm('Pause this listing? You can reactivate it later.')) return
+  const handleRemoveAsk = async (listing: StockxListing) => {
+    if (!confirm('Remove your ask from StockX? You can reactivate it later.')) return
 
-    const loadingToast = toast.loading('Pausing listing...')
+    const loadingToast = toast.loading('Removing ask...')
 
     try {
       await deactivateListing(listing.stockx_listing_id)
       toast.dismiss(loadingToast)
-      toast.success('Listing paused successfully')
+      toast.success('Ask removed successfully')
       await onRefresh()
     } catch (error: any) {
       toast.dismiss(loadingToast)
-      toast.error(error.message || 'Failed to pause listing')
-      console.error('Failed to pause listing:', error)
+      toast.error(error.message || 'Failed to remove ask')
+      console.error('Failed to remove ask:', error)
     }
   }
 
@@ -305,11 +305,11 @@ export function ActiveListingsSection({
                           Lower Price
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handlePause(listing)}
+                          onClick={() => handleRemoveAsk(listing)}
                           className="text-yellow-400 hover:bg-elev-0 cursor-pointer transition-colors"
                         >
-                          <Pause className="mr-2 h-4 w-4" />
-                          Pause
+                          <PauseCircle className="mr-2 h-4 w-4" />
+                          Remove Ask
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleCancel(listing)}
