@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
 // Force dynamic rendering - never cache this route
@@ -62,41 +63,62 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user is authenticated
-    const supabase = await createClient();
+    // CRITICAL: Use cookies from next/headers for proper session detection in route handlers
+    const cookieStore = await cookies();
+    const allCookies = cookieStore.getAll();
 
-    // Try to get user from session first (more reliable in PWAs)
-    const { data: { session } } = await supabase.auth.getSession();
+    console.log('[StockX OAuth Start] Route handler cookies:', {
+      count: allCookies.length,
+      cookieNames: allCookies.map(c => c.name),
+      hasSupabaseCookies: allCookies.some(c => c.name.startsWith('sb-')),
+    });
+
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
+    console.log('[StockX OAuth Start] Auth check result:', {
+      hasUser: !!user,
+      userId: user?.id || '(none)',
+      email: user?.email || '(none)',
+      hasError: !!authError,
+      errorMessage: authError?.message || '(none)',
+      errorStatus: authError?.status || '(none)',
+    });
+
     if (authError || !user) {
-      console.error('[StockX OAuth Start] Authentication failed', {
+      console.error('[StockX OAuth Start] Authentication failed - Auth session missing!', {
         hasError: !!authError,
         errorMessage: authError?.message,
         errorStatus: authError?.status,
         hasUser: !!user,
-        hasSession: !!session,
-        cookies: request.cookies.getAll().map(c => c.name),
-        headers: {
-          authorization: request.headers.get('authorization'),
-          cookie: request.headers.get('cookie')?.substring(0, 100) + '...',
-        },
+        cookiesPresent: allCookies.map(c => c.name),
+        supabaseCookies: allCookies.filter(c => c.name.startsWith('sb-')).map(c => ({
+          name: c.name,
+          hasValue: !!c.value,
+          valueLength: c.value.length,
+        })),
       });
 
       return NextResponse.json(
         {
           error: 'Unauthorized',
           message: 'Please ensure you are logged in to Archvd before connecting StockX',
-          details: authError?.message || 'No active session found',
+          details: authError?.message || 'Auth session missing!',
           hint: 'Try refreshing the page and logging in again before connecting StockX',
+          debug: {
+            hasSupabaseCookies: allCookies.some(c => c.name.startsWith('sb-')),
+            cookieCount: allCookies.length,
+          },
         },
         { status: 401 }
       );
     }
 
-    console.log('[StockX OAuth Start] User authenticated', {
+    console.log('[StockX OAuth Start] ✅ User authenticated successfully', {
       userId: user.id,
       email: user.email,
-      hasSession: !!session,
+      aud: user.aud,
+      role: user.role,
     });
 
     // Generate PKCE parameters
