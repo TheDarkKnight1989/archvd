@@ -20,7 +20,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
 
         {/* Main content with dynamic padding based on sidebar pinned state */}
         <main
-          className="pl-0 md:pl-20 transition-[padding-left] duration-120 ease-terminal"
+          className="pl-0 md:pl-16 transition-[padding-left] duration-120 ease-terminal"
           id="main"
         >
           {/* App Top Bar - visible on all pages */}
@@ -39,7 +39,7 @@ export default function PortfolioLayout({ children }: PortfolioLayoutProps) {
           /* When sidebar is expanded (hover) or pinned, shift content to make room */
           body[data-sidebar='expanded'] main,
           body[data-sidebar='pinned'] main {
-            padding-left: 336px; /* 320px sidebar + 16px gutter */
+            padding-left: 272px; /* 256px sidebar + 16px gutter */
           }
 
           /* Mobile: no sidebar padding */

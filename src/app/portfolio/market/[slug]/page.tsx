@@ -259,7 +259,7 @@ async function getInventoryItem(itemId: string): Promise<InventoryWithPricing | 
     if (aliasCatalog) {
       console.log('[Market Page] Found Alias catalog by SKU:', aliasCatalog.catalog_id)
       aliasCatalogId = aliasCatalog.catalog_id
-      item.alias_image_url = aliasCatalog.image_url
+      ;(item as any).alias_image_url = aliasCatalog.image_url
     }
   }
 
@@ -285,7 +285,7 @@ async function getInventoryItem(itemId: string): Promise<InventoryWithPricing | 
     }
 
     // Fetch Alias catalog image if we don't already have it
-    if (!item.alias_image_url) {
+    if (!(item as any).alias_image_url) {
       const { data: aliasCatalog } = await supabase
         .from('alias_catalog_items')
         .select('image_url')
@@ -293,7 +293,7 @@ async function getInventoryItem(itemId: string): Promise<InventoryWithPricing | 
         .maybeSingle()
 
       if (aliasCatalog) {
-        item.alias_image_url = aliasCatalog.image_url
+        ;(item as any).alias_image_url = aliasCatalog.image_url
       }
     }
   }
@@ -719,8 +719,8 @@ export default async function MarketPage({ params, searchParams }: MarketPagePro
   // Note: This queries stockx_market_latest view (DB only, no API calls)
   const combinedSizeRunPricing = await getCombinedSizeRunPricing(
     stockxProductId,
-    catalogItem.catalog_id,
-    catalogItem.sku
+    catalogItem?.catalog_id,
+    catalogItem?.sku
   )
 
   // PHASE 2.4: Fetch debug info for StockX variant and snapshot counts
@@ -749,7 +749,7 @@ export default async function MarketPage({ params, searchParams }: MarketPagePro
   // Determine which image to show (Alias first, then catalog, then StockX)
   const imageUrl =
     inventoryItem?.alias_image_url ||
-    catalogItem.image_url ||
+    catalogItem?.image_url ||
     inventoryItem?.stockx_image_url ||
     inventoryItem?.image_url ||
     null
@@ -800,7 +800,7 @@ export default async function MarketPage({ params, searchParams }: MarketPagePro
           <div className="w-full md:w-64 h-64 bg-elev-1 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
             <img
               src={imageUrl}
-              alt={catalogItem.product_name}
+              alt={catalogItem?.product_name}
               className="object-contain w-full h-full"
             />
           </div>
@@ -812,11 +812,11 @@ export default async function MarketPage({ params, searchParams }: MarketPagePro
             Market View
           </h1>
           <h2 className="text-3xl font-bold text-fg">
-            {catalogItem.brand || ''} {catalogItem.product_name}
+            {catalogItem?.brand || ''} {catalogItem?.product_name}
           </h2>
 
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
-            {catalogItem.sku && (
+            {catalogItem?.sku && (
               <span className="font-mono bg-soft px-2 py-1 rounded">
                 {catalogItem.sku.toUpperCase()}
               </span>
@@ -828,7 +828,7 @@ export default async function MarketPage({ params, searchParams }: MarketPagePro
             )}
           </div>
 
-          {catalogItem.colorway && (
+          {catalogItem?.colorway && (
             <p className="text-base text-fg font-semibold">
               {catalogItem.colorway}
             </p>

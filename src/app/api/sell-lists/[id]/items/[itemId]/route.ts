@@ -142,7 +142,7 @@ export async function DELETE(
     }
 
     // Verify ownership
-    if (item.sell_lists.user_id !== user.id) {
+    if ((item.sell_lists as any)?.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }

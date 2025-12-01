@@ -71,9 +71,7 @@ export async function PATCH(
     const client = createAliasClient();
 
     // Update listing
-    const result = await updateAliasListing(client, {
-      user_id: user.id,
-      listing_id: listingId,
+    const result = await updateAliasListing(client, listingId, user.id, {
       price_cents: body.price_cents,
       condition: body.condition,
       packaging_condition: body.packaging_condition,

@@ -88,10 +88,10 @@ export async function GET(
           // Create a map of inventory_item_id to market price
           const marketPriceMap = new Map()
           marketData.forEach(link => {
-            if (link.stockx_market_products?.current_price_snapshot) {
+            if ((link.stockx_market_products as any)?.current_price_snapshot) {
               marketPriceMap.set(
                 link.inventory_item_id,
-                link.stockx_market_products.current_price_snapshot
+                (link.stockx_market_products as any).current_price_snapshot
               )
             }
           })
@@ -99,8 +99,8 @@ export async function GET(
           // Attach market prices to items
           itemsWithMarketPrices = items.map(item => ({
             ...item,
-            market_price: item.inventory_item?.id
-              ? marketPriceMap.get(item.inventory_item.id) || null
+            market_price: (item.inventory_item as any)?.id
+              ? marketPriceMap.get((item.inventory_item as any).id) || null
               : null
           }))
         }

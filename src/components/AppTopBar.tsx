@@ -85,7 +85,7 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
           backdropFilter: 'blur(8px)'
         }}
       >
-        <div className="px-4 py-3">
+        <div className="px-4 py-2.5">
           <div className="flex items-center gap-3">
             {/* Logo Button */}
             <AppLogoButton onClick={onMenuClick} />
@@ -140,75 +140,76 @@ export function AppTopBar({ onMenuClick }: AppTopBarProps) {
         </div>
       </div>
 
-      {/* Desktop: Slim utility strip */}
-      <div className="hidden md:block sticky top-0 z-30 bg-elev-1/95 border-b border-white/5">
-        <div className="h-12 flex items-center justify-between gap-4">
-          {/* Left Side: Search + Utility Icons (constrained width) */}
-          <div className="flex items-center gap-3 px-4 lg:px-8">
+      {/* Desktop: Large search-focused header */}
+      <div className="hidden md:block sticky top-0 z-30 bg-elev-1/95 border-b border-white/5 backdrop-blur-sm">
+        <div className="h-16 flex items-center justify-between gap-4 px-6">
+          {/* Left Side: Search Bar + Utility Icons */}
+          <div className="flex-1 flex items-center gap-2 mr-4">
             {/* Search Bar */}
             <button
               onClick={handleSearchClick}
               className={cn(
-                "w-[400px] h-9 rounded-lg px-3",
+                "w-full max-w-4xl h-11 rounded-lg px-4",
                 "bg-elev-1/50 border border-white/10",
-                "flex items-center gap-2",
-                "text-muted hover:text-fg hover:bg-white/5 hover:border-white/20",
+                "flex items-center gap-3",
+                "text-muted hover:text-fg hover:bg-elev-2/80 hover:border-accent/30",
                 "transition-all duration-200",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent shadow-sm"
               )}
             >
-              <Search className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
-              <span className="text-sm flex-1">Search products...</span>
-              <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-elev-2 px-1.5 font-mono text-[10px] font-medium text-muted">
+              <Search className="h-5 w-5 flex-shrink-0 text-muted/70" strokeWidth={2} />
+              <span className="text-sm text-muted flex-1 text-left">Search products...</span>
+              <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-border/60 bg-elev-2 px-2 font-mono text-[10px] font-medium text-muted/70">
                 <span className="text-xs">⌘</span>K
               </kbd>
             </button>
 
-            {/* Utility Icons */}
+            {/* Calculator Icon */}
             <button
               onClick={handleCalculatorClick}
               aria-label="Open profit calculator"
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full",
-                "border border-white/10 text-muted",
-                "hover:border-white/20 hover:bg-white/5 hover:text-fg",
+                "flex h-10 w-10 items-center justify-center rounded-lg",
+                "bg-elev-1/50 border border-white/10 text-muted",
+                "hover:border-accent/30 hover:bg-elev-2/80 hover:text-fg",
                 "transition-all duration-200",
                 "active:scale-95"
               )}
             >
-              <Calculator className="h-4 w-4" strokeWidth={1.75} />
+              <Calculator className="h-5 w-5" strokeWidth={2} />
             </button>
 
+            {/* Camera Icon */}
             <button
               onClick={handleCameraClick}
               aria-label="Open barcode scanner"
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full",
-                "border border-white/10 text-muted",
-                "hover:border-white/20 hover:bg-white/5 hover:text-fg",
+                "flex h-10 w-10 items-center justify-center rounded-lg",
+                "bg-elev-1/50 border border-white/10 text-muted",
+                "hover:border-accent/30 hover:bg-elev-2/80 hover:text-fg",
                 "transition-all duration-200",
                 "active:scale-95"
               )}
             >
-              <Camera className="h-4 w-4" strokeWidth={1.75} />
+              <Camera className="h-5 w-5" strokeWidth={2} />
             </button>
           </div>
 
-          {/* Right Side: Notifications + Profile (at edge of screen) */}
-          <div className="flex items-center gap-2 pr-4 lg:pr-8">
+          {/* Right Side: Notifications + Profile */}
+          <div className="flex items-center gap-2">
             {/* Notifications */}
             <button
               onClick={handleNotificationsClick}
               aria-label="Notifications"
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full",
-                "border border-white/10 text-muted",
-                "hover:border-white/20 hover:bg-white/5 hover:text-fg",
+                "flex h-10 w-10 items-center justify-center rounded-lg",
+                "bg-elev-1/50 border border-white/10 text-muted",
+                "hover:border-accent/30 hover:bg-elev-2/80 hover:text-fg",
                 "transition-all duration-200",
                 "active:scale-95"
               )}
             >
-              <Bell className="h-4 w-4" strokeWidth={1.75} />
+              <Bell className="h-5 w-5" strokeWidth={2} />
             </button>
 
             {/* User Profile */}

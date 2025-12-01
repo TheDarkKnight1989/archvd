@@ -68,10 +68,7 @@ export async function POST(
     const client = createAliasClient();
 
     // Activate listing
-    const result = await activateAliasListing(client, {
-      user_id: user.id,
-      listing_id: listingId,
-    });
+    const result = await activateAliasListing(client, listingId, user.id);
 
     if (!result.success) {
       return NextResponse.json(

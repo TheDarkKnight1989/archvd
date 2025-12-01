@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
           name: item.name,
           brand: item.brand || '',
           colorway: item.colorway,
-          imageUrl: item.main_picture_url,
+          imageUrl: item.main_picture_url ?? null,
           releaseDate: item.release_date,
           retailPrice: item.retail_price_cents ? item.retail_price_cents / 100 : null,
           aliasCatalogId: item.catalog_id

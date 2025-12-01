@@ -59,10 +59,7 @@ export async function DELETE(
     const client = createAliasClient();
 
     // Delete listing
-    const result = await deleteAliasListing(client, {
-      user_id: user.id,
-      listing_id: listingId,
-    });
+    const result = await deleteAliasListing(client, listingId, user.id);
 
     if (!result.success) {
       return NextResponse.json(

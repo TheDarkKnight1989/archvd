@@ -76,7 +76,7 @@ export function CategoryBreakdownChart({ expenses, formatCurrency, className }: 
             outerRadius={90}
             paddingAngle={2}
             dataKey="amount"
-            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+            label={({ percent }: { percent: number }) => `${(percent * 100).toFixed(0)}%`}
             labelLine={false}
           >
             {chartData.map((entry, index) => (

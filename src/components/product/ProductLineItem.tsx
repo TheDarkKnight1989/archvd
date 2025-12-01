@@ -196,11 +196,11 @@ export function ProductLineItem({
     }
   }
 
-  const imageSizeClass = compact ? 'h-10 w-10' : 'h-11 w-11 md:h-12 md:w-12'
-  const imageSize = compact ? 40 : 48
+  const imageSizeClass = compact ? 'h-9 w-9' : 'h-11 w-11 md:h-12 md:w-12'
+  const imageSize = compact ? 36 : 48
 
   return (
-    <div className={cn('flex gap-3 items-start', className)}>
+    <div className={cn('flex gap-2 items-start', className)}>
       {/* Image thumbnail */}
       <div
         className={cn(
@@ -231,7 +231,7 @@ export function ProductLineItem({
       </div>
 
       {/* Text content */}
-      <div className="flex-1 min-w-0 space-y-1">
+      <div className="flex-1 min-w-0 space-y-0.5">
         {/* Title row: Brand + Model + Link icon */}
         <div className="flex items-center gap-1.5">
           <Link
@@ -272,43 +272,27 @@ export function ProductLineItem({
           </Tooltip.Provider>
         </div>
 
-        {/* Variant/colorway (semibold) */}
-        {variant && (
-          <div className="text-[13px] font-semibold text-fg line-clamp-1" title={variant}>
-            {variant}
-          </div>
-        )}
-
-        {/* Chips row: Size (if applicable) + SKU + Language tag */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Size chip for sneakers/streetwear */}
+        {/* Compressed metadata row: Size • SKU • Variant (single line with bullets) */}
+        <div className="text-[11px] text-muted/80 flex items-center gap-1.5 line-clamp-1">
           {sizeLabel && category !== 'pokemon' && (
-            <span
-              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted whitespace-nowrap opacity-70"
-              title={`Size: ${sizeLabel}`}
-            >
-              <span className="font-semibold">Size:</span>
-              <span className="ml-1">{sizeLabel}</span>
-            </span>
+            <>
+              <span>Size {sizeLabel}</span>
+              <span className="text-muted/40">•</span>
+            </>
           )}
-
-          {/* Language tag for Pokémon sealed */}
           {languageTag && category === 'pokemon' && (
-            <span
-              className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted font-medium opacity-70"
-              title={`Language: ${languageTag}`}
-            >
-              {languageTag}
-            </span>
+            <>
+              <span>{languageTag}</span>
+              <span className="text-muted/40">•</span>
+            </>
           )}
-
-          {/* SKU chip (always shown) */}
-          <span
-            className="inline-flex items-center text-[11px] px-2 py-[2px] rounded-full bg-soft text-muted font-mono opacity-70"
-            title={`SKU: ${sku}`}
-          >
-            {sku}
-          </span>
+          <span className="font-mono">{sku}</span>
+          {variant && (
+            <>
+              <span className="text-muted/40">•</span>
+              <span className="font-semibold" title={variant}>{variant}</span>
+            </>
+          )}
         </div>
       </div>
     </div>

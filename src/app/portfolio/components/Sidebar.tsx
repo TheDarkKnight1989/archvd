@@ -121,16 +121,16 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
   return (
     <>
       {/* Wrapper */}
-      <div className="flex h-full flex-col overflow-y-auto">
+      <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden">
         {/* Top Block: Logo + Wordmark + Search */}
         <div className={cn(
           "transition-all duration-200",
-          isExpanded ? "px-3 sm:px-4 py-3 sm:py-4" : "px-0 py-4"
+          isExpanded ? "px-2.5 sm:px-3 py-2.5 sm:py-3" : "px-0 py-1.5"
         )}>
           {/* Logo + App Name */}
           <div className={cn(
-            "mb-4 flex items-center gap-3 transition-all duration-200",
-            isExpanded ? "px-2" : "flex-col px-0 justify-center"
+            "flex items-center gap-3 transition-all duration-200",
+            isExpanded ? "mb-4 px-2" : "mb-1.5 flex-col px-0 justify-center"
           )}>
             <div
               className={cn(
@@ -204,12 +204,12 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
 
         {/* Scrollable Content */}
         <div className={cn(
-          "flex-1 overflow-y-auto pb-3 transition-all duration-200",
-          isExpanded ? "px-3 sm:px-4" : "px-0"
+          "flex-1 overflow-y-auto overflow-x-hidden pb-3 transition-all duration-200",
+          isExpanded ? "px-2.5 sm:px-3" : "px-0"
         )}>
           <div className={cn(
-            "flex flex-col pt-3.5",
-            isExpanded ? "gap-2 sm:gap-3" : "gap-1"
+            "flex flex-col transition-all duration-200",
+            isExpanded ? "pt-3.5 gap-2 sm:gap-3" : "pt-1 gap-1"
           )}>
             {/* 📦 Manage */}
             <div>
@@ -361,8 +361,8 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
           {/* Quick Actions - Vertical stack when expanded, centered icons when collapsed */}
           <div
             className={cn(
-              "pt-3 pb-3",
-              isExpanded ? "px-3 space-y-1" : "flex flex-col items-center justify-center gap-2 px-[15px]"
+              "pt-2.5 pb-2.5",
+              isExpanded ? "px-2.5 space-y-1" : "flex flex-col items-center justify-center gap-2 px-[15px]"
             )}
           >
             {/* Import */}
@@ -387,7 +387,7 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               )}
               title={!isExpanded ? 'Import' : undefined}
             >
-              <UploadCloud className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              <UploadCloud className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
               {isExpanded && (
                 <span className="text-xs font-medium truncate">Import</span>
               )}
@@ -415,7 +415,7 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               )}
               title={!isExpanded ? 'Accounting' : undefined}
             >
-              <ReceiptText className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              <ReceiptText className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
               {isExpanded && (
                 <span className="text-xs font-medium truncate">Accounting</span>
               )}
@@ -443,7 +443,7 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               )}
               title={!isExpanded ? 'Settings' : undefined}
             >
-              <Settings className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              <Settings className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
               {isExpanded && (
                 <span className="text-xs font-medium truncate">Settings</span>
               )}
@@ -473,7 +473,7 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               )}
               title={!isExpanded ? 'Discord' : undefined}
             >
-              <MessageSquare className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              <MessageSquare className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
               {isExpanded && (
                 <span className="text-xs font-medium truncate">Discord</span>
               )}
@@ -500,7 +500,7 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
               )}
               title={!isExpanded ? 'Logout' : undefined}
             >
-              <LogOut className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+              <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
               {isExpanded && (
                 <span className="text-xs font-medium truncate">Logout</span>
               )}
@@ -523,9 +523,9 @@ export function SidebarContent({ isExpanded, onClose, isMobile = false }: Sideba
                   aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
                 >
                   {pinned ? (
-                    <Pin className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+                    <Pin className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
                   ) : (
-                    <PinOff className="h-5 w-5 flex-shrink-0" strokeWidth={1.75} />
+                    <PinOff className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
                   )}
                   <span className="text-xs font-medium flex-1 text-left">
                     {pinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
@@ -635,7 +635,7 @@ export function Sidebar() {
       className={cn(
         'fixed left-0 top-0 h-dvh z-40 max-md:hidden',
         'border-r-2 transition-[width,background,box-shadow,border,border-radius] duration-120 ease-terminal',
-        isExpanded ? 'w-[320px] rounded-none' : 'w-20 rounded-tr-3xl rounded-br-3xl'
+        isExpanded ? 'w-64 rounded-none' : 'w-16 rounded-tr-3xl rounded-br-3xl'
       )}
       style={{
         background: isExpanded
@@ -679,7 +679,7 @@ function NavItem({ item, pathname, isExpanded, index = 0, onClick }: NavItemProp
   const staggerDelay = isExpanded ? index * 20 : 0
 
   return (
-    <li className={cn(!isExpanded && "w-full")}>
+    <li className={cn(!isExpanded && "w-full flex justify-center")}>
       <Link
         href={item.href}
         onClick={onClick}
@@ -747,7 +747,7 @@ function NavItem({ item, pathname, isExpanded, index = 0, onClick }: NavItemProp
         <Icon
           className={cn(
             'flex-shrink-0 transition-all duration-200',
-            isExpanded ? 'h-5 w-5' : 'h-5 w-5',
+            isExpanded ? 'h-4 w-4' : 'h-4 w-4',
             isExpanded && isActive ? 'text-[#0E1A15]' :
             !isExpanded && isActive ? 'text-accent-foreground' :
             'text-muted group-hover:text-accent'

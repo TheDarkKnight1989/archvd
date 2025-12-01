@@ -24,6 +24,10 @@ interface RepriceListingModalProps {
     market_lowest_ask?: number
     product_name?: string
     sku?: string
+    alias_image_url?: string
+    stockx_image_url?: string
+    image_url?: string
+    image?: { url: string; alt: string }
   }
   invested: number
 }

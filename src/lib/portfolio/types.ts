@@ -65,9 +65,14 @@ export type EnrichedLineItem = {
   // Image resolved through fallback chain
   image: { url: string; alt: string };
   imageSource?: 'alias' | 'stockx' | null;
+  // Legacy image fields (for backwards compatibility)
+  alias_image_url?: string | null;
+  stockx_image_url?: string | null;
+  image_url?: string | null;
 
   // Purchase info
   purchaseDate?: string | null;
+  created_at?: string | null;
   qty: number;
   invested: number;       // total cost (purchase_price + tax + shipping)
   avgCost: number;        // invested / qty

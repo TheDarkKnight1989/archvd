@@ -112,15 +112,18 @@ export default function PortfolioPage() {
 
   // Column visibility state - Updated to match new Portfolio table spec
   const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
-    { key: 'item', label: 'Item', visible: true, lock: true },
-    { key: 'sku', label: 'SKU', visible: true },
-    { key: 'category', label: 'Category', visible: true },
-    { key: 'purchase_date', label: 'Purchase Date', visible: true },
-    { key: 'buy', label: 'Buy £', visible: true },
-    { key: 'total', label: 'Total £', visible: true },
-    { key: 'market', label: 'Market £', visible: true },
-    { key: 'gain_loss_pct', label: '% Gain/Loss', visible: true },
+    { key: 'name', label: 'Name', visible: true, lock: true },
+    { key: 'size', label: 'Size (UK)', visible: true },
     { key: 'status', label: 'Status', visible: true },
+    { key: 'unrealised_pl', label: 'Unrealised P/L', visible: true },
+    { key: 'invested', label: 'Purchase Price', visible: true },
+    { key: 'market_value', label: 'Market Value', visible: true },
+    { key: 'highest_bid', label: 'Highest Bid', visible: true },
+    { key: 'listed_price', label: 'Listed Price', visible: true },
+    { key: 'spread', label: 'Spread %', visible: false },
+    { key: 'performance_pct', label: 'Performance %', visible: true },
+    { key: 'platform', label: 'Platform', visible: true },
+    { key: 'purchase_date', label: 'Purchase Date', visible: false },
     { key: 'actions', label: 'Actions', visible: true },
   ])
 
@@ -982,7 +985,7 @@ export default function PortfolioPage() {
     (searchQuery ? 1 : 0) +
     (quickFilter ? 1 : 0)
 
-  // Convert columnConfig to columnVisibility object
+  // Convert columnConfig to columnVisibility object for InventoryV3Table
   const columnVisibility = useMemo(() => {
     return columnConfig.reduce((acc, col) => {
       acc[col.key] = col.visible
@@ -1011,234 +1014,189 @@ export default function PortfolioPage() {
     .map(([key, count]) => ({ key, label: key, count }))
 
   return (
-    <div className="mx-auto max-w-[1400px] px-3 md:px-6 lg:px-8 py-2 md:py-6 space-y-3 md:space-y-6 text-fg">
-      {/* Page Header */}
-      <div className="flex items-start justify-between gap-4 p-2 md:p-4 rounded-2xl bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10 shadow-lg">
-        <div className="flex-1">
-          <h1 className="font-display text-2xl md:text-3xl font-semibold text-fg tracking-tight mb-1">
+    <div className="mx-auto max-w-[1400px] px-3 md:px-6 lg:px-8 py-2 md:py-4 space-y-2 md:space-y-3 text-fg">
+      {/* Compact Page Header */}
+      <div className="flex items-center justify-between gap-4 py-2">
+        {/* Left: Title + Subtitle */}
+        <div className="flex-1 min-w-0">
+          <h1 className="font-display text-xl md:text-2xl font-semibold text-fg tracking-tight">
             Portfolio
           </h1>
-          <p className="text-xs text-fg/70 max-w-2xl hidden md:block">
+          <p className="text-[11px] text-muted/70 max-w-2xl hidden md:block mt-0.5">
             Track and manage your collectibles inventory with live market data
           </p>
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
-          {/* Saved Views */}
-          {savedViews.views.map((view) => (
-            <SavedViewChip
-              key={view.id}
-              label={view.name}
-              active={savedViews.activeViewId === view.id}
-              onApply={() => applySavedView(view.id)}
-              onDelete={() => savedViews.deleteView(view.id)}
-            />
-          ))}
+        {/* Right: Action Buttons */}
+        <div className="hidden md:flex items-center gap-2">
+          {/* Sync Button */}
+          <Button
+            onClick={async () => {
+              setSyncing(true)
+              setSyncResult(null)
+              try {
+                const endpoint = platform === 'alias' ? '/api/alias/sync/inventory' : '/api/stockx/sync-all'
+                const requestBody = platform === 'alias' ? { limit: 100 } : {}
+                const res = await fetch(endpoint, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(requestBody)
+                })
+                if (!res.ok) throw new Error('Sync failed')
+                setSyncResult('success')
+                setTimeout(() => setSyncResult(null), 3000)
+                void refetch()
+              } catch (error) {
+                console.error('Sync error:', error)
+                setSyncResult('error')
+                setTimeout(() => setSyncResult(null), 3000)
+              } finally {
+                setSyncing(false)
+              }
+            }}
+            disabled={syncing}
+            size="sm"
+            variant="outline"
+            className="h-8 px-3 text-xs border-border/60 hover:border-border text-muted hover:text-fg"
+          >
+            <RefreshCw className={cn('h-3 w-3 mr-1.5', syncing && 'animate-spin')} />
+            {syncing ? 'Syncing...' : 'Sync'}
+          </Button>
+
+          {/* Add Item */}
+          <Button
+            onClick={() => setAddItemModalOpen(true)}
+            size="sm"
+            className="h-8 px-3 text-xs bg-[#00FF94] hover:bg-[#00E085] text-black font-medium"
+          >
+            <Plus className="h-3 w-3 mr-1.5" />
+            Add Item
+          </Button>
+
+          {/* Column Chooser */}
+          <ColumnChooser
+            columns={columnConfig}
+            onChange={(updated) => {
+              setColumnConfig(prev =>
+                prev.map(col => ({
+                  ...col,
+                  visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
+                }))
+              )
+            }}
+          />
+
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 text-xs border-border/60 hover:border-border text-muted hover:text-fg"
+              >
+                <Download className="h-3 w-3 mr-1.5" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => console.log('Export CSV')}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => console.log('Export JSON')}>
+                Export as JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Compact Filter Bar */}
-      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-1.5 md:py-2 bg-bg/95 backdrop-blur-lg border-y border-border/40">
-        <div className="flex flex-col gap-1.5 md:gap-2">
-          {/* Main Row: Search + Quick Filters on left, Platform + Actions on right */}
+      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-3 bg-elev-0/30 border-y border-border/20">
+        <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2 overflow-x-auto">
-            {/* Search - Bigger on desktop */}
-            <div className="relative flex-shrink-0 w-[280px] md:w-[340px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-              <Input
-                placeholder="Search SKU, brand, model..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onBlur={() => updateParams({ search: searchQuery || undefined })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    updateParams({ search: searchQuery || undefined })
-                  }
-                }}
-                className={cn(
-                  'pl-9 h-9 bg-elev-0 border-border transition-all duration-120 text-fg text-sm',
-                  searchQuery && 'ring-2 ring-[#00FF94]/35 border-[#00FF94]/35'
-                )}
-              />
-            </div>
+          {/* Search - Match top bar style */}
+          <div className="relative flex-shrink-0 w-[280px] md:w-[360px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/70" />
+            <Input
+              placeholder="Search SKU, brand, model..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onBlur={() => updateParams({ search: searchQuery || undefined })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  updateParams({ search: searchQuery || undefined })
+                }
+              }}
+              className={cn(
+                'pl-9 pr-3 h-10 bg-elev-1/50 border border-white/10 rounded-lg transition-all text-fg text-sm',
+                'hover:bg-elev-2/80 hover:border-accent/30',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent shadow-sm',
+                searchQuery && 'ring-2 ring-[#00FF94]/30 border-[#00FF94]/30'
+              )}
+            />
+          </div>
 
-            {/* Quick Filters */}
+            {/* Quick Filters - Premium style with emojis */}
             <Button
-              variant={quickFilter === 'listed-stockx' ? 'default' : 'outline'}
-              size="sm"
               onClick={() => applyQuickFilter('listed-stockx')}
               className={cn(
-                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
+                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
                 quickFilter === 'listed-stockx'
-                  ? 'bg-[#00FF94] text-black hover:bg-[#00E085]'
-                  : 'border-[#00FF94]/30 text-[#00FF94] hover:bg-[#00FF94]/10'
+                  ? '!bg-[#00FF94]/15 !text-[#00FF94] !border-[#00FF94]/30 hover:!bg-[#00FF94]/25 !shadow-sm'
+                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
               )}
             >
+              <span>🏷️</span>
               Listed on StockX
             </Button>
             <Button
-              variant={quickFilter === 'profitable' ? 'default' : 'outline'}
-              size="sm"
               onClick={() => applyQuickFilter('profitable')}
               className={cn(
-                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
+                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
                 quickFilter === 'profitable'
-                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                  : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                  ? '!bg-emerald-500/15 !text-emerald-400 !border-emerald-500/30 hover:!bg-emerald-500/25 !shadow-sm'
+                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
               )}
             >
+              <span>💰</span>
               Profitable
             </Button>
             <Button
-              variant={quickFilter === 'loss-making' ? 'default' : 'outline'}
-              size="sm"
               onClick={() => applyQuickFilter('loss-making')}
               className={cn(
-                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
+                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
                 quickFilter === 'loss-making'
-                  ? 'bg-red-500 text-white hover:bg-red-600'
-                  : 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+                  ? '!bg-red-500/15 !text-red-400 !border-red-500/30 hover:!bg-red-500/25 !shadow-sm'
+                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
               )}
             >
+              <span>📉</span>
               Loss Making
             </Button>
             <Button
-              variant={quickFilter === 'never-listed' ? 'default' : 'outline'}
-              size="sm"
               onClick={() => applyQuickFilter('never-listed')}
               className={cn(
-                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
+                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
                 quickFilter === 'never-listed'
-                  ? 'bg-blue-500 text-white hover:bg-blue-600'
-                  : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10'
+                  ? '!bg-blue-500/15 !text-blue-400 !border-blue-500/30 hover:!bg-blue-500/25 !shadow-sm'
+                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
               )}
             >
+              <span>📦</span>
               Never Listed
             </Button>
             <Button
-              variant={quickFilter === 'added-this-week' ? 'default' : 'outline'}
-              size="sm"
               onClick={() => applyQuickFilter('added-this-week')}
               className={cn(
-                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
+                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
                 quickFilter === 'added-this-week'
-                  ? 'bg-amber-500 text-black hover:bg-amber-600'
-                  : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
+                  ? '!bg-amber-500/15 !text-amber-400 !border-amber-500/30 hover:!bg-amber-500/25 !shadow-sm'
+                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
               )}
             >
+              <span>⏰</span>
               Added This Week
             </Button>
-
-            {/* Spacer */}
-            <div className="flex-1 min-w-[20px]" />
-
-            {/* Sync Button */}
-            <Button
-              onClick={async () => {
-                setSyncing(true)
-                setSyncResult(null)
-                try {
-                  const endpoint = platform === 'alias' ? '/api/alias/sync/inventory' : '/api/stockx/sync-all'
-                  const requestBody = platform === 'alias' ? { limit: 100 } : {}
-                  const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                  })
-                  if (!res.ok) throw new Error('Sync failed')
-                  setSyncResult('success')
-                  setTimeout(() => setSyncResult(null), 3000)
-                  void refetch()
-                } catch (error) {
-                  console.error('Sync error:', error)
-                  setSyncResult('error')
-                  setTimeout(() => setSyncResult(null), 3000)
-                } finally {
-                  setSyncing(false)
-                }
-              }}
-              disabled={syncing}
-              size="sm"
-              variant="outline"
-              className="h-8 px-2.5 border-border hover:border-[#00FF94]/40 flex-shrink-0"
-            >
-              <RefreshCw className={cn('h-3 w-3 mr-1.5', syncing && 'animate-spin')} />
-              {syncing ? 'Syncing...' : 'Sync'}
-            </Button>
-
-            {/* Add Item */}
-            <Button
-              onClick={() => setAddItemModalOpen(true)}
-              size="sm"
-              className="h-8 px-2.5 bg-[#00FF94] hover:bg-[#00E085] text-black font-medium flex-shrink-0"
-            >
-              <Plus className="h-3 w-3 mr-1.5" />
-              Add Item
-            </Button>
-
-            {/* Column Chooser */}
-            <div className="flex-shrink-0">
-              <ColumnChooser
-                columns={columnConfig}
-                onChange={(updated) => {
-                  setColumnConfig(prev =>
-                    prev.map(col => ({
-                      ...col,
-                      visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
-                    }))
-                  )
-                }}
-              />
-            </div>
-
-            {/* Export Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-2.5 border-border hover:border-[#00FF94]/40 flex-shrink-0"
-                  disabled={items.length === 0}
-                >
-                  <Download className="h-3 w-3 mr-1.5" />
-                  Export
-                  <ChevronDown className="h-3 w-3 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-[#0E1A15] border-[#15251B] p-2">
-                <div className="text-xs font-medium text-[#7FA08F] uppercase tracking-wide px-2 py-1.5">
-                  Export Options
-                </div>
-                <DropdownMenuItem
-                  onClick={exportCSV}
-                  disabled={filteredItems.length === 0}
-                  className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Export Inventory
-                  <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-[#15251B]/40 my-1" />
-                <DropdownMenuItem
-                  onClick={() => exportInsuranceCsv(items as any)}
-                  disabled={items.length === 0}
-                  className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Insurance Report
-                  <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => exportTaxCsv(items as any)}
-                  disabled={items.length === 0}
-                  className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
-                >
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Tax Report
-                  <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           {/* Optional Second Row: Clear Filters / Save View */}
@@ -1486,17 +1444,18 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {/* Platform Tabs - Table Selectors */}
-      <div className="border-b border-border/40 -mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8">
+      {/* Platform Tabs - Premium selectors */}
+      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 pt-3 pb-0">
         <Tabs value={platform} onValueChange={(value) => setPlatform(value as 'stockx' | 'alias')}>
-          <TabsList className="bg-transparent border-0 gap-0 p-0 h-auto">
+          <TabsList className="bg-transparent border-0 gap-2 p-0 h-auto">
             <TabsTrigger
               value="stockx"
               className={cn(
-                "relative px-6 py-3 text-sm font-medium transition-all rounded-t-lg border-b-2",
+                "relative px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg border",
+                "data-[state=active]:shadow-sm",
                 platform === 'stockx'
-                  ? "text-[#00FF94] border-[#00FF94] bg-[#00FF94]/5"
-                  : "text-muted border-transparent hover:text-fg hover:bg-soft/30"
+                  ? "text-white bg-gradient-to-br from-[#00FF94]/20 to-[#00FF94]/10 border-[#00FF94]/30 shadow-[0_0_20px_rgba(0,255,148,0.15)]"
+                  : "text-muted border-white/10 bg-elev-1/50 hover:text-fg hover:bg-elev-2/80 hover:border-accent/30"
               )}
             >
               StockX
@@ -1504,10 +1463,11 @@ export default function PortfolioPage() {
             <TabsTrigger
               value="alias"
               className={cn(
-                "relative px-6 py-3 text-sm font-medium transition-all rounded-t-lg border-b-2",
+                "relative px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg border",
+                "data-[state=active]:shadow-sm",
                 platform === 'alias'
-                  ? "text-[#A855F7] border-[#A855F7] bg-[#A855F7]/5"
-                  : "text-muted border-transparent hover:text-fg hover:bg-soft/30"
+                  ? "text-white bg-gradient-to-br from-[#A855F7]/20 to-[#A855F7]/10 border-[#A855F7]/30 shadow-[0_0_20px_rgba(168,85,247,0.15)]"
+                  : "text-muted border-white/10 bg-elev-1/50 hover:text-fg hover:bg-elev-2/80 hover:border-[#A855F7]/30"
               )}
             >
               Alias
@@ -1567,10 +1527,7 @@ export default function PortfolioPage() {
           sorting={sorting}
           onSortingChange={setSorting}
           platform={platform}
-          columnVisibility={{
-            spread: false,
-            purchase_date: false,
-          }}
+          columnVisibility={columnVisibility}
           onRowClick={handleRowClick}
           selectedItems={selectedItems}
           onSelectionChange={setSelectedItems}

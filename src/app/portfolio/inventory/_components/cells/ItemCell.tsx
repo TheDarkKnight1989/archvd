@@ -16,12 +16,12 @@ export function ItemCell({ item, onClick }: ItemCellProps) {
   return (
     <ProductLineItem
       // Image fallback chain
-      imageUrl={item.image.src}
+      imageUrl={item.image.url}
       imageAlt={item.image.alt}
-      marketImageUrl={item.image.src}
-      inventoryImageUrl={item.image.src}
+      marketImageUrl={item.image.url}
+      inventoryImageUrl={item.image.url}
       provider={item.market.provider}
-      imageSource={item.imageSource}
+      imageSource={item.imageSource === 'alias' ? 'local' : item.imageSource}
 
       // Product info
       brand={item.brand}

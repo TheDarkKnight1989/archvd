@@ -21,7 +21,7 @@
  * 14. Actions - three-dot menu
  */
 
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import {
   createColumnHelper,
   flexRender,
@@ -43,8 +43,100 @@ import { ProductLineItem } from '@/components/product/ProductLineItem'
 import { RowActions } from './RowActions'
 import type { EnrichedLineItem } from '@/lib/portfolio/types'
 import { generateProductSlug } from '@/lib/utils/slug'
+import Link from 'next/link'
+import { ExternalLink, ArrowUpDown } from 'lucide-react'
 
 const columnHelper = createColumnHelper<EnrichedLineItem>()
+
+/**
+ * DesktopNameCell - Premium 3-line vertical layout for desktop inventory table
+ *
+ * Structure:
+ * - Line 1: Product Name (font-medium, text-[15px], tracking-tight)
+ * - Line 2: Variant/Colorway (text-sm, text-muted-foreground)
+ * - Line 3: Metadata (Size UK, SKU) (text-[11px], text-muted-foreground/70)
+ */
+interface DesktopNameCellProps {
+  item: EnrichedLineItem
+  href: string
+}
+
+function DesktopNameCell({ item, href }: DesktopNameCellProps) {
+  // Only show brand if model doesn't already start with it (prevents "Nike Nike...")
+  const productName = item.model?.trim().toLowerCase().startsWith(item.brand?.toLowerCase() || '')
+    ? item.model.trim()
+    : `${item.brand || ''} ${item.model || ''}`.trim()
+
+  // Build metadata array: size UK, SKU
+  const metadataParts = [
+    item.size_uk ? `UK ${item.size_uk}` : null,
+    item.sku
+  ].filter(Boolean)
+
+  return (
+    <div className="flex items-center gap-2.5 group">
+      {/* Image Thumbnail - 48px with subtle frame */}
+      <div className="h-12 w-12 rounded-md shadow-sm ring-1 ring-black/10 overflow-hidden flex-shrink-0 bg-black/40 transition-transform duration-200 group-hover:-translate-y-[0.5px] relative flex items-center justify-center">
+        {item.image?.url ? (
+          <img
+            src={item.image.url}
+            alt={item.image.alt || productName}
+            className="object-cover w-full h-full"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-elev-2 text-[11px] font-medium text-dim">
+            {item.brand?.slice(0, 2).toUpperCase() || 'IT'}
+          </div>
+        )}
+
+        {/* StockX badge overlay */}
+        {item.imageSource === 'stockx' && item.image?.url && (
+          <div className="absolute bottom-0.5 right-0.5 bg-emerald-600 text-white text-[9px] font-semibold px-1 py-0.5 rounded-full leading-none shadow-sm">
+            S
+          </div>
+        )}
+      </div>
+
+      {/* Text Content - 2-line hierarchy: name + metadata */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Primary name */}
+        <div className="flex items-center gap-1">
+          <Link
+            href={href}
+            className="text-sm font-medium text-white leading-tight tracking-tight hover:text-muted transition-colors truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:rounded"
+            aria-label={`View ${productName} details`}
+          >
+            {productName}
+          </Link>
+          <Link
+            href={href}
+            className="flex-shrink-0 text-muted-foreground/70 hover:text-fg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:rounded opacity-0 group-hover:opacity-100"
+            aria-hidden="true"
+          >
+            <ExternalLink className="h-3 w-3" strokeWidth={2} />
+          </Link>
+        </div>
+
+        {/* Secondary metadata: size • SKU (more subtle) */}
+        {metadataParts.length > 0 && (
+          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/55 leading-tight truncate">
+            {metadataParts.map((part, idx) => (
+              <React.Fragment key={idx}>
+                {idx > 0 && (
+                  <span className="text-white/30">•</span>
+                )}
+                <span className={cn("tabular-nums", idx > 0 && "font-mono")}>
+                  {part}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export interface InventoryV3TableProps {
   items: EnrichedLineItem[]
@@ -53,6 +145,8 @@ export interface InventoryV3TableProps {
   onSortingChange: OnChangeFn<SortingState>
   onRowClick?: (item: EnrichedLineItem) => void
   platform?: 'stockx' | 'alias' // Platform filter for data sources
+  // Column visibility
+  columnVisibility?: Record<string, boolean>
   // Bulk selection
   selectedItems?: Set<string>
   onSelectionChange?: (selectedIds: Set<string>) => void
@@ -89,6 +183,7 @@ export function InventoryV3Table({
   onSortingChange,
   onRowClick,
   platform = 'stockx',
+  columnVisibility = {},
   selectedItems = new Set(),
   onSelectionChange,
   // Item actions
@@ -154,12 +249,13 @@ export function InventoryV3Table({
       columnHelper.display({
         id: 'select',
         header: () => (
-          <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-center">
             <Checkbox
               checked={allSelected}
               indeterminate={someSelected}
               onCheckedChange={handleSelectAll}
               aria-label="Select all"
+              onClick={(e) => e.stopPropagation()}
             />
           </div>
         ),
@@ -185,7 +281,20 @@ export function InventoryV3Table({
         (row) => `${row.brand || ''} ${row.model || ''}`.trim(),
         {
           id: 'name',
-          header: 'Name',
+          header: (info) => {
+            const isSorted = info.column.getIsSorted()
+            return (
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs font-medium text-white/80">Name</span>
+                <ArrowUpDown
+                  className={cn(
+                    'h-3 w-3 transition-opacity flex-shrink-0',
+                    isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                  )}
+                />
+              </div>
+            )
+          },
           cell: (info) => {
             const item = info.row.original
 
@@ -196,19 +305,8 @@ export function InventoryV3Table({
             const marketHref = slug ? `/portfolio/market/${slug}?itemId=${item.id}` : `/portfolio/inventory/market/${item.id}`
 
             return (
-              <div className="min-w-[350px]">
-                <ProductLineItem
-                  imageUrl={item.image?.url || null}
-                  imageAlt={item.image?.alt || `${item.brand} ${item.model}`}
-                  brand={item.brand || ''}
-                  model={item.model || ''}
-                  variant={item.colorway || undefined}
-                  sku={item.sku}
-                  href={marketHref}
-                  sizeUk={item.size_uk ? parseFloat(String(item.size_uk)) : undefined}
-                  sizeSystem="UK"
-                  category={(item.category?.toLowerCase() as any) || 'other'}
-                />
+              <div className="max-w-[320px] min-w-[260px]">
+                <DesktopNameCell item={item} href={marketHref} />
               </div>
             )
           },
@@ -219,13 +317,29 @@ export function InventoryV3Table({
       // 2. Size (user's preferred system)
       columnHelper.accessor('size_uk', {
         id: 'size',
-        header: () => <div className="text-center w-16 opacity-70">Size (UK)</div>,
+        header: (info) => {
+          const isSorted = info.column.getIsSorted()
+          return (
+            <div className="flex items-center justify-center gap-1 w-16">
+              <div className="flex flex-col items-center leading-[1.1]">
+                <span className="text-xs font-medium text-white/80">Size</span>
+                <span className="text-[10px] text-white/50">UK</span>
+              </div>
+              <ArrowUpDown
+                className={cn(
+                  'h-3 w-3 transition-opacity flex-shrink-0',
+                  isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                )}
+              />
+            </div>
+          )
+        },
         cell: (info) => {
           const sizeUk = info.getValue()
           if (!sizeUk) return <div className="text-center text-dim/50 w-16">—</div>
 
           return (
-            <div className="text-center mono text-sm w-16 tabular-nums">
+            <div className="text-center mono text-[11px] text-muted w-16 tabular-nums">
               {sizeUk}
             </div>
           )
@@ -244,7 +358,20 @@ export function InventoryV3Table({
         },
         {
           id: 'status',
-          header: () => <div className="text-center w-24 opacity-70">Status</div>,
+          header: (info) => {
+            const isSorted = info.column.getIsSorted()
+            return (
+              <div className="flex items-center justify-center gap-1 w-20">
+                <span className="text-xs font-medium text-white/80">Status</span>
+                <ArrowUpDown
+                  className={cn(
+                    'h-3 w-3 transition-opacity flex-shrink-0',
+                    isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                  )}
+                />
+              </div>
+            )
+          },
           cell: (info) => {
             const item = info.row.original
             const status = item.stockx?.listingStatus
@@ -252,8 +379,8 @@ export function InventoryV3Table({
             // Active or Pending → Green "Listed"
             if (status === 'ACTIVE' || status === 'PENDING') {
               return (
-                <div className="text-center w-24">
-                  <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 font-semibold shadow-sm shadow-emerald-500/10 whitespace-nowrap">
+                <div className="text-center w-20">
+                  <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 font-semibold shadow-sm shadow-emerald-500/10 whitespace-nowrap text-[11px] px-2 py-0.5">
                     Listed
                   </Badge>
                 </div>
@@ -263,8 +390,8 @@ export function InventoryV3Table({
             // Inactive → Yellow "Paused"
             if (status === 'INACTIVE') {
               return (
-                <div className="text-center w-24">
-                  <Badge variant="outline" className="bg-amber-400/20 text-amber-300 border-amber-400/50 font-semibold shadow-sm shadow-amber-400/10 whitespace-nowrap">
+                <div className="text-center w-20">
+                  <Badge variant="outline" className="bg-amber-400/20 text-amber-300 border-amber-400/50 font-semibold shadow-sm shadow-amber-400/10 whitespace-nowrap text-[11px] px-2 py-0.5">
                     Paused
                   </Badge>
                 </div>
@@ -273,56 +400,106 @@ export function InventoryV3Table({
 
             // No listing → Gray "Unlisted"
             return (
-              <div className="text-center w-24">
-                <Badge variant="outline" className="bg-muted/10 text-muted border-muted/30 whitespace-nowrap">
+              <div className="text-center w-20">
+                <Badge variant="outline" className="bg-muted/10 text-muted border-muted/30 whitespace-nowrap text-[11px] px-2 py-0.5">
                   Unlisted
                 </Badge>
               </div>
             )
           },
           enableSorting: true,
-          size: 100,
+          size: 90,
         }
       ),
 
       // 4. Unrealised P/L
       columnHelper.accessor('pl', {
         id: 'unrealised_pl',
-        header: () => <div className="text-right opacity-70">Unrealised P/L {symbol()}</div>,
+        header: (info) => {
+          const isSorted = info.column.getIsSorted()
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <div className="flex flex-col items-end leading-[1.1]">
+                <span className="text-xs font-medium text-white/80">Unrealised</span>
+                <span className="text-[10px] text-white/50">P/L {symbol()}</span>
+              </div>
+              <ArrowUpDown
+                className={cn(
+                  'h-3 w-3 transition-opacity flex-shrink-0',
+                  isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                )}
+              />
+            </div>
+          )
+        },
         cell: (info) => {
           const pl = info.getValue()
           const converted = pl !== null && pl !== undefined ? convert(pl, 'GBP') : null
 
           return (
-            <div className="text-right mono tabular-nums">
+            <div className="text-right mono tabular-nums text-xs leading-tight">
               <MoneyCell value={converted} currency={currency} />
             </div>
           )
         },
         enableSorting: true,
+        size: 110,
       }),
 
       // 5. Purchase Price (invested = purchase_price + tax + shipping)
       columnHelper.accessor('invested', {
         id: 'purchase_price',
-        header: () => <div className="text-right opacity-70">Purchase {symbol()}</div>,
+        header: (info) => {
+          const isSorted = info.column.getIsSorted()
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <div className="flex flex-col items-end leading-[1.1]">
+                <span className="text-xs font-medium text-white/80">Buy</span>
+                <span className="text-[10px] text-white/50">{symbol()}</span>
+              </div>
+              <ArrowUpDown
+                className={cn(
+                  'h-3 w-3 transition-opacity flex-shrink-0',
+                  isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                )}
+              />
+            </div>
+          )
+        },
         cell: (info) => {
           const price = info.getValue()
           const converted = price ? convert(price, 'GBP') : null
 
           return (
-            <div className="text-right mono tabular-nums">
+            <div className="text-right mono tabular-nums text-xs text-muted leading-tight">
               <PlainMoneyCell value={converted} currency={currency} />
             </div>
           )
         },
         enableSorting: true,
+        size: 100,
       }),
 
       // 6. Market Value
       columnHelper.accessor('market.price', {
         id: 'market_value',
-        header: () => <div className="text-right opacity-70">Market {symbol()}</div>,
+        header: (info) => {
+          const isSorted = info.column.getIsSorted()
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <div className="flex flex-col items-end leading-[1.1]">
+                <span className="text-xs font-medium text-white/80">Market</span>
+                <span className="text-[10px] text-white/50">{symbol()}</span>
+              </div>
+              <ArrowUpDown
+                className={cn(
+                  'h-3 w-3 transition-opacity flex-shrink-0',
+                  isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                )}
+              />
+            </div>
+          )
+        },
         cell: (info) => {
           const item = info.row.original
 
@@ -343,12 +520,13 @@ export function InventoryV3Table({
           }
 
           return (
-            <div className="text-right mono tabular-nums">
+            <div className="text-right mono tabular-nums text-xs text-muted leading-tight">
               <PlainMoneyCell value={price} currency={displayCurrency} />
             </div>
           )
         },
         enableSorting: true,
+        size: 100,
       }),
 
       // 7. Last Sold (Alias only)
@@ -357,7 +535,20 @@ export function InventoryV3Table({
           (row) => row.alias?.lastSoldPrice ?? null,
           {
             id: 'last_sold',
-            header: () => <div className="text-right opacity-70">Last Sold</div>,
+            header: (info) => {
+              const isSorted = info.column.getIsSorted()
+              return (
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-xs font-medium text-white/80">Last Sold</span>
+                  <ArrowUpDown
+                    className={cn(
+                      'h-3 w-3 transition-opacity flex-shrink-0',
+                      isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                    )}
+                  />
+                </div>
+              )
+            },
             cell: (info) => {
               const item = info.row.original
               const lastSold = item.alias?.lastSoldPrice ?? null
@@ -367,7 +558,7 @@ export function InventoryV3Table({
               }
 
               return (
-                <div className="text-right mono tabular-nums">
+                <div className="text-right mono tabular-nums text-xs text-muted leading-tight">
                   <PlainMoneyCell value={lastSold} currency="USD" />
                 </div>
               )
@@ -388,7 +579,23 @@ export function InventoryV3Table({
         },
         {
           id: 'highest_bid',
-          header: () => <div className="text-right opacity-70">Highest Bid</div>,
+          header: (info) => {
+            const isSorted = info.column.getIsSorted()
+            return (
+              <div className="flex items-center justify-end gap-1">
+                <div className="flex flex-col items-end leading-[1.1]">
+                  <span className="text-xs font-medium text-white/80">Bid</span>
+                  <span className="text-[10px] text-white/50">{symbol()}</span>
+                </div>
+                <ArrowUpDown
+                  className={cn(
+                    'h-3 w-3 transition-opacity flex-shrink-0',
+                    isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                  )}
+                />
+              </div>
+            )
+          },
           cell: (info) => {
             const item = info.row.original
             let highestBid: number | null = null
@@ -414,7 +621,7 @@ export function InventoryV3Table({
 
             return (
               <div className="flex items-center justify-end gap-2">
-                <div className="text-right mono tabular-nums">
+                <div className="text-right mono tabular-nums text-xs text-muted leading-tight">
                   <PlainMoneyCell value={highestBid} currency={displayCurrency} />
                 </div>
                 <PlatformBadge platform={platform} compact />
@@ -423,6 +630,7 @@ export function InventoryV3Table({
           },
           enableSorting: true,
           sortUndefined: 1, // Push undefined/null values to the end
+          size: 110,
         }
       ),
 
@@ -431,7 +639,23 @@ export function InventoryV3Table({
         (row) => platform === 'alias' ? (row.alias?.askPrice ?? null) : (row.stockx?.askPrice ?? null),
         {
           id: 'listing_price',
-          header: () => <div className="text-right opacity-70">Listed {symbol()}</div>,
+          header: (info) => {
+            const isSorted = info.column.getIsSorted()
+            return (
+              <div className="flex items-center justify-end gap-1">
+                <div className="flex flex-col items-end leading-[1.1]">
+                  <span className="text-xs font-medium text-white/80">Ask</span>
+                  <span className="text-[10px] text-white/50">{symbol()}</span>
+                </div>
+                <ArrowUpDown
+                  className={cn(
+                    'h-3 w-3 transition-opacity flex-shrink-0',
+                    isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                  )}
+                />
+              </div>
+            )
+          },
           cell: (info) => {
             const item = info.row.original
             let askPrice: number | null = null
@@ -455,13 +679,14 @@ export function InventoryV3Table({
             }
 
             return (
-              <div className="text-right mono tabular-nums text-emerald-500">
+              <div className="text-right mono tabular-nums text-xs text-emerald-500 leading-tight">
                 <PlainMoneyCell value={askPrice} currency={displayCurrency} />
               </div>
             )
           },
           enableSorting: true,
           sortUndefined: 1, // Push undefined/null values to the end
+          size: 100,
         }
       ),
 
@@ -478,7 +703,20 @@ export function InventoryV3Table({
         },
         {
           id: 'spread',
-          header: () => <div className="text-right opacity-70">Spread</div>,
+          header: (info) => {
+            const isSorted = info.column.getIsSorted()
+            return (
+              <div className="flex items-center justify-end gap-1">
+                <span className="text-xs font-medium text-white/80">Spread</span>
+                <ArrowUpDown
+                  className={cn(
+                    'h-3 w-3 transition-opacity flex-shrink-0',
+                    isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                  )}
+                />
+              </div>
+            )
+          },
           cell: (info) => {
             const spreadPct = info.getValue()
 
@@ -495,7 +733,7 @@ export function InventoryV3Table({
             }
 
             return (
-              <div className={cn("text-right mono tabular-nums", colorClass)}>
+              <div className={cn("text-right mono tabular-nums text-xs leading-tight", colorClass)}>
                 {spreadPct > 0 ? '+' : ''}{spreadPct.toFixed(1)}%
               </div>
             )
@@ -508,17 +746,34 @@ export function InventoryV3Table({
       // 11. Performance %
       columnHelper.accessor('performancePct', {
         id: 'performance',
-        header: () => <div className="text-right opacity-70">Performance</div>,
+        header: (info) => {
+          const isSorted = info.column.getIsSorted()
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <div className="flex flex-col items-end leading-[1.1]">
+                <span className="text-xs font-medium text-white/80">Perf</span>
+                <span className="text-[10px] text-white/50">%</span>
+              </div>
+              <ArrowUpDown
+                className={cn(
+                  'h-3 w-3 transition-opacity flex-shrink-0',
+                  isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                )}
+              />
+            </div>
+          )
+        },
         cell: (info) => {
           const pct = info.getValue()
 
           return (
-            <div className="text-right mono">
+            <div className="text-right mono tabular-nums text-xs leading-tight">
               <PercentCell value={pct} />
             </div>
           )
         },
         enableSorting: true,
+        size: 90,
       }),
 
       // 12. Platform Listed (with badges)
@@ -530,7 +785,20 @@ export function InventoryV3Table({
         },
         {
           id: 'platform_listed',
-          header: () => <div className="text-center w-28 opacity-70">Platform</div>,
+          header: (info) => {
+            const isSorted = info.column.getIsSorted()
+            return (
+              <div className="flex items-center justify-center gap-1 w-28">
+                <span className="text-xs font-medium text-white/80">Platform</span>
+                <ArrowUpDown
+                  className={cn(
+                    'h-3 w-3 transition-opacity flex-shrink-0',
+                    isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                  )}
+                />
+              </div>
+            )
+          },
           cell: (info) => {
             const item = info.row.original
             const status = item.stockx?.listingStatus
@@ -555,7 +823,20 @@ export function InventoryV3Table({
       // 13. Purchase Date
       columnHelper.accessor('purchase_date', {
         id: 'purchase_date',
-        header: () => <div className="text-center opacity-70">Purchase Date</div>,
+        header: (info) => {
+          const isSorted = info.column.getIsSorted()
+          return (
+            <div className="flex items-center justify-center gap-1">
+              <span className="text-xs font-medium text-white/80">Purchase Date</span>
+              <ArrowUpDown
+                className={cn(
+                  'h-3 w-3 transition-opacity flex-shrink-0',
+                  isSorted ? 'text-white/70 opacity-100' : 'text-white/30 opacity-100 group-hover:opacity-80'
+                )}
+              />
+            </div>
+          )
+        },
         cell: (info) => {
           const date = info.getValue()
           if (!date) return <div className="text-center text-dim/50">—</div>
@@ -567,7 +848,7 @@ export function InventoryV3Table({
           })
 
           return (
-            <div className="text-center text-sm mono">
+            <div className="text-center text-[11px] text-muted mono leading-tight">
               {formatted}
             </div>
           )
@@ -578,7 +859,11 @@ export function InventoryV3Table({
       // 14. Actions column (three-dot menu)
       columnHelper.display({
         id: 'actions',
-        header: () => <div className="text-center opacity-70">Actions</div>,
+        header: () => (
+          <div className="text-center">
+            <span className="text-xs font-medium text-white">Actions</span>
+          </div>
+        ),
         cell: (info) => {
           const item = info.row.original
           const stockxMapped = !!item.stockx?.mapped && !!item.stockx?.productId && !!item.stockx?.variantId
@@ -661,7 +946,10 @@ export function InventoryV3Table({
   const table = useReactTable({
     data: items,
     columns,
-    state: { sorting },
+    state: {
+      sorting,
+      columnVisibility,
+    },
     onSortingChange: (updater) => {
       console.log('[InventoryV3Table] Sort change triggered', { currentSorting: sorting, updater })
       onSortingChange(updater)
@@ -710,8 +998,9 @@ export function InventoryV3Table({
   }
 
   return (
-    <TableWrapper>
-      <TableBase>
+    <div className="max-w-[1650px] mx-auto">
+      <TableWrapper>
+        <TableBase>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -723,24 +1012,19 @@ export function InventoryV3Table({
                   <TableHead
                     key={header.id}
                     className={cn(
-                      canSort && 'cursor-pointer select-none hover:bg-soft/30 transition-colors',
-                      'whitespace-nowrap group'
+                      canSort && 'cursor-pointer select-none hover:bg-soft/20 transition-colors',
+                      'group py-2 px-1.5 align-top'
                     )}
-                    onClick={header.column.getToggleSortingHandler()}
+                    style={{
+                      width: header.column.getSize() !== 150 ? header.column.getSize() : undefined,
+                      minWidth: header.column.getSize() !== 150 ? header.column.getSize() : undefined,
+                      maxWidth: header.column.getSize() !== 150 ? header.column.getSize() : undefined,
+                    }}
+                    onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                   >
-                    <div className="flex items-center gap-1.5">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                      {canSort && (
-                        <span className={cn(
-                          'text-xs transition-opacity',
-                          isSorted ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'
-                        )}>
-                          {isSorted === 'asc' ? '↑' : isSorted === 'desc' ? '↓' : '↕'}
-                        </span>
-                      )}
-                    </div>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 )
               })}
@@ -757,15 +1041,29 @@ export function InventoryV3Table({
               )}
               onClick={() => onRowClick?.(row.original)}
             >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} className="py-3">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
+              {row.getVisibleCells().map((cell) => {
+                // Compact padding for all cells
+                const cellPadding = 'py-1.5 px-1.5'
+
+                return (
+                  <TableCell
+                    key={cell.id}
+                    className={cellPadding}
+                    style={{
+                      width: cell.column.getSize() !== 150 ? cell.column.getSize() : undefined,
+                      minWidth: cell.column.getSize() !== 150 ? cell.column.getSize() : undefined,
+                      maxWidth: cell.column.getSize() !== 150 ? cell.column.getSize() : undefined,
+                    }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                )
+              })}
             </TableRow>
           ))}
         </TableBody>
       </TableBase>
     </TableWrapper>
+    </div>
   )
 }

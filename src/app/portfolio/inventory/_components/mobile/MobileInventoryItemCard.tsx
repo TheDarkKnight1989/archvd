@@ -119,7 +119,7 @@ export function MobileInventoryItemCard({
         {/* Card Content with padding */}
         <div className="p-4">
           {/* Top Row: Checkbox + Image + Basic Info + Menu */}
-          <div className="flex items-start gap-3 mb-4">
+          <div className="flex items-start gap-3 mb-3">
             {/* Checkbox */}
             <div className="flex items-center pt-1">
               <Checkbox
@@ -137,7 +137,7 @@ export function MobileInventoryItemCard({
             >
               {/* Product Image */}
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-elev-2 border border-border/40">
+                <div className="w-14 h-14 rounded-lg overflow-hidden bg-elev-2 border border-border/40">
                   {item.image?.url ? (
                     <img
                       src={item.image.url}
@@ -154,10 +154,10 @@ export function MobileInventoryItemCard({
 
               {/* Product Info */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-fg line-clamp-2 mb-1">
+                <h3 className="text-sm font-medium text-white line-clamp-2 mb-1 leading-tight">
                   {item.brand} {item.model}
                 </h3>
-                <p className="text-xs text-muted mono mb-1">{item.sku}</p>
+                <p className="text-[11px] text-white/55 mono mb-1 leading-tight">{item.sku}</p>
                 <Badge variant="outline" className={cn('text-xs', statusBadge.className)}>
                   {statusBadge.label}
                 </Badge>
@@ -182,27 +182,27 @@ export function MobileInventoryItemCard({
             onClick={handleCardClick}
             className="w-full text-left"
           >
-            <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-border/30">
+            <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-border/30">
               {/* Left Column */}
-              <div className="space-y-3 pr-4 border-r border-soft/20">
+              <div className="space-y-2.5 pr-3 border-r border-soft/20">
                 <div>
-                  <div className="text-xs text-muted mb-0.5">Size UK</div>
-                  <div className="text-sm font-medium mono tabular-nums text-fg">
+                  <div className="text-[11px] text-muted/70 mb-0.5">Size UK</div>
+                  <div className="text-xs font-medium mono tabular-nums text-fg leading-tight">
                     {item.size_uk || '—'}
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-xs text-muted mb-0.5">Purchase {symbol()}</div>
-                  <div className="text-sm font-medium mono tabular-nums text-fg">
+                  <div className="text-[11px] text-muted/70 mb-0.5">Purchase {symbol()}</div>
+                  <div className="text-xs font-medium mono tabular-nums text-fg leading-tight">
                     <PlainMoneyCell value={purchasePrice} currency={currency} />
                   </div>
                 </div>
 
                 {listedPrice && (
                   <div>
-                    <div className="text-xs text-muted mb-0.5">Listed {symbol()}</div>
-                    <div className="text-sm font-medium mono tabular-nums text-emerald-500">
+                    <div className="text-[11px] text-muted/70 mb-0.5">Listed {symbol()}</div>
+                    <div className="text-xs font-medium mono tabular-nums text-emerald-500 leading-tight">
                       <PlainMoneyCell value={listedPrice} currency={currency} />
                     </div>
                   </div>
@@ -210,19 +210,19 @@ export function MobileInventoryItemCard({
               </div>
 
               {/* Right Column */}
-              <div className="space-y-3 pl-2">
+              <div className="space-y-2.5 pl-2">
                 <div>
-                  <div className="text-xs text-muted mb-0.5">Market {symbol()}</div>
-                  <div className="text-sm font-medium mono tabular-nums text-fg">
+                  <div className="text-[11px] text-muted/70 mb-0.5">Market {symbol()}</div>
+                  <div className="text-xs font-medium mono tabular-nums text-fg leading-tight">
                     <PlainMoneyCell value={marketPrice} currency={currency} />
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-xs text-muted mb-0.5">Unrealised P/L {symbol()}</div>
+                  <div className="text-[11px] text-muted/70 mb-0.5">Unrealised P/L {symbol()}</div>
                   <div
                     className={cn(
-                      'text-sm font-semibold mono tabular-nums',
+                      'text-xs font-semibold mono tabular-nums leading-tight',
                       pl !== null && pl > 0 ? 'text-emerald-500' : pl !== null && pl < 0 ? 'text-red-500' : 'text-muted'
                     )}
                   >
@@ -239,20 +239,20 @@ export function MobileInventoryItemCard({
                 </div>
 
                 <div>
-                  <div className="text-xs text-muted mb-0.5">Performance</div>
-                  <div className="text-sm font-semibold mono tabular-nums flex items-center gap-1.5">
+                  <div className="text-[11px] text-muted/70 mb-0.5">Performance</div>
+                  <div className="text-xs font-semibold mono tabular-nums flex items-center gap-1.5 leading-tight">
                     {performancePct !== null && performancePct !== undefined ? (
                       <>
                         {performancePct > 0 ? (
                           <>
-                            <TrendingUp className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                            <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
                             <span className="text-emerald-500">
                               +{performancePct.toFixed(1)}%
                             </span>
                           </>
                         ) : performancePct < 0 ? (
                           <>
-                            <TrendingDown className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                            <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
                             <span className="text-red-500">
                               {performancePct.toFixed(1)}%
                             </span>
@@ -273,7 +273,7 @@ export function MobileInventoryItemCard({
           {/* Bottom Row: Meta Info */}
           <button
             onClick={handleCardClick}
-            className="w-full flex items-center justify-between text-xs text-muted"
+            className="w-full flex items-center justify-between text-[10px] text-muted/60"
           >
             <div>Last sync: {lastSyncText}</div>
             <div>Source: StockX</div>
