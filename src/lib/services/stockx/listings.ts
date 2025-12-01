@@ -375,7 +375,7 @@ export class StockxListingsService {
 
   /**
    * Deactivate an active listing (pause without deleting)
-   * POST /v2/selling/listings/{listingId}/deactivate
+   * PUT /v2/selling/listings/{listingId}/deactivate
    * Returns operationId for async polling
    */
   static async deactivateListing(
@@ -389,7 +389,7 @@ export class StockxListingsService {
     const response = await client.request(
       `/v2/selling/listings/${listingId}/deactivate`,
       {
-        method: 'POST',
+        method: 'PUT',
       }
     )
 

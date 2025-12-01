@@ -192,7 +192,7 @@ export function RowActions({
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-yellow-400 hover:bg-yellow-500/10 transition-all duration-120"
                 >
                   <PauseCircle className="h-4 w-4" />
-                  Remove Ask
+                  Pause Listing
                 </button>
               )}
 

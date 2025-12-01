@@ -234,30 +234,49 @@ export function InventoryV3Table({
         size: 70,
       }),
 
-      // 3. Status (Listed / Unlisted)
+      // 3. Status (Listed / Paused / Unlisted)
       columnHelper.accessor(
         (row) => {
-          const isListed = !!row.stockx?.listingId && (row.stockx?.listingStatus === 'ACTIVE' || row.stockx?.listingStatus === 'PENDING')
-          return isListed ? 'Listed' : 'Unlisted'
+          const status = row.stockx?.listingStatus
+          if (status === 'ACTIVE' || status === 'PENDING') return 'Listed'
+          if (status === 'INACTIVE') return 'Paused'
+          return 'Unlisted'
         },
         {
           id: 'status',
           header: () => <div className="text-center w-24 opacity-70">Status</div>,
           cell: (info) => {
             const item = info.row.original
-            const isListed = !!item.stockx?.listingId && (item.stockx?.listingStatus === 'ACTIVE' || item.stockx?.listingStatus === 'PENDING')
+            const status = item.stockx?.listingStatus
 
-            return (
-              <div className="text-center w-24">
-                {isListed ? (
+            // Active or Pending → Green "Listed"
+            if (status === 'ACTIVE' || status === 'PENDING') {
+              return (
+                <div className="text-center w-24">
                   <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/50 font-semibold shadow-sm shadow-emerald-500/10 whitespace-nowrap">
                     Listed
                   </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-muted/10 text-muted border-muted/30 whitespace-nowrap">
-                    Unlisted
+                </div>
+              )
+            }
+
+            // Inactive → Yellow "Paused"
+            if (status === 'INACTIVE') {
+              return (
+                <div className="text-center w-24">
+                  <Badge variant="outline" className="bg-amber-400/20 text-amber-300 border-amber-400/50 font-semibold shadow-sm shadow-amber-400/10 whitespace-nowrap">
+                    Paused
                   </Badge>
-                )}
+                </div>
+              )
+            }
+
+            // No listing → Gray "Unlisted"
+            return (
+              <div className="text-center w-24">
+                <Badge variant="outline" className="bg-muted/10 text-muted border-muted/30 whitespace-nowrap">
+                  Unlisted
+                </Badge>
               </div>
             )
           },
@@ -505,17 +524,19 @@ export function InventoryV3Table({
       // 12. Platform Listed (with badges)
       columnHelper.accessor(
         (row) => {
-          const isListed = !!row.stockx?.listingId && (row.stockx?.listingStatus === 'ACTIVE' || row.stockx?.listingStatus === 'PENDING')
-          return isListed ? 'StockX' : ''
+          const status = row.stockx?.listingStatus
+          const hasListing = !!row.stockx?.listingId && (status === 'ACTIVE' || status === 'PENDING' || status === 'INACTIVE')
+          return hasListing ? 'StockX' : ''
         },
         {
           id: 'platform_listed',
           header: () => <div className="text-center w-28 opacity-70">Platform</div>,
           cell: (info) => {
             const item = info.row.original
-            const isListed = !!item.stockx?.listingId && (item.stockx?.listingStatus === 'ACTIVE' || item.stockx?.listingStatus === 'PENDING')
+            const status = item.stockx?.listingStatus
+            const hasListing = !!item.stockx?.listingId && (status === 'ACTIVE' || status === 'PENDING' || status === 'INACTIVE')
 
-            if (!isListed) {
+            if (!hasListing) {
               return <div className="text-center text-dim/50 w-28">—</div>
             }
 

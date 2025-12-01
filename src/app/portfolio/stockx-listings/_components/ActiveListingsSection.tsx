@@ -172,6 +172,7 @@ export function ActiveListingsSection({
             <TableRow className="hover:bg-transparent border-b border-border bg-elev-0/50">
               <TableHead className="w-[350px] font-semibold text-fg/80">Product</TableHead>
               <TableHead className="w-[100px] font-semibold text-fg/80">Size</TableHead>
+              <TableHead className="w-[90px] font-semibold text-fg/80">Status</TableHead>
               <TableHead className="w-[120px] font-semibold text-fg/80">Ask Price</TableHead>
               <TableHead className="w-[160px] font-semibold text-fg/80">Market</TableHead>
               <TableHead className="w-[110px] font-semibold text-fg/80">Position</TableHead>
@@ -182,7 +183,7 @@ export function ActiveListingsSection({
           <TableBody>
             {filteredListings.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted/70">
+                <TableCell colSpan={8} className="h-32 text-center text-muted/70">
                   {searchQuery ? 'No listings match your search' : 'No active listings'}
                 </TableCell>
               </TableRow>
@@ -222,6 +223,48 @@ export function ActiveListingsSection({
                     <span className="text-sm text-fg mono">
                       UK {listing.size_uk || 'N/A'}
                     </span>
+                  </TableCell>
+
+                  {/* Status */}
+                  <TableCell>
+                    {(() => {
+                      const status = listing.status ?? 'UNKNOWN'
+                      let statusLabel = '—'
+                      let statusClass = 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-white/10 bg-white/5 text-muted'
+
+                      switch (status) {
+                        case 'ACTIVE':
+                          statusLabel = 'Active'
+                          statusClass = 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                          break
+                        case 'INACTIVE':
+                          statusLabel = 'Paused'
+                          statusClass = 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-amber-400/40 bg-amber-400/10 text-amber-300'
+                          break
+                        case 'PENDING':
+                          statusLabel = 'Pending'
+                          statusClass = 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-sky-400/40 bg-sky-400/10 text-sky-300'
+                          break
+                        case 'SOLD':
+                          statusLabel = 'Sold'
+                          statusClass = 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-purple-500/40 bg-purple-500/10 text-purple-300'
+                          break
+                        case 'CANCELLED':
+                        case 'EXPIRED':
+                          statusLabel = status.charAt(0) + status.slice(1).toLowerCase()
+                          statusClass = 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-red-500/40 bg-red-500/10 text-red-300'
+                          break
+                        case 'MISSING':
+                          statusLabel = 'Missing'
+                          statusClass = 'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-red-500/40 bg-red-500/10 text-red-300'
+                          break
+                        default:
+                          statusLabel = status
+                          break
+                      }
+
+                      return <span className={statusClass}>{statusLabel}</span>
+                    })()}
                   </TableCell>
 
                   {/* Ask Price - Show "—" if £0 or missing */}

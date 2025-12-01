@@ -1,9 +1,9 @@
 /**
- * StockX Deactivate Listing API
- * POST /api/stockx/listings/deactivate
+ * StockX Activate Listing API
+ * POST /api/stockx/listings/activate
  *
- * Temporarily deactivates (pauses) a listing without deleting it.
- * User can reactivate later to resume selling.
+ * Reactivates a paused/inactive listing.
+ * Resumes selling on StockX.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -48,41 +48,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[Deactivate Listing] Request:', { listingId, userId: user.id })
+    console.log('[Activate Listing] Request:', { listingId, userId: user.id })
 
-    // Deactivate via StockX API
-    const result = await StockxListingsService.deactivateListing(user.id, listingId)
+    // Activate via StockX API
+    const result = await StockxListingsService.activateListing(user.id, listingId)
 
     // Update local database status in inventory_market_links
     const { error: updateError } = await supabase
       .from('inventory_market_links')
       .update({
-        stockx_listing_status: 'INACTIVE',
+        stockx_listing_status: 'ACTIVE',
         updated_at: new Date().toISOString(),
       })
       .eq('stockx_listing_id', listingId)
       .eq('user_id', user.id)
 
     if (updateError) {
-      console.warn('[Deactivate Listing] Failed to update inventory_market_links:', updateError)
+      console.warn('[Activate Listing] Failed to update inventory_market_links:', updateError)
     }
 
     // Also update stockx_listings table (used by inventory UI)
     const { error: listingUpdateError } = await supabase
       .from('stockx_listings')
       .update({
-        status: 'INACTIVE',
+        status: 'ACTIVE',
         updated_at: new Date().toISOString(),
       })
       .eq('stockx_listing_id', listingId)
 
     if (listingUpdateError) {
-      console.warn('[Deactivate Listing] Failed to update stockx_listings:', listingUpdateError)
+      console.warn('[Activate Listing] Failed to update stockx_listings:', listingUpdateError)
     }
 
     const duration = Date.now() - startTime
 
-    console.log('[Deactivate Listing] Success:', {
+    console.log('[Activate Listing] Success:', {
       listingId,
       operationId: result.operationId,
       duration,
@@ -98,11 +98,11 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     const duration = Date.now() - startTime
 
-    console.error('[Deactivate Listing] Error:', error)
+    console.error('[Activate Listing] Error:', error)
 
     return NextResponse.json(
       {
-        error: 'Failed to deactivate listing',
+        error: 'Failed to activate listing',
         details: error.message,
         duration_ms: duration,
       },

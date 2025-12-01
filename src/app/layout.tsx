@@ -120,7 +120,22 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetmono.variable} ${cinzel.variable} font-sans min-h-screen bg-[#050608] text-zinc-100`} suppressHydrationWarning>
         <a href="#main" className="skip-link">Skip to content</a>
         <Providers>{children}</Providers>
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster
+          position="top-right"
+          closeButton
+          toastOptions={{
+            style: {
+              fontSize: '15px',
+              padding: '18px 20px',
+              minHeight: '70px',
+              borderRadius: '12px',
+            },
+            classNames: {
+              success: 'bg-emerald-600 text-white border-2 border-emerald-500/50 shadow-lg',
+              error: 'bg-red-600 text-white border-2 border-red-500/50 shadow-lg',
+            },
+          }}
+        />
         <PWAUpdatePrompt />
       </body>
     </html>

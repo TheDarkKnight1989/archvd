@@ -233,8 +233,8 @@ But OAuth doesn't work because:
 - Create: `POST /v2/selling/listings`
 - Update: `PATCH /v2/selling/listings/{listingId}`
 - Delete: `DELETE /v2/selling/listings/{listingId}`
-- Activate: `POST /v2/selling/listings/{listingId}/activate`
-- Deactivate: `POST /v2/selling/listings/{listingId}/deactivate`
+- Activate: `PUT /v2/selling/listings/{listingId}/activate`
+- Deactivate: `PUT /v2/selling/listings/{listingId}/deactivate`
 
 **Orders:**
 - Get Active: `GET /v2/selling/orders?status=ACTIVE&pageSize=100`
