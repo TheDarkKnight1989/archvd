@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Search, Download, Plus, Bookmark, ChevronDown, FileText, Shield, Receipt, Clock, RefreshCw, CheckCircle2, AlertCircle, TrendingUp, PauseCircle, PlayCircle, Trash2 } from 'lucide-react'
+import { Search, Download, Plus, Bookmark, ChevronDown, FileText, Shield, Receipt, Clock, RefreshCw, CheckCircle2, AlertCircle, TrendingUp, PauseCircle, PlayCircle, Trash2, Columns, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { AddItemModal } from '@/components/modals/AddItemModal'
@@ -48,6 +48,7 @@ import { InventoryV3Table } from './_components/InventoryV3Table'
 import { SyncToolbar } from './_components/SyncToolbar'
 import { BulkRepriceModal } from './_components/BulkRepriceModal'
 import { BulkOperationProgressModal, type BulkOperationResult } from './_components/BulkOperationProgressModal'
+import { BulkActionsSheet } from './_components/BulkActionsSheet'
 
 // Mobile Components
 import { MobileInventoryList } from './_components/mobile/MobileInventoryList'
@@ -170,6 +171,9 @@ export default function PortfolioPage() {
     inProgress: false,
     errors: []
   })
+
+  // Mobile bulk actions sheet state
+  const [bulkActionsSheetOpen, setBulkActionsSheetOpen] = useState(false)
 
   // StockX operations
   const { deactivateListing, activateListing, deleteListing } = useListingOperations()
@@ -1007,14 +1011,14 @@ export default function PortfolioPage() {
     .map(([key, count]) => ({ key, label: key, count }))
 
   return (
-    <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-2 md:py-6 space-y-3 md:space-y-6 text-fg">
+    <div className="mx-auto max-w-[1400px] px-3 md:px-6 lg:px-8 py-2 md:py-6 space-y-3 md:space-y-6 text-fg">
       {/* Page Header */}
-      <div className="flex items-start justify-between gap-4 p-3 md:p-6 rounded-2xl bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10 shadow-lg">
+      <div className="flex items-start justify-between gap-4 p-2 md:p-4 rounded-2xl bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10 shadow-lg">
         <div className="flex-1">
-          <h1 className="font-display text-2xl md:text-3xl font-semibold text-fg tracking-tight mb-1 md:mb-2">
+          <h1 className="font-display text-2xl md:text-3xl font-semibold text-fg tracking-tight mb-1">
             Portfolio
           </h1>
-          <p className="text-xs md:text-sm text-fg/70 max-w-2xl hidden md:block">
+          <p className="text-xs text-fg/70 max-w-2xl hidden md:block">
             Track and manage your collectibles inventory with live market data
           </p>
         </div>
@@ -1034,12 +1038,12 @@ export default function PortfolioPage() {
       </div>
 
       {/* Compact Filter Bar */}
-      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-2 md:py-3 bg-bg/95 backdrop-blur-lg border-y border-border/40">
-        <div className="flex flex-col gap-2 md:gap-3">
-          {/* Main Row: Search + Quick Filters + Platform + Actions */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Search */}
-            <div className="relative flex-1 md:min-w-[200px] md:max-w-[280px] md:flex-initial">
+      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-1.5 md:py-2 bg-bg/95 backdrop-blur-lg border-y border-border/40">
+        <div className="flex flex-col gap-1.5 md:gap-2">
+          {/* Main Row: Search + Quick Filters on left, Platform + Actions on right */}
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {/* Search - Bigger on desktop */}
+            <div className="relative flex-shrink-0 w-[280px] md:w-[340px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
               <Input
                 placeholder="Search SKU, brand, model..."
@@ -1052,19 +1056,19 @@ export default function PortfolioPage() {
                   }
                 }}
                 className={cn(
-                  'pl-9 h-8 md:h-9 bg-elev-0 border-border transition-all duration-120 text-fg text-sm',
+                  'pl-9 h-9 bg-elev-0 border-border transition-all duration-120 text-fg text-sm',
                   searchQuery && 'ring-2 ring-[#00FF94]/35 border-[#00FF94]/35'
                 )}
               />
             </div>
 
-            {/* Quick Filters - Hidden on mobile */}
+            {/* Quick Filters */}
             <Button
               variant={quickFilter === 'listed-stockx' ? 'default' : 'outline'}
               size="sm"
               onClick={() => applyQuickFilter('listed-stockx')}
               className={cn(
-                'hidden md:flex h-8 text-xs font-medium transition-all',
+                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
                 quickFilter === 'listed-stockx'
                   ? 'bg-[#00FF94] text-black hover:bg-[#00E085]'
                   : 'border-[#00FF94]/30 text-[#00FF94] hover:bg-[#00FF94]/10'
@@ -1077,7 +1081,7 @@ export default function PortfolioPage() {
               size="sm"
               onClick={() => applyQuickFilter('profitable')}
               className={cn(
-                'hidden md:flex h-8 text-xs font-medium transition-all',
+                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
                 quickFilter === 'profitable'
                   ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                   : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
@@ -1090,7 +1094,7 @@ export default function PortfolioPage() {
               size="sm"
               onClick={() => applyQuickFilter('loss-making')}
               className={cn(
-                'hidden md:flex h-8 text-xs font-medium transition-all',
+                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
                 quickFilter === 'loss-making'
                   ? 'bg-red-500 text-white hover:bg-red-600'
                   : 'border-red-500/30 text-red-400 hover:bg-red-500/10'
@@ -1103,7 +1107,7 @@ export default function PortfolioPage() {
               size="sm"
               onClick={() => applyQuickFilter('never-listed')}
               className={cn(
-                'hidden md:flex h-8 text-xs font-medium transition-all',
+                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
                 quickFilter === 'never-listed'
                   ? 'bg-blue-500 text-white hover:bg-blue-600'
                   : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10'
@@ -1116,7 +1120,7 @@ export default function PortfolioPage() {
               size="sm"
               onClick={() => applyQuickFilter('added-this-week')}
               className={cn(
-                'hidden md:flex h-8 text-xs font-medium transition-all',
+                'h-8 px-2.5 text-xs font-medium transition-all flex-shrink-0',
                 quickFilter === 'added-this-week'
                   ? 'bg-amber-500 text-black hover:bg-amber-600'
                   : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
@@ -1128,33 +1132,7 @@ export default function PortfolioPage() {
             {/* Spacer */}
             <div className="flex-1 min-w-[20px]" />
 
-            {/* Platform Toggle */}
-            <Tabs value={platform} onValueChange={(value) => setPlatform(value as 'stockx' | 'alias')}>
-              <TabsList className="bg-transparent border-0 gap-1.5 p-0 h-auto">
-                <TabsTrigger
-                  value="stockx"
-                  className={cn(
-                    "rounded-full px-4 py-1.5 text-xs font-medium transition-all h-8",
-                    "bg-[#00FF94] text-black",
-                    platform === 'stockx' ? "opacity-100" : "opacity-30 hover:opacity-50"
-                  )}
-                >
-                  StockX
-                </TabsTrigger>
-                <TabsTrigger
-                  value="alias"
-                  className={cn(
-                    "rounded-full px-4 py-1.5 text-xs font-medium transition-all h-8",
-                    "bg-[#A855F7] text-white",
-                    platform === 'alias' ? "opacity-100" : "opacity-30 hover:opacity-50"
-                  )}
-                >
-                  Alias
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {/* Sync Button - Hidden on mobile */}
+            {/* Sync Button */}
             <Button
               onClick={async () => {
                 setSyncing(true)
@@ -1182,34 +1160,49 @@ export default function PortfolioPage() {
               disabled={syncing}
               size="sm"
               variant="outline"
-              className="hidden md:flex h-8 border-border hover:border-[#00FF94]/40"
+              className="h-8 px-2.5 border-border hover:border-[#00FF94]/40 flex-shrink-0"
             >
-              <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', syncing && 'animate-spin')} />
+              <RefreshCw className={cn('h-3 w-3 mr-1.5', syncing && 'animate-spin')} />
               {syncing ? 'Syncing...' : 'Sync'}
             </Button>
 
-            {/* Add Item - Hidden on mobile */}
+            {/* Add Item */}
             <Button
               onClick={() => setAddItemModalOpen(true)}
               size="sm"
-              className="hidden md:flex h-8 bg-[#00FF94] hover:bg-[#00E085] text-black font-medium"
+              className="h-8 px-2.5 bg-[#00FF94] hover:bg-[#00E085] text-black font-medium flex-shrink-0"
             >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              <Plus className="h-3 w-3 mr-1.5" />
               Add Item
             </Button>
 
-            {/* Export Dropdown - Hidden on mobile */}
+            {/* Column Chooser */}
+            <div className="flex-shrink-0">
+              <ColumnChooser
+                columns={columnConfig}
+                onChange={(updated) => {
+                  setColumnConfig(prev =>
+                    prev.map(col => ({
+                      ...col,
+                      visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
+                    }))
+                  )
+                }}
+              />
+            </div>
+
+            {/* Export Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="hidden md:flex h-8 border-border hover:border-[#00FF94]/40"
+                  className="h-8 px-2.5 border-border hover:border-[#00FF94]/40 flex-shrink-0"
                   disabled={items.length === 0}
                 >
-                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  <Download className="h-3 w-3 mr-1.5" />
                   Export
-                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                  <ChevronDown className="h-3 w-3 ml-1" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-[#0E1A15] border-[#15251B] p-2">
@@ -1287,32 +1280,97 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {/* Unified Actions Toolbar - Hidden on mobile */}
-      <div className={cn(
-        "hidden md:block sticky top-0 z-50 rounded-xl p-4 mb-4 shadow-lg transition-all duration-200 border-t border-[#00FF94]/8 overflow-x-auto",
-        selectedItems.size > 0
-          ? "bg-gradient-to-br from-[#00FF94]/8 to-[#00FF94]/2 border-2 border-[#00FF94]/20 shadow-xl shadow-[#00FF94]/5"
-          : "bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10"
-      )}>
-        <div className="flex items-center gap-4 min-w-max">
-          {/* Left: Selection info */}
-          <div className="flex items-center gap-3">
-            {selectedItems.size > 0 && (
-              <>
-                <span className="text-sm font-semibold text-fg">
-                  {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedItems(new Set())}
-                  className="text-xs"
-                >
-                  Clear
-                </Button>
-              </>
-            )}
-          </div>
+      {/* Mobile Primary Actions Row - Always visible on mobile */}
+      <div className="flex sm:hidden gap-2 mb-3">
+        {/* Sync StockX */}
+        <Button
+          onClick={async () => {
+            setSyncing(true)
+            setSyncResult(null)
+            try {
+              const endpoint = platform === 'alias' ? '/api/alias/sync/inventory' : '/api/stockx/sync-all'
+              const requestBody = platform === 'alias' ? { limit: 100 } : {}
+              const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+              })
+              if (!res.ok) throw new Error('Sync failed')
+              setSyncResult('success')
+              setTimeout(() => setSyncResult(null), 3000)
+              void refetch()
+            } catch (error) {
+              console.error('Sync error:', error)
+              setSyncResult('error')
+              setTimeout(() => setSyncResult(null), 3000)
+            } finally {
+              setSyncing(false)
+            }
+          }}
+          disabled={syncing}
+          className="flex-1 bg-[#00FF94] hover:bg-[#00E085] text-black font-semibold rounded-xl py-2"
+        >
+          <RefreshCw className={cn('h-4 w-4 mr-2', syncing && 'animate-spin')} />
+          {syncing ? 'Syncing...' : 'Sync StockX'}
+        </Button>
+
+        {/* Add Item */}
+        <Button
+          onClick={() => setAddItemModalOpen(true)}
+          className="flex-1 bg-soft hover:bg-soft/80 text-fg font-semibold rounded-xl py-2"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Item
+        </Button>
+
+        {/* Columns */}
+        <div className="flex-shrink-0">
+          <ColumnChooser
+            columns={columnConfig}
+            onChange={(updated) => {
+              setColumnConfig(prev =>
+                prev.map(col => ({
+                  ...col,
+                  visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
+                }))
+              )
+            }}
+          />
+        </div>
+
+        {/* More - Opens bulk actions sheet */}
+        <Button
+          onClick={() => setBulkActionsSheetOpen(true)}
+          variant="outline"
+          className="px-3 bg-soft hover:bg-soft/80 border-border rounded-xl flex items-center gap-1"
+          disabled={selectedItems.size === 0}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+          More
+        </Button>
+      </div>
+
+      {/* Unified Actions Toolbar - Desktop only, visible when items are selected */}
+      {selectedItems.size > 0 && (
+        <div className={cn(
+          "hidden sm:flex sticky top-0 z-50 rounded-xl p-4 mb-4 shadow-lg transition-all duration-200 border-t border-[#00FF94]/8 overflow-x-auto",
+          "bg-gradient-to-br from-[#00FF94]/8 to-[#00FF94]/2 border-2 border-[#00FF94]/20 shadow-xl shadow-[#00FF94]/5"
+        )}>
+          <div className="flex items-center gap-4 min-w-max">
+            {/* Left: Selection info */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-fg">
+                {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedItems(new Set())}
+                className="text-xs"
+              >
+                Clear
+              </Button>
+            </div>
 
           {/* Export - isolated on left */}
           <Button
@@ -1364,60 +1422,6 @@ export default function PortfolioPage() {
               Add to Sell List
             </Button>
 
-            {/* Sync - always enabled */}
-            <Button
-              onClick={async () => {
-                try {
-                  setSyncing(true)
-                  setSyncResult(null)
-
-                  const endpoint = platform === 'alias'
-                    ? '/api/alias/sync/inventory'
-                    : '/api/stockx/sync-all'
-
-                  const requestBody = platform === 'alias'
-                    ? { limit: 100 }
-                    : {}
-
-                  const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
-                  })
-
-                  if (!response.ok) {
-                    const error = await response.json()
-                    throw new Error(error.error || 'Sync failed')
-                  }
-
-                  const result = await response.json()
-                  console.log(`[${platform.toUpperCase()} Sync] Completed:`, result)
-
-                  refetch()
-                  setSyncResult('success')
-                  setTimeout(() => setSyncResult(null), 3000)
-                } catch (error) {
-                  console.error('Sync failed:', error)
-                  setSyncResult('error')
-                  setTimeout(() => setSyncResult(null), 5000)
-                } finally {
-                  setSyncing(false)
-                }
-              }}
-              disabled={syncing}
-              size="sm"
-              className={cn(
-                platform === 'alias'
-                  ? 'bg-[#A855F7] hover:bg-[#9333EA] text-white'
-                  : 'bg-[#00FF94] hover:bg-[#00E085] text-black',
-                'text-xs font-semibold shadow-lg transition-all duration-120',
-                syncing && 'cursor-wait opacity-75'
-              )}
-            >
-              <RefreshCw className={cn('h-3 w-3 mr-1', syncing && 'animate-spin')} />
-              {syncing ? 'Syncing...' : `Sync ${platform === 'alias' ? 'Alias' : 'StockX'}`}
-            </Button>
-
             {/* Delete - requires selection */}
             <Button
               variant="outline"
@@ -1430,23 +1434,8 @@ export default function PortfolioPage() {
               Delete {selectedItems.size > 0 ? selectedItems.size : ''}
             </Button>
 
-            {/* Column Chooser - always enabled */}
-            <div className="ml-2 border-l border-border/50 pl-2">
-              <ColumnChooser
-                columns={columnConfig}
-                onChange={(updated) => {
-                  setColumnConfig(prev =>
-                    prev.map(col => ({
-                      ...col,
-                      visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
-                    }))
-                  )
-                }}
-              />
-            </div>
-
             {/* StockX-specific bulk actions - only show when items are selected on StockX tab */}
-            {platform === 'stockx' && selectedItems.size > 0 && (
+            {platform === 'stockx' && (
               <>
                 {/* Reprice - requires selection */}
                 <Button
@@ -1494,6 +1483,37 @@ export default function PortfolioPage() {
             )}
           </div>
         </div>
+        </div>
+      )}
+
+      {/* Platform Tabs - Table Selectors */}
+      <div className="border-b border-border/40 -mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8">
+        <Tabs value={platform} onValueChange={(value) => setPlatform(value as 'stockx' | 'alias')}>
+          <TabsList className="bg-transparent border-0 gap-0 p-0 h-auto">
+            <TabsTrigger
+              value="stockx"
+              className={cn(
+                "relative px-6 py-3 text-sm font-medium transition-all rounded-t-lg border-b-2",
+                platform === 'stockx'
+                  ? "text-[#00FF94] border-[#00FF94] bg-[#00FF94]/5"
+                  : "text-muted border-transparent hover:text-fg hover:bg-soft/30"
+              )}
+            >
+              StockX
+            </TabsTrigger>
+            <TabsTrigger
+              value="alias"
+              className={cn(
+                "relative px-6 py-3 text-sm font-medium transition-all rounded-t-lg border-b-2",
+                platform === 'alias'
+                  ? "text-[#A855F7] border-[#A855F7] bg-[#A855F7]/5"
+                  : "text-muted border-transparent hover:text-fg hover:bg-soft/30"
+              )}
+            >
+              Alias
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Mobile vs Desktop View */}
@@ -1547,6 +1567,10 @@ export default function PortfolioPage() {
           sorting={sorting}
           onSortingChange={setSorting}
           platform={platform}
+          columnVisibility={{
+            spread: false,
+            purchase_date: false,
+          }}
           onRowClick={handleRowClick}
           selectedItems={selectedItems}
           onSelectionChange={setSelectedItems}
@@ -1771,6 +1795,23 @@ export default function PortfolioPage() {
         onClose={() => setBulkProgressModalOpen(false)}
         operation={currentBulkOperation}
         result={bulkOperationResult}
+      />
+
+      {/* Mobile Bulk Actions Sheet */}
+      <BulkActionsSheet
+        open={bulkActionsSheetOpen}
+        onOpenChange={setBulkActionsSheetOpen}
+        selectedCount={selectedItems.size}
+        platform={platform}
+        onBulkList={() => setBulkListModalOpen(true)}
+        onBulkPause={handleBulkPause}
+        onBulkActivate={handleBulkActivate}
+        onBulkReprice={handleBulkRepriceOpen}
+        onBulkAddToSellList={() => {
+          setSelectedItemsForSellList(Array.from(selectedItems))
+          setSellListModalOpen(true)
+        }}
+        onBulkDelete={handleBulkDelete}
       />
     </div>
   )
