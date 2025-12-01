@@ -1,21 +1,15 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, TrendingUp, TrendingDown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils/cn'
 import { useCurrency } from '@/hooks/useCurrency'
-import { PlainMoneyCell, PercentCell } from '@/lib/format/money'
+import { PlainMoneyCell } from '@/lib/format/money'
 import { generateProductSlug } from '@/lib/utils/slug'
+import { MobileItemActionsSheet } from './MobileItemActionsSheet'
 import type { EnrichedLineItem } from '@/lib/portfolio/types'
 
 interface MobileInventoryItemCardProps {
@@ -41,6 +35,7 @@ export function MobileInventoryItemCard({
 }: MobileInventoryItemCardProps) {
   const router = useRouter()
   const { convert, currency, symbol } = useCurrency()
+  const [actionsSheetOpen, setActionsSheetOpen] = useState(false)
 
   // Derive status from StockX listing
   const status = useMemo(() => {
@@ -83,18 +78,12 @@ export function MobileInventoryItemCard({
   const performancePct = item.performancePct
 
   // Handle card click (navigate to market page)
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Don't navigate if clicking checkbox or actions menu
-    const target = e.target as HTMLElement
-    if (
-      target.closest('[data-no-navigate]') ||
-      target.closest('button') ||
-      target.closest('[role="checkbox"]')
-    ) {
-      return
-    }
+  const handleCardClick = () => {
     router.push(marketUrl)
   }
+
+  // Can list on StockX if mapped and not already listed
+  const canListOnStockX = !!item.stockx?.mapped && !item.stockx?.listingId
 
   // Last synced info
   const lastSyncText = useMemo(() => {
@@ -118,235 +107,194 @@ export function MobileInventoryItemCard({
   }, [item.stockx?.lastSyncSuccessAt])
 
   return (
-    <div
-      className={cn(
-        'relative bg-gradient-to-br from-elev-1 to-elev-1/80 rounded-xl p-4 border-2 transition-all duration-200 cursor-pointer',
-        isSelected
-          ? 'border-[#00FF94]/60 shadow-lg shadow-[#00FF94]/10'
-          : 'border-[#00FF94]/10 hover:border-[#00FF94]/30 hover:shadow-md'
-      )}
-      onClick={handleCardClick}
-    >
-      {/* Top Row: Checkbox + Image + Basic Info + Status */}
-      <div className="flex items-start gap-3 mb-3">
-        {/* Checkbox */}
-        <div className="flex items-center pt-1" data-no-navigate>
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={onSelectionChange}
-            aria-label={`Select ${item.sku}`}
-          />
-        </div>
-
-        {/* Product Image */}
-        <div className="flex-shrink-0">
-          <div className="w-16 h-16 rounded-lg overflow-hidden bg-elev-2 border border-border/40">
-            {item.image?.url ? (
-              <img
-                src={item.image.url}
-                alt={item.image.alt || `${item.brand} ${item.model}`}
-                className="w-full h-full object-cover"
+    <>
+      <div
+        className={cn(
+          'relative bg-gradient-to-br from-elev-1 to-elev-1/80 rounded-xl border-2 transition-all duration-200 overflow-hidden',
+          isSelected
+            ? 'border-[#00FF94]/60 shadow-lg shadow-[#00FF94]/10'
+            : 'border-[#00FF94]/10'
+        )}
+      >
+        {/* Card Content with padding */}
+        <div className="p-4">
+          {/* Top Row: Checkbox + Image + Basic Info + Menu */}
+          <div className="flex items-start gap-3 mb-4">
+            {/* Checkbox */}
+            <div className="flex items-center pt-1">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={onSelectionChange}
+                aria-label={`Select ${item.sku}`}
+                onClick={(e) => e.stopPropagation()}
               />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted text-xs">
-                No Image
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Product Info */}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-fg line-clamp-2 mb-1">
-            {item.brand} {item.model}
-          </h3>
-          <p className="text-xs text-muted mono mb-1">{item.sku}</p>
-          <Badge variant="outline" className={cn('text-xs', statusBadge.className)}>
-            {statusBadge.label}
-          </Badge>
-        </div>
-
-        {/* Actions Menu */}
-        <div data-no-navigate>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="p-2 hover:bg-elev-2 rounded-lg transition-colors"
-                aria-label="Item actions"
-              >
-                <MoreVertical className="h-5 w-5 text-muted" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              className="w-[200px] bg-[#0E1A15] border-[#15251B] p-2 shadow-xl"
-              align="end"
+            {/* Tappable Card Content */}
+            <button
+              onClick={handleCardClick}
+              className="flex-1 flex items-start gap-3 text-left min-w-0"
             >
-              <DropdownMenuItem
-                onClick={() => router.push(marketUrl)}
-                className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
-              >
-                View market
-              </DropdownMenuItem>
+              {/* Product Image */}
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-elev-2 border border-border/40">
+                  {item.image?.url ? (
+                    <img
+                      src={item.image.url}
+                      alt={item.image.alt || `${item.brand} ${item.model}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted text-xs">
+                      No Image
+                    </div>
+                  )}
+                </div>
+              </div>
 
-              <DropdownMenuSeparator className="bg-[#15251B]/40 my-1" />
+              {/* Product Info */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-fg line-clamp-2 mb-1">
+                  {item.brand} {item.model}
+                </h3>
+                <p className="text-xs text-muted mono mb-1">{item.sku}</p>
+                <Badge variant="outline" className={cn('text-xs', statusBadge.className)}>
+                  {statusBadge.label}
+                </Badge>
+              </div>
+            </button>
 
-              {/* List on StockX - if not listed */}
-              {status === 'Unlisted' && item.stockx?.mapped && onListOnStockX && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onListOnStockX()
-                  }}
-                  className="text-[#00FF94] hover:bg-[#00FF94]/10 rounded-lg px-3 py-2 cursor-pointer"
-                >
-                  List on StockX
-                </DropdownMenuItem>
-              )}
+            {/* Actions Menu Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setActionsSheetOpen(true)
+              }}
+              className="p-2 hover:bg-elev-2 rounded-lg transition-colors flex-shrink-0"
+              aria-label="Item actions"
+            >
+              <MoreVertical className="h-5 w-5 text-muted" />
+            </button>
+          </div>
 
-              {/* Reprice - if listed */}
-              {(status === 'Listed' || status === 'Paused') && onRepriceListing && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onRepriceListing()
-                  }}
-                  className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
-                >
-                  Reprice on StockX
-                </DropdownMenuItem>
-              )}
+          {/* Middle Row: Financial Data (2 columns with visual separator) */}
+          <button
+            onClick={handleCardClick}
+            className="w-full text-left"
+          >
+            <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-border/30">
+              {/* Left Column */}
+              <div className="space-y-3 pr-4 border-r border-soft/20">
+                <div>
+                  <div className="text-xs text-muted mb-0.5">Size UK</div>
+                  <div className="text-sm font-medium mono tabular-nums text-fg">
+                    {item.size_uk || '—'}
+                  </div>
+                </div>
 
-              {/* Pause - if active */}
-              {status === 'Listed' && onDeactivateListing && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDeactivateListing()
-                  }}
-                  className="text-yellow-400 hover:bg-yellow-500/10 rounded-lg px-3 py-2 cursor-pointer"
-                >
-                  Pause on StockX
-                </DropdownMenuItem>
-              )}
+                <div>
+                  <div className="text-xs text-muted mb-0.5">Purchase {symbol()}</div>
+                  <div className="text-sm font-medium mono tabular-nums text-fg">
+                    <PlainMoneyCell value={purchasePrice} currency={currency} />
+                  </div>
+                </div>
 
-              {/* Activate - if paused */}
-              {status === 'Paused' && onReactivateListing && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onReactivateListing()
-                  }}
-                  className="text-emerald-400 hover:bg-emerald-500/10 rounded-lg px-3 py-2 cursor-pointer"
-                >
-                  Activate on StockX
-                </DropdownMenuItem>
-              )}
+                {listedPrice && (
+                  <div>
+                    <div className="text-xs text-muted mb-0.5">Listed {symbol()}</div>
+                    <div className="text-sm font-medium mono tabular-nums text-emerald-500">
+                      <PlainMoneyCell value={listedPrice} currency={currency} />
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              {onDeleteItem && (
-                <>
-                  <DropdownMenuSeparator className="bg-[#15251B]/40 my-1" />
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDeleteItem()
-                    }}
-                    className="text-red-400 hover:bg-red-500/10 rounded-lg px-3 py-2 cursor-pointer"
+              {/* Right Column */}
+              <div className="space-y-3 pl-2">
+                <div>
+                  <div className="text-xs text-muted mb-0.5">Market {symbol()}</div>
+                  <div className="text-sm font-medium mono tabular-nums text-fg">
+                    <PlainMoneyCell value={marketPrice} currency={currency} />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-muted mb-0.5">Unrealised P/L {symbol()}</div>
+                  <div
+                    className={cn(
+                      'text-sm font-semibold mono tabular-nums',
+                      pl !== null && pl > 0 ? 'text-emerald-500' : pl !== null && pl < 0 ? 'text-red-500' : 'text-muted'
+                    )}
                   >
-                    Delete item
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+                    {pl !== null ? (
+                      <>
+                        {pl > 0 && '+'}
+                        {symbol()}
+                        {Math.abs(pl).toFixed(2)}
+                      </>
+                    ) : (
+                      '—'
+                    )}
+                  </div>
+                </div>
 
-      {/* Middle Row: Financial Data (2 columns) */}
-      <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-border/30">
-        {/* Left Column */}
-        <div className="space-y-2">
-          <div>
-            <div className="text-xs text-muted mb-0.5">Size UK</div>
-            <div className="text-sm font-medium mono tabular-nums text-fg">
-              {item.size_uk || '—'}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs text-muted mb-0.5">Purchase {symbol()}</div>
-            <div className="text-sm font-medium mono tabular-nums text-fg">
-              <PlainMoneyCell value={purchasePrice} currency={currency} />
-            </div>
-          </div>
-
-          {listedPrice && (
-            <div>
-              <div className="text-xs text-muted mb-0.5">Listed {symbol()}</div>
-              <div className="text-sm font-medium mono tabular-nums text-emerald-500">
-                <PlainMoneyCell value={listedPrice} currency={currency} />
+                <div>
+                  <div className="text-xs text-muted mb-0.5">Performance</div>
+                  <div className="text-sm font-semibold mono tabular-nums flex items-center gap-1.5">
+                    {performancePct !== null && performancePct !== undefined ? (
+                      <>
+                        {performancePct > 0 ? (
+                          <>
+                            <TrendingUp className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                            <span className="text-emerald-500">
+                              +{performancePct.toFixed(1)}%
+                            </span>
+                          </>
+                        ) : performancePct < 0 ? (
+                          <>
+                            <TrendingDown className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                            <span className="text-red-500">
+                              {performancePct.toFixed(1)}%
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-muted">0.0%</span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+          </button>
 
-        {/* Right Column */}
-        <div className="space-y-2">
-          <div>
-            <div className="text-xs text-muted mb-0.5">Market {symbol()}</div>
-            <div className="text-sm font-medium mono tabular-nums text-fg">
-              <PlainMoneyCell value={marketPrice} currency={currency} />
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs text-muted mb-0.5">Unrealised P/L {symbol()}</div>
-            <div
-              className={cn(
-                'text-sm font-semibold mono tabular-nums',
-                pl !== null && pl > 0 ? 'text-emerald-500' : pl !== null && pl < 0 ? 'text-red-500' : 'text-muted'
-              )}
-            >
-              {pl !== null ? (
-                <>
-                  {pl > 0 && '+'}
-                  {symbol()}
-                  {Math.abs(pl).toFixed(2)}
-                </>
-              ) : (
-                '—'
-              )}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs text-muted mb-0.5">Performance</div>
-            <div className="text-sm font-semibold mono tabular-nums flex items-center gap-1">
-              {performancePct !== null && performancePct !== undefined ? (
-                <>
-                  <span className={cn(
-                    performancePct > 0 ? 'text-emerald-500' : performancePct < 0 ? 'text-red-500' : 'text-muted'
-                  )}>
-                    {performancePct > 0 ? '+' : ''}{performancePct.toFixed(1)}%
-                  </span>
-                  {performancePct > 0 ? (
-                    <TrendingUp className="h-3 w-3 text-emerald-500" />
-                  ) : performancePct < 0 ? (
-                    <TrendingDown className="h-3 w-3 text-red-500" />
-                  ) : null}
-                </>
-              ) : (
-                <span className="text-muted">—</span>
-              )}
-            </div>
-          </div>
+          {/* Bottom Row: Meta Info */}
+          <button
+            onClick={handleCardClick}
+            className="w-full flex items-center justify-between text-xs text-muted"
+          >
+            <div>Last sync: {lastSyncText}</div>
+            <div>Source: StockX</div>
+          </button>
         </div>
       </div>
 
-      {/* Bottom Row: Meta Info */}
-      <div className="flex items-center justify-between text-xs text-muted">
-        <div>Last sync: {lastSyncText}</div>
-        <div>Source: StockX</div>
-      </div>
-    </div>
+      {/* Mobile Actions Sheet */}
+      <MobileItemActionsSheet
+        open={actionsSheetOpen}
+        onOpenChange={setActionsSheetOpen}
+        itemName={`${item.brand} ${item.model}`}
+        status={status}
+        canListOnStockX={canListOnStockX}
+        onViewMarket={handleCardClick}
+        onListOnStockX={onListOnStockX}
+        onRepriceListing={onRepriceListing}
+        onPauseListing={onDeactivateListing}
+        onActivateListing={onReactivateListing}
+        onDeleteItem={onDeleteItem}
+      />
+    </>
   )
 }

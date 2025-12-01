@@ -1007,19 +1007,19 @@ export default function PortfolioPage() {
     .map(([key, count]) => ({ key, label: key, count }))
 
   return (
-    <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-4 md:py-6 space-y-6 text-fg">
+    <div className="mx-auto max-w-[1600px] px-3 md:px-6 lg:px-8 py-2 md:py-6 space-y-3 md:space-y-6 text-fg">
       {/* Page Header */}
-      <div className="flex items-start justify-between gap-4 p-6 rounded-2xl bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10 shadow-lg">
+      <div className="flex items-start justify-between gap-4 p-3 md:p-6 rounded-2xl bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10 shadow-lg">
         <div className="flex-1">
-          <h1 className="font-display text-3xl font-semibold text-fg tracking-tight mb-2">
+          <h1 className="font-display text-2xl md:text-3xl font-semibold text-fg tracking-tight mb-1 md:mb-2">
             Portfolio
           </h1>
-          <p className="text-sm text-fg/70 max-w-2xl">
+          <p className="text-xs md:text-sm text-fg/70 max-w-2xl hidden md:block">
             Track and manage your collectibles inventory with live market data
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           {/* Saved Views */}
           {savedViews.views.map((view) => (
             <SavedViewChip
@@ -1030,75 +1030,16 @@ export default function PortfolioPage() {
               onDelete={() => savedViews.deleteView(view.id)}
             />
           ))}
-
-          {/* Primary Action */}
-          <Button
-            onClick={() => setAddItemModalOpen(true)}
-            size="default"
-            className="bg-[#00FF94] hover:bg-[#00E085] text-black font-medium transition-all duration-120 shadow-soft"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
-
-          {/* Export Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="default"
-                className="transition-boutique shadow-soft border-border hover:border-[#00FF94]/60"
-                disabled={items.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-[#0E1A15] border-[#15251B] p-2">
-              <div className="text-xs font-medium text-[#7FA08F] uppercase tracking-wide px-2 py-1.5">
-                Export Options
-              </div>
-              <DropdownMenuItem
-                onClick={exportCSV}
-                disabled={filteredItems.length === 0}
-                className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Export Inventory
-                <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-[#15251B]/40 my-1" />
-              <DropdownMenuItem
-                onClick={() => exportInsuranceCsv(items as any)}
-                disabled={items.length === 0}
-                className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
-              >
-                <Shield className="h-4 w-4 mr-2" />
-                Insurance Report
-                <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => exportTaxCsv(items as any)}
-                disabled={items.length === 0}
-                className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
-              >
-                <Receipt className="h-4 w-4 mr-2" />
-                Tax Report
-                <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-4 bg-bg/95 backdrop-blur-lg border-y border-border/40">
-        <div className="flex flex-col gap-5">
-          {/* Search + Filters Row */}
-          <div className="flex flex-wrap items-center gap-3">
+      {/* Compact Filter Bar */}
+      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-2 md:py-3 bg-bg/95 backdrop-blur-lg border-y border-border/40">
+        <div className="flex flex-col gap-2 md:gap-3">
+          {/* Main Row: Search + Quick Filters + Platform + Actions */}
+          <div className="flex flex-wrap items-center gap-2">
             {/* Search */}
-            <div className="relative flex-1 min-w-[240px] max-w-md">
+            <div className="relative flex-1 md:min-w-[200px] md:max-w-[280px] md:flex-initial">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
               <Input
                 placeholder="Search SKU, brand, model..."
@@ -1111,48 +1052,22 @@ export default function PortfolioPage() {
                   }
                 }}
                 className={cn(
-                  'pl-9 bg-elev-0 border-border transition-all duration-120 text-fg',
+                  'pl-9 h-8 md:h-9 bg-elev-0 border-border transition-all duration-120 text-fg text-sm',
                   searchQuery && 'ring-2 ring-[#00FF94]/35 border-[#00FF94]/35'
                 )}
               />
             </div>
 
-            {/* Status Filter */}
-            <div className="flex items-center gap-2">
-              <FilterTabs
-                tabs={statusTabs}
-                value={selectedStatus}
-                onChange={(keys) => updateParams({ status: keys })}
-                multiselect
-              />
-            </div>
-
-            {/* Divider */}
-            <div className="h-6 w-px bg-border/40" />
-
-            {/* Category Filter */}
-            <div className="flex items-center gap-2">
-              <FilterTabs
-                tabs={categoryTabs}
-                value={selectedCategory}
-                onChange={(keys) => updateParams({ category: keys.length > 0 ? keys : ['sneaker'] })}
-                multiselect={false}
-              />
-            </div>
-          </div>
-
-          {/* Quick Filters Row */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-bold text-[#00FF94]/85 uppercase tracking-wide mr-0.5">Quick Filters:</span>
+            {/* Quick Filters - Hidden on mobile */}
             <Button
               variant={quickFilter === 'listed-stockx' ? 'default' : 'outline'}
               size="sm"
               onClick={() => applyQuickFilter('listed-stockx')}
               className={cn(
-                'h-7 text-xs font-semibold transition-all duration-200',
+                'hidden md:flex h-8 text-xs font-medium transition-all',
                 quickFilter === 'listed-stockx'
-                  ? 'bg-[#00FF94] text-black hover:bg-[#00E085] shadow-lg'
-                  : 'border-[#00FF94]/30 text-[#00FF94] hover:bg-[#00FF94]/10 hover:border-[#00FF94]/50 hover:shadow-[0_0_8px_rgba(0,255,148,0.15)]'
+                  ? 'bg-[#00FF94] text-black hover:bg-[#00E085]'
+                  : 'border-[#00FF94]/30 text-[#00FF94] hover:bg-[#00FF94]/10'
               )}
             >
               Listed on StockX
@@ -1162,10 +1077,10 @@ export default function PortfolioPage() {
               size="sm"
               onClick={() => applyQuickFilter('profitable')}
               className={cn(
-                'h-7 text-xs font-semibold transition-all duration-200',
+                'hidden md:flex h-8 text-xs font-medium transition-all',
                 quickFilter === 'profitable'
-                  ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg'
-                  : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500/50 hover:shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                  : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
               )}
             >
               Profitable
@@ -1175,10 +1090,10 @@ export default function PortfolioPage() {
               size="sm"
               onClick={() => applyQuickFilter('loss-making')}
               className={cn(
-                'h-7 text-xs font-semibold transition-all duration-200',
+                'hidden md:flex h-8 text-xs font-medium transition-all',
                 quickFilter === 'loss-making'
-                  ? 'bg-red-500 text-white hover:bg-red-600 shadow-lg'
-                  : 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 hover:shadow-[0_0_8px_rgba(239,68,68,0.15)]'
+                  ? 'bg-red-500 text-white hover:bg-red-600'
+                  : 'border-red-500/30 text-red-400 hover:bg-red-500/10'
               )}
             >
               Loss Making
@@ -1188,10 +1103,10 @@ export default function PortfolioPage() {
               size="sm"
               onClick={() => applyQuickFilter('never-listed')}
               className={cn(
-                'h-7 text-xs font-semibold transition-all duration-200',
+                'hidden md:flex h-8 text-xs font-medium transition-all',
                 quickFilter === 'never-listed'
-                  ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'
-                  : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/50 hover:shadow-[0_0_8px_rgba(59,130,246,0.15)]'
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10'
               )}
             >
               Never Listed
@@ -1201,51 +1116,167 @@ export default function PortfolioPage() {
               size="sm"
               onClick={() => applyQuickFilter('added-this-week')}
               className={cn(
-                'h-7 text-xs font-semibold transition-all duration-200',
+                'hidden md:flex h-8 text-xs font-medium transition-all',
                 quickFilter === 'added-this-week'
-                  ? 'bg-amber-500 text-black hover:bg-amber-600 shadow-lg'
-                  : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/50 hover:shadow-[0_0_8px_rgba(245,158,11,0.15)]'
+                  ? 'bg-amber-500 text-black hover:bg-amber-600'
+                  : 'border-amber-500/30 text-amber-400 hover:bg-amber-500/10'
               )}
             >
               Added This Week
             </Button>
-          </div>
 
-          {/* Actions Row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSearchQuery('')
-                    setQuickFilter(null)
-                    updateParams({ status: [], category: ['sneaker'], size_uk: [], search: undefined })
-                  }}
-                  className="text-xs text-muted hover:text-fg"
+            {/* Spacer */}
+            <div className="flex-1 min-w-[20px]" />
+
+            {/* Platform Toggle */}
+            <Tabs value={platform} onValueChange={(value) => setPlatform(value as 'stockx' | 'alias')}>
+              <TabsList className="bg-transparent border-0 gap-1.5 p-0 h-auto">
+                <TabsTrigger
+                  value="stockx"
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-medium transition-all h-8",
+                    "bg-[#00FF94] text-black",
+                    platform === 'stockx' ? "opacity-100" : "opacity-30 hover:opacity-50"
+                  )}
                 >
-                  Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
-                </Button>
-              )}
-            </div>
+                  StockX
+                </TabsTrigger>
+                <TabsTrigger
+                  value="alias"
+                  className={cn(
+                    "rounded-full px-4 py-1.5 text-xs font-medium transition-all h-8",
+                    "bg-[#A855F7] text-white",
+                    platform === 'alias' ? "opacity-100" : "opacity-30 hover:opacity-50"
+                  )}
+                >
+                  Alias
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-            <div className="flex items-center gap-2">
-              {activeFilterCount > 0 && (
+            {/* Sync Button - Hidden on mobile */}
+            <Button
+              onClick={async () => {
+                setSyncing(true)
+                setSyncResult(null)
+                try {
+                  const endpoint = platform === 'alias' ? '/api/alias/sync/inventory' : '/api/stockx/sync-all'
+                  const requestBody = platform === 'alias' ? { limit: 100 } : {}
+                  const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                  })
+                  if (!res.ok) throw new Error('Sync failed')
+                  setSyncResult('success')
+                  setTimeout(() => setSyncResult(null), 3000)
+                  void refetch()
+                } catch (error) {
+                  console.error('Sync error:', error)
+                  setSyncResult('error')
+                  setTimeout(() => setSyncResult(null), 3000)
+                } finally {
+                  setSyncing(false)
+                }
+              }}
+              disabled={syncing}
+              size="sm"
+              variant="outline"
+              className="hidden md:flex h-8 border-border hover:border-[#00FF94]/40"
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', syncing && 'animate-spin')} />
+              {syncing ? 'Syncing...' : 'Sync'}
+            </Button>
+
+            {/* Add Item - Hidden on mobile */}
+            <Button
+              onClick={() => setAddItemModalOpen(true)}
+              size="sm"
+              className="hidden md:flex h-8 bg-[#00FF94] hover:bg-[#00E085] text-black font-medium"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Add Item
+            </Button>
+
+            {/* Export Dropdown - Hidden on mobile */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
-                  className="border-border max-md:hidden border-[#00FF94]/40 text-[#00FF94] hover:bg-[#00FF94]/10 hover:border-[#00FF94] font-semibold transition-all duration-120"
-                  onClick={() => {
-                    const name = prompt('Enter a name for this view:')
-                    if (name) saveCurrentView(name)
-                  }}
                   size="sm"
+                  className="hidden md:flex h-8 border-border hover:border-[#00FF94]/40"
+                  disabled={items.length === 0}
                 >
-                  <Bookmark className="h-4 w-4 mr-2" /> Save View
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Export
+                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
                 </Button>
-              )}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-[#0E1A15] border-[#15251B] p-2">
+                <div className="text-xs font-medium text-[#7FA08F] uppercase tracking-wide px-2 py-1.5">
+                  Export Options
+                </div>
+                <DropdownMenuItem
+                  onClick={exportCSV}
+                  disabled={filteredItems.length === 0}
+                  className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export Inventory
+                  <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-[#15251B]/40 my-1" />
+                <DropdownMenuItem
+                  onClick={() => exportInsuranceCsv(items as any)}
+                  disabled={items.length === 0}
+                  className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Insurance Report
+                  <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => exportTaxCsv(items as any)}
+                  disabled={items.length === 0}
+                  className="text-[#E8F6EE] hover:bg-[#0B1510] rounded-lg px-3 py-2 cursor-pointer"
+                >
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Tax Report
+                  <span className="ml-auto text-xs text-[#7FA08F]">CSV</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+
+          {/* Optional Second Row: Clear Filters / Save View */}
+          {activeFilterCount > 0 && (
+            <div className="flex items-center justify-between pt-1 border-t border-border/30">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery('')
+                  setQuickFilter(null)
+                  updateParams({ status: [], category: ['sneaker'], size_uk: [], search: undefined })
+                }}
+                className="h-7 text-xs text-muted hover:text-fg"
+              >
+                Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
+              </Button>
+
+              <Button
+                variant="outline"
+                className="h-7 text-xs border-[#00FF94]/40 text-[#00FF94] hover:bg-[#00FF94]/10 hover:border-[#00FF94]"
+                onClick={() => {
+                  const name = prompt('Enter a name for this view:')
+                  if (name) saveCurrentView(name)
+                }}
+                size="sm"
+              >
+                <Bookmark className="h-3 w-3 mr-1.5" /> Save View
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1256,87 +1287,9 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {/* Last Synced Text */}
-      <div className="flex items-center gap-2 text-sm mb-3 px-1">
-        <Clock className="h-3.5 w-3.5 text-muted" />
-        <span className="text-muted">Last synced:</span>
-        <span className="font-medium mono text-fg text-xs">
-          {(() => {
-            const timestamp = items[0]?.stockx?.lastSyncSuccessAt
-            if (!timestamp) return 'Never synced'
-
-            const date = new Date(timestamp)
-            const now = new Date()
-            const diffMs = now.getTime() - date.getTime()
-            const diffMinutes = Math.floor(diffMs / 60000)
-            const diffHours = Math.floor(diffMs / 3600000)
-            const diffDays = Math.floor(diffMs / 86400000)
-
-            if (diffMinutes < 1) return 'Just now'
-            if (diffMinutes < 60) return `${diffMinutes}m ago`
-            if (diffHours < 24) return `${diffHours}h ago`
-            if (diffDays === 1) return 'Yesterday'
-            if (diffDays < 7) return `${diffDays}d ago`
-
-            return date.toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })
-          })()}
-        </span>
-
-        {/* Sync Status Badge */}
-        {syncResult === 'success' && (
-          <div className="flex items-center gap-1.5 text-[#00FF94] text-xs animate-in fade-in slide-in-from-right-2 duration-200">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>Synced successfully</span>
-          </div>
-        )}
-
-        {syncResult === 'error' && (
-          <div className="flex items-center gap-1.5 text-red-500 text-xs animate-in fade-in slide-in-from-right-2 duration-200">
-            <AlertCircle className="h-3.5 w-3.5" />
-            <span>Sync failed - try again</span>
-          </div>
-        )}
-      </div>
-
-      {/* Platform Switcher */}
-      <div className="mb-6">
-        <Tabs value={platform} onValueChange={(value) => setPlatform(value as 'stockx' | 'alias')}>
-          <TabsList className="bg-transparent border-0 gap-2 p-0">
-            <TabsTrigger
-              value="stockx"
-              className={cn(
-                "rounded-full px-5 py-2 font-medium transition-all duration-200",
-                "bg-[#00FF94] text-black",
-                platform === 'stockx'
-                  ? "opacity-100"
-                  : "opacity-30 hover:opacity-50"
-              )}
-            >
-              StockX
-            </TabsTrigger>
-            <TabsTrigger
-              value="alias"
-              className={cn(
-                "rounded-full px-5 py-2 font-medium transition-all duration-200",
-                "bg-[#A855F7] text-white",
-                platform === 'alias'
-                  ? "opacity-100"
-                  : "opacity-30 hover:opacity-50"
-              )}
-            >
-              Alias
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* Unified Actions Toolbar */}
+      {/* Unified Actions Toolbar - Hidden on mobile */}
       <div className={cn(
-        "sticky top-0 z-50 rounded-xl p-4 mb-4 shadow-lg transition-all duration-200 border-t border-[#00FF94]/8 overflow-x-auto",
+        "hidden md:block sticky top-0 z-50 rounded-xl p-4 mb-4 shadow-lg transition-all duration-200 border-t border-[#00FF94]/8 overflow-x-auto",
         selectedItems.size > 0
           ? "bg-gradient-to-br from-[#00FF94]/8 to-[#00FF94]/2 border-2 border-[#00FF94]/20 shadow-xl shadow-[#00FF94]/5"
           : "bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10"
