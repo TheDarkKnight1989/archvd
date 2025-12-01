@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Search, Download, Plus, Bookmark, ChevronDown, FileText, Shield, Receipt, Clock, RefreshCw, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react'
+import { Search, Download, Plus, Bookmark, ChevronDown, FileText, Shield, Receipt, Clock, RefreshCw, CheckCircle2, AlertCircle, TrendingUp, PauseCircle, PlayCircle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { AddItemModal } from '@/components/modals/AddItemModal'
@@ -46,11 +46,26 @@ import { InventoryTableV3 } from './_components/InventoryTableV3'
 import { FilterTabs } from './_components/FilterTabs'
 import { InventoryV3Table } from './_components/InventoryV3Table'
 import { SyncToolbar } from './_components/SyncToolbar'
+import { BulkRepriceModal } from './_components/BulkRepriceModal'
+import { BulkOperationProgressModal, type BulkOperationResult } from './_components/BulkOperationProgressModal'
+
+// Mobile Components
+import { MobileInventoryList } from './_components/mobile/MobileInventoryList'
+
+// Hooks
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+
+// Bulk operations
+import { bulkPauseListings, bulkActivateListings, bulkRepriceListings, type BulkListingItem } from '@/lib/services/stockx/bulkListings'
+import { toast } from 'sonner'
 
 export default function PortfolioPage() {
   const { user } = useRequireAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Detect mobile breakpoint
+  const isMobile = useMediaQuery('(max-width: 768px)')
 
   // Parse URL params
   const urlParams = parseParams(searchParams)
@@ -141,6 +156,20 @@ export default function PortfolioPage() {
   // Sync state
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState<'success' | 'error' | null>(null)
+
+  // Bulk operations state
+  const [bulkRepriceModalOpen, setBulkRepriceModalOpen] = useState(false)
+  const [bulkProgressModalOpen, setBulkProgressModalOpen] = useState(false)
+  const [currentBulkOperation, setCurrentBulkOperation] = useState<'pause' | 'activate' | 'reprice'>('pause')
+  const [bulkOperationResult, setBulkOperationResult] = useState<BulkOperationResult>({
+    total: 0,
+    processed: 0,
+    successful: 0,
+    failed: 0,
+    skipped: 0,
+    inProgress: false,
+    errors: []
+  })
 
   // StockX operations
   const { deactivateListing, activateListing, deleteListing } = useListingOperations()
@@ -465,6 +494,157 @@ export default function PortfolioPage() {
     console.log('Print StockX label:', item.sku)
   }
 
+  // Bulk StockX action handlers
+  const getSelectedItemsWithListings = (): BulkListingItem[] => {
+    const selected = filteredItems.filter(item => selectedItems.has(item.id))
+    return selected.map(item => ({
+      id: item.id,
+      stockxListingId: item.stockx?.listingId || null,
+      sku: item.sku,
+      productName: `${item.brand} ${item.model}`
+    }))
+  }
+
+  const handleBulkPause = () => {
+    const items = getSelectedItemsWithListings()
+    const eligible = items.filter(i => i.stockxListingId)
+    const skipped = items.length - eligible.length
+
+    if (eligible.length > 50) {
+      toast.error('Bulk action limited to 50 listings at a time. Please select fewer items.')
+      return
+    }
+
+    if (eligible.length === 0) {
+      toast.error('No items with StockX listings selected.')
+      return
+    }
+
+    setCurrentBulkOperation('pause')
+    setBulkOperationResult({
+      total: eligible.length,
+      processed: 0,
+      successful: 0,
+      failed: 0,
+      skipped,
+      inProgress: true,
+      errors: []
+    })
+    setBulkProgressModalOpen(true)
+
+    bulkPauseListings(eligible, (progress) => {
+      setBulkOperationResult({
+        ...progress,
+        skipped,
+        inProgress: progress.processed < progress.total
+      })
+    }).then((finalResult) => {
+      setBulkOperationResult({
+        ...finalResult,
+        skipped,
+        inProgress: false
+      })
+      refetch()
+      setSelectedItems(new Set())
+    })
+  }
+
+  const handleBulkActivate = () => {
+    const items = getSelectedItemsWithListings()
+    const eligible = items.filter(i => i.stockxListingId)
+    const skipped = items.length - eligible.length
+
+    if (eligible.length > 50) {
+      toast.error('Bulk action limited to 50 listings at a time. Please select fewer items.')
+      return
+    }
+
+    if (eligible.length === 0) {
+      toast.error('No items with StockX listings selected.')
+      return
+    }
+
+    setCurrentBulkOperation('activate')
+    setBulkOperationResult({
+      total: eligible.length,
+      processed: 0,
+      successful: 0,
+      failed: 0,
+      skipped,
+      inProgress: true,
+      errors: []
+    })
+    setBulkProgressModalOpen(true)
+
+    bulkActivateListings(eligible, (progress) => {
+      setBulkOperationResult({
+        ...progress,
+        skipped,
+        inProgress: progress.processed < progress.total
+      })
+    }).then((finalResult) => {
+      setBulkOperationResult({
+        ...finalResult,
+        skipped,
+        inProgress: false
+      })
+      refetch()
+      setSelectedItems(new Set())
+    })
+  }
+
+  const handleBulkRepriceOpen = () => {
+    const items = getSelectedItemsWithListings()
+    const eligible = items.filter(i => i.stockxListingId)
+
+    if (eligible.length > 50) {
+      toast.error('Bulk action limited to 50 listings at a time. Please select fewer items.')
+      return
+    }
+
+    if (eligible.length === 0) {
+      toast.error('No items with StockX listings selected.')
+      return
+    }
+
+    setBulkRepriceModalOpen(true)
+  }
+
+  const handleBulkRepriceConfirm = (askPrice: number) => {
+    const items = getSelectedItemsWithListings()
+    const eligible = items.filter(i => i.stockxListingId)
+    const skipped = items.length - eligible.length
+
+    setBulkRepriceModalOpen(false)
+    setCurrentBulkOperation('reprice')
+    setBulkOperationResult({
+      total: eligible.length,
+      processed: 0,
+      successful: 0,
+      failed: 0,
+      skipped,
+      inProgress: true,
+      errors: []
+    })
+    setBulkProgressModalOpen(true)
+
+    bulkRepriceListings(eligible, askPrice, (progress) => {
+      setBulkOperationResult({
+        ...progress,
+        skipped,
+        inProgress: progress.processed < progress.total
+      })
+    }).then((finalResult) => {
+      setBulkOperationResult({
+        ...finalResult,
+        skipped,
+        inProgress: false
+      })
+      refetch()
+      setSelectedItems(new Set())
+    })
+  }
+
   // Alias action handlers
   const handlePlaceAliasListing = async (item: EnrichedLineItem) => {
     setItemForAliasListing(item)
@@ -657,7 +837,7 @@ export default function PortfolioPage() {
       const listingData = {
         catalog_id: catalogId,
         price_cents: priceCents,
-        size: parseFloat(item.size_uk), // Convert string to number
+        size: parseFloat(String(item.size_uk ?? '')), // Convert string to number
         size_unit: sizeUnit, // Use catalog's size_unit
         condition: 'CONDITION_NEW', // Alias API enum value
         packaging_condition: 'PACKAGING_CONDITION_GOOD_CONDITION',
@@ -912,8 +1092,8 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Filter Bar - Sticky */}
-      <div className="sticky top-0 z-30 -mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-4 bg-bg/95 backdrop-blur-lg border-y border-border/40">
+      {/* Filter Bar */}
+      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-4 bg-bg/95 backdrop-blur-lg border-y border-border/40">
         <div className="flex flex-col gap-5">
           {/* Search + Filters Row */}
           <div className="flex flex-wrap items-center gap-3">
@@ -1076,130 +1256,50 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {/* Sync Toolbar & Column Chooser */}
-      <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10 shadow-lg">
-        {/* Last Synced Indicator */}
-        <div className="flex items-center gap-2 text-sm">
-          <Clock className="h-4 w-4 text-muted" />
-          <span className="text-muted">Last synced:</span>
-          <span className="font-medium mono text-fg">
-            {(() => {
-              const timestamp = items[0]?.stockx?.lastSyncSuccessAt
-              if (!timestamp) return 'Never synced'
+      {/* Last Synced Text */}
+      <div className="flex items-center gap-2 text-sm mb-3 px-1">
+        <Clock className="h-3.5 w-3.5 text-muted" />
+        <span className="text-muted">Last synced:</span>
+        <span className="font-medium mono text-fg text-xs">
+          {(() => {
+            const timestamp = items[0]?.stockx?.lastSyncSuccessAt
+            if (!timestamp) return 'Never synced'
 
-              const date = new Date(timestamp)
-              const now = new Date()
-              const diffMs = now.getTime() - date.getTime()
-              const diffMinutes = Math.floor(diffMs / 60000)
-              const diffHours = Math.floor(diffMs / 3600000)
-              const diffDays = Math.floor(diffMs / 86400000)
+            const date = new Date(timestamp)
+            const now = new Date()
+            const diffMs = now.getTime() - date.getTime()
+            const diffMinutes = Math.floor(diffMs / 60000)
+            const diffHours = Math.floor(diffMs / 3600000)
+            const diffDays = Math.floor(diffMs / 86400000)
 
-              if (diffMinutes < 1) return 'Just now'
-              if (diffMinutes < 60) return `${diffMinutes}m ago`
-              if (diffHours < 24) return `${diffHours}h ago`
-              if (diffDays === 1) return 'Yesterday'
-              if (diffDays < 7) return `${diffDays}d ago`
+            if (diffMinutes < 1) return 'Just now'
+            if (diffMinutes < 60) return `${diffMinutes}m ago`
+            if (diffHours < 24) return `${diffHours}h ago`
+            if (diffDays === 1) return 'Yesterday'
+            if (diffDays < 7) return `${diffDays}d ago`
 
-              return date.toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-              })
-            })()}
-          </span>
-        </div>
+            return date.toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })
+          })()}
+        </span>
 
         {/* Sync Status Badge */}
         {syncResult === 'success' && (
-          <div className="flex items-center gap-1.5 text-[#00FF94] text-sm animate-in fade-in slide-in-from-right-2 duration-200">
-            <CheckCircle2 className="h-4 w-4" />
+          <div className="flex items-center gap-1.5 text-[#00FF94] text-xs animate-in fade-in slide-in-from-right-2 duration-200">
+            <CheckCircle2 className="h-3.5 w-3.5" />
             <span>Synced successfully</span>
           </div>
         )}
 
         {syncResult === 'error' && (
-          <div className="flex items-center gap-1.5 text-red-500 text-sm animate-in fade-in slide-in-from-right-2 duration-200">
-            <AlertCircle className="h-4 w-4" />
+          <div className="flex items-center gap-1.5 text-red-500 text-xs animate-in fade-in slide-in-from-right-2 duration-200">
+            <AlertCircle className="h-3.5 w-3.5" />
             <span>Sync failed - try again</span>
           </div>
         )}
-
-        <div className="flex-1" />
-
-        {/* Right side: Column Chooser + Sync Button */}
-        <div className="flex items-center gap-2">
-          <ColumnChooser
-            columns={columnConfig}
-            onChange={(updated) => {
-              setColumnConfig(prev =>
-                prev.map(col => ({
-                  ...col,
-                  visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
-                }))
-              )
-            }}
-          />
-
-          <Button
-            onClick={async () => {
-              try {
-                setSyncing(true)
-                setSyncResult(null)
-
-                // Use different endpoint based on platform
-                const endpoint = platform === 'alias'
-                  ? '/api/alias/sync/inventory'
-                  : '/api/stockx/sync-all'
-
-                const requestBody = platform === 'alias'
-                  ? { limit: 100 }
-                  : {} // StockX: send empty body for default quick mode
-
-                const response = await fetch(endpoint, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify(requestBody),
-                })
-
-                if (!response.ok) {
-                  const error = await response.json()
-                  throw new Error(error.error || 'Sync failed')
-                }
-
-                const result = await response.json()
-                console.log(`[${platform.toUpperCase()} Sync] Completed:`, result)
-
-                refetch()
-                setSyncResult('success')
-
-                // Clear success message after 3 seconds
-                setTimeout(() => setSyncResult(null), 3000)
-              } catch (error) {
-                console.error('Sync failed:', error)
-                setSyncResult('error')
-
-                // Clear error message after 5 seconds
-                setTimeout(() => setSyncResult(null), 5000)
-              } finally {
-                setSyncing(false)
-              }
-            }}
-            disabled={syncing}
-            size="sm"
-            className={cn(
-              platform === 'alias'
-                ? 'bg-[#A855F7] hover:bg-[#9333EA] text-white'
-                : 'bg-[#00FF94] hover:bg-[#00E085] text-black',
-              'font-medium transition-all duration-120 shadow-soft gap-2',
-              syncing && 'cursor-wait opacity-75'
-            )}
-          >
-            <RefreshCw className={cn('h-4 w-4', syncing && 'animate-spin')} />
-            <span>{syncing ? 'Syncing...' : `Sync ${platform === 'alias' ? 'Alias' : 'StockX'}`}</span>
-          </Button>
-        </div>
       </div>
 
       {/* Platform Switcher */}
@@ -1234,16 +1334,17 @@ export default function PortfolioPage() {
         </Tabs>
       </div>
 
-      {/* Bulk Actions Toolbar - Updated */}
+      {/* Unified Actions Toolbar */}
       <div className={cn(
-        "sticky top-0 z-10 rounded-xl p-4 mb-4 shadow-lg transition-all duration-200 border-t border-[#00FF94]/8",
+        "sticky top-0 z-50 rounded-xl p-4 mb-4 shadow-lg transition-all duration-200 border-t border-[#00FF94]/8 overflow-x-auto",
         selectedItems.size > 0
-          ? "bg-gradient-to-br from-[#00FF94]/20 to-[#00FF94]/5 border-2 border-[#00FF94]/40 shadow-xl shadow-[#00FF94]/10"
+          ? "bg-gradient-to-br from-[#00FF94]/8 to-[#00FF94]/2 border-2 border-[#00FF94]/20 shadow-xl shadow-[#00FF94]/5"
           : "bg-gradient-to-br from-elev-1 to-elev-1/80 border-2 border-[#00FF94]/10"
       )}>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4 min-w-max">
+          {/* Left: Selection info */}
           <div className="flex items-center gap-3">
-            {selectedItems.size > 0 ? (
+            {selectedItems.size > 0 && (
               <>
                 <span className="text-sm font-semibold text-fg">
                   {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
@@ -1257,55 +1358,46 @@ export default function PortfolioPage() {
                   Clear
                 </Button>
               </>
-            ) : (
-              <span className="text-sm text-muted">
-                Select items using checkboxes to enable bulk actions
-              </span>
             )}
           </div>
 
+          {/* Export - isolated on left */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={selectedItems.size === 0}
+            onClick={() => {
+              const selectedData = filteredItems.filter(item => selectedItems.has(item.id))
+              const csv = [
+                ['SKU', 'Brand', 'Model', 'Size', 'Cost', 'Market', 'P&L'].join(','),
+                ...selectedData.map(item => [
+                  item.sku,
+                  item.brand,
+                  item.model,
+                  item.size_uk,
+                  item.invested,
+                  item.market?.price || 0,
+                  (item.market?.price || 0) - (item.invested || 0)
+                ].join(','))
+              ].join('\n')
+              const blob = new Blob([csv], { type: 'text/csv' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `selected-items-${new Date().toISOString().split('T')[0]}.csv`
+              a.click()
+            }}
+            className="text-xs border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500 font-semibold transition-all duration-120"
+          >
+            <Download className="h-3 w-3 mr-1" />
+            Export
+          </Button>
+
+          <div className="flex-1" />
+
+          {/* Right: Main action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={selectedItems.size === 0}
-              onClick={() => {
-                const selectedData = filteredItems.filter(item => selectedItems.has(item.id))
-                const csv = [
-                  ['SKU', 'Brand', 'Model', 'Size', 'Cost', 'Market', 'P&L'].join(','),
-                  ...selectedData.map(item => [
-                    item.sku,
-                    item.brand,
-                    item.model,
-                    item.size_uk,
-                    item.invested,
-                    item.market?.price || 0,
-                    (item.market?.price || 0) - (item.invested || 0)
-                  ].join(','))
-                ].join('\n')
-                const blob = new Blob([csv], { type: 'text/csv' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `selected-items-${new Date().toISOString().split('T')[0]}.csv`
-                a.click()
-              }}
-              className="text-xs border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500 font-semibold transition-all duration-120"
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Export
-            </Button>
-
-            <Button
-              size="sm"
-              disabled={selectedItems.size === 0}
-              onClick={() => setBulkListModalOpen(true)}
-              className="text-xs bg-[#00FF94] hover:bg-[#00E085] text-black font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-120"
-            >
-              <TrendingUp className="h-3 w-3 mr-1" />
-              List on StockX
-            </Button>
-
+            {/* Add to Sell List - requires selection */}
             <Button
               size="sm"
               disabled={selectedItems.size === 0}
@@ -1319,54 +1411,218 @@ export default function PortfolioPage() {
               Add to Sell List
             </Button>
 
+            {/* Sync - always enabled */}
+            <Button
+              onClick={async () => {
+                try {
+                  setSyncing(true)
+                  setSyncResult(null)
+
+                  const endpoint = platform === 'alias'
+                    ? '/api/alias/sync/inventory'
+                    : '/api/stockx/sync-all'
+
+                  const requestBody = platform === 'alias'
+                    ? { limit: 100 }
+                    : {}
+
+                  const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody),
+                  })
+
+                  if (!response.ok) {
+                    const error = await response.json()
+                    throw new Error(error.error || 'Sync failed')
+                  }
+
+                  const result = await response.json()
+                  console.log(`[${platform.toUpperCase()} Sync] Completed:`, result)
+
+                  refetch()
+                  setSyncResult('success')
+                  setTimeout(() => setSyncResult(null), 3000)
+                } catch (error) {
+                  console.error('Sync failed:', error)
+                  setSyncResult('error')
+                  setTimeout(() => setSyncResult(null), 5000)
+                } finally {
+                  setSyncing(false)
+                }
+              }}
+              disabled={syncing}
+              size="sm"
+              className={cn(
+                platform === 'alias'
+                  ? 'bg-[#A855F7] hover:bg-[#9333EA] text-white'
+                  : 'bg-[#00FF94] hover:bg-[#00E085] text-black',
+                'text-xs font-semibold shadow-lg transition-all duration-120',
+                syncing && 'cursor-wait opacity-75'
+              )}
+            >
+              <RefreshCw className={cn('h-3 w-3 mr-1', syncing && 'animate-spin')} />
+              {syncing ? 'Syncing...' : `Sync ${platform === 'alias' ? 'Alias' : 'StockX'}`}
+            </Button>
+
+            {/* Delete - requires selection */}
             <Button
               variant="outline"
               size="sm"
               disabled={selectedItems.size === 0}
               onClick={handleBulkDelete}
-              className="text-xs border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500 font-semibold transition-all duration-120"
+              className="text-xs border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500 font-semibold transition-all duration-120 disabled:opacity-50"
             >
+              <Trash2 className="h-3 w-3 mr-1" />
               Delete {selectedItems.size > 0 ? selectedItems.size : ''}
             </Button>
+
+            {/* Column Chooser - always enabled */}
+            <div className="ml-2 border-l border-border/50 pl-2">
+              <ColumnChooser
+                columns={columnConfig}
+                onChange={(updated) => {
+                  setColumnConfig(prev =>
+                    prev.map(col => ({
+                      ...col,
+                      visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
+                    }))
+                  )
+                }}
+              />
+            </div>
+
+            {/* StockX-specific bulk actions - only show when items are selected on StockX tab */}
+            {platform === 'stockx' && selectedItems.size > 0 && (
+              <>
+                {/* Reprice - requires selection */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkRepriceOpen}
+                  className="text-xs border-purple-500/40 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500 font-semibold transition-all duration-120"
+                >
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  Reprice on StockX
+                </Button>
+
+                {/* Activate - requires selection */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkActivate}
+                  className="text-xs border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500 font-semibold transition-all duration-120"
+                >
+                  <PlayCircle className="h-3 w-3 mr-1" />
+                  Activate on StockX
+                </Button>
+
+                {/* Pause - requires selection */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkPause}
+                  className="text-xs border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500 font-semibold transition-all duration-120"
+                >
+                  <PauseCircle className="h-3 w-3 mr-1" />
+                  Pause on StockX
+                </Button>
+
+                {/* List on StockX - requires selection */}
+                <Button
+                  size="sm"
+                  onClick={() => setBulkListModalOpen(true)}
+                  className="text-xs bg-[#00FF94] hover:bg-[#00E085] text-black font-semibold shadow-lg transition-all duration-120"
+                >
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  List on StockX
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Inventory V3 Table */}
-      <InventoryV3Table
-        items={filteredItems}
-        loading={loading}
-        sorting={sorting}
-        onSortingChange={setSorting}
-        platform={platform}
-        onRowClick={handleRowClick}
-        selectedItems={selectedItems}
-        onSelectionChange={setSelectedItems}
-        // Item actions
-        onEdit={handleEdit}
-        onDuplicate={handleDuplicateItem}
-        onAdjustTaxRate={handleAdjustTaxRate}
-        onDelete={handleDeleteItem}
-        // StockX actions
-        onListOnStockX={handleListOnStockX}
-        onRepriceListing={handleRepriceListing}
-        onDeactivateListing={handleDeactivateListing}
-        onReactivateListing={handleReactivateListing}
-        onDeleteListing={handleDeleteListing}
-        onPrintStockXLabel={handlePrintStockXLabel}
-        // Alias actions
-        onPlaceAliasListing={handlePlaceAliasListing}
-        onEditAliasListing={handleEditAliasListing}
-        onCancelAliasListing={handleCancelAliasListing}
-        // Status actions
-        onAddToWatchlist={handleAddToWatchlist}
-        onAddToSellList={handleAddToSellList}
-        onMarkListed={handleMarkListed}
-        onMarkSold={handleToggleSold}
-        onMarkUnlisted={handleMarkUnlisted}
-        onTogglePersonals={handleTogglePersonals}
-        onAddExpense={handleAddExpense}
-      />
+      {/* Mobile vs Desktop View */}
+      {isMobile ? (
+        /* Mobile Card View */
+        <MobileInventoryList
+          items={filteredItems}
+          loading={loading}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          onRefetch={refetch}
+          // StockX action handlers
+          onListOnStockX={handleListOnStockX}
+          onRepriceListing={handleRepriceListing}
+          onDeactivateListing={handleDeactivateListing}
+          onReactivateListing={handleReactivateListing}
+          onDeleteItem={handleDeleteItem}
+          // Bulk action handlers
+          onBulkList={() => setBulkListModalOpen(true)}
+          onBulkPause={handleBulkPause}
+          onBulkActivate={handleBulkActivate}
+          onBulkReprice={handleBulkRepriceOpen}
+          onBulkDelete={handleBulkDelete}
+          onBulkExport={() => {
+            const selectedData = filteredItems.filter(item => selectedItems.has(item.id))
+            const csv = [
+              ['SKU', 'Brand', 'Model', 'Size', 'Cost', 'Market', 'P&L'].join(','),
+              ...selectedData.map(item => [
+                item.sku,
+                item.brand,
+                item.model,
+                item.size_uk,
+                item.invested,
+                item.market?.price || 0,
+                (item.market?.price || 0) - (item.invested || 0)
+              ].join(','))
+            ].join('\n')
+            const blob = new Blob([csv], { type: 'text/csv' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `selected-items-${new Date().toISOString().split('T')[0]}.csv`
+            a.click()
+          }}
+        />
+      ) : (
+        /* Desktop Table View */
+        <InventoryV3Table
+          items={filteredItems}
+          loading={loading}
+          sorting={sorting}
+          onSortingChange={setSorting}
+          platform={platform}
+          onRowClick={handleRowClick}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          // Item actions
+          onEdit={handleEdit}
+          onDuplicate={handleDuplicateItem}
+          onAdjustTaxRate={handleAdjustTaxRate}
+          onDelete={handleDeleteItem}
+          // StockX actions
+          onListOnStockX={handleListOnStockX}
+          onRepriceListing={handleRepriceListing}
+          onDeactivateListing={handleDeactivateListing}
+          onReactivateListing={handleReactivateListing}
+          onDeleteListing={handleDeleteListing}
+          onPrintStockXLabel={handlePrintStockXLabel}
+          // Alias actions
+          onPlaceAliasListing={handlePlaceAliasListing}
+          onEditAliasListing={handleEditAliasListing}
+          onCancelAliasListing={handleCancelAliasListing}
+          // Status actions
+          onAddToWatchlist={handleAddToWatchlist}
+          onAddToSellList={handleAddToSellList}
+          onMarkListed={handleMarkListed}
+          onMarkSold={handleToggleSold}
+          onMarkUnlisted={handleMarkUnlisted}
+          onTogglePersonals={handleTogglePersonals}
+          onAddExpense={handleAddExpense}
+        />
+      )}
 
       {/* Add Item Modal */}
       <AddItemModal
@@ -1520,8 +1776,8 @@ export default function PortfolioPage() {
           }}
           onConfirm={handleSetPrice}
           productName={`${itemForAliasListing.brand} ${itemForAliasListing.model}`}
-          imageUrl={itemForAliasListing.alias_image_url || itemForAliasListing.image?.url || itemForAliasListing.stockx_image_url || itemForAliasListing.image_url}
-          marketPrice={itemForAliasListing.alias?.lowestAsk || itemForAliasListing.market?.price}
+          imageUrl={itemForAliasListing.alias_image_url || itemForAliasListing.image?.url || itemForAliasListing.stockx_image_url || itemForAliasListing.image_url || undefined}
+          marketPrice={itemForAliasListing.alias?.lowestAsk || itemForAliasListing.market?.price || undefined}
           loading={aliasListingLoading}
         />
       )}
@@ -1547,6 +1803,22 @@ export default function PortfolioPage() {
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* Bulk Reprice Modal */}
+      <BulkRepriceModal
+        open={bulkRepriceModalOpen}
+        onClose={() => setBulkRepriceModalOpen(false)}
+        onConfirm={handleBulkRepriceConfirm}
+        listingCount={getSelectedItemsWithListings().filter(i => i.stockxListingId).length}
+      />
+
+      {/* Bulk Operation Progress Modal */}
+      <BulkOperationProgressModal
+        open={bulkProgressModalOpen}
+        onClose={() => setBulkProgressModalOpen(false)}
+        operation={currentBulkOperation}
+        result={bulkOperationResult}
+      />
     </div>
   )
 }
