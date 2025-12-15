@@ -1,1775 +1,683 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useRequireAuth } from '@/hooks/useRequireAuth'
-import { useInventoryV3 } from '@/hooks/useInventoryV3'
-import type { EnrichedLineItem } from '@/lib/portfolio/types'
-import { generateProductSlug } from '@/lib/utils/slug'
-import { useInventoryCounts } from '@/hooks/useInventoryCounts'
-import { parseParams, buildQuery, type TableParams } from '@/lib/url/params'
-import { useSavedViews } from '@/hooks/useSavedViews'
-import { exportTaxCsv, exportInsuranceCsv } from '@/lib/portfolio/exports'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Search, Download, Plus, Bookmark, ChevronDown, FileText, Shield, Receipt, Clock, RefreshCw, CheckCircle2, AlertCircle, TrendingUp, PauseCircle, PlayCircle, Trash2, Columns, MoreHorizontal } from 'lucide-react'
-import { cn } from '@/lib/utils/cn'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { AddItemModal } from '@/components/modals/AddItemModal'
-import { MarkAsSoldModal } from '@/components/modals/MarkAsSoldModal'
-import { AddToWatchlistPicker } from '@/components/AddToWatchlistPicker'
-import { AddToSellListModal } from '@/components/modals/AddToSellListModal'
+/**
+ * Inventory Page (V4)
+ *
+ * Fresh V4 implementation with:
+ * - Unified market pricing (StockX + Alias)
+ * - Fee-adjusted best platform recommendations
+ * - Real profit/loss after fees
+ * - Comprehensive filtering toolbar
+ */
+
+import { useState, useMemo, useCallback } from 'react'
+import { useInventoryV4 } from '@/hooks/useInventoryV4'
+import { useCurrency } from '@/hooks/useCurrency'
+import { InventoryV4Table } from './_components/InventoryV4Table'
+import { InventoryV4Toolbar, DEFAULT_FILTERS, type InventoryV4Filters } from './_components/InventoryV4Toolbar'
+import { AddItemV4Modal } from './_components/AddItemV4Modal'
 import { ListOnStockXModal } from '@/components/stockx/ListOnStockXModal'
 import { RepriceListingModal } from '@/components/stockx/RepriceListingModal'
-import { BulkListOnStockXModal } from '@/components/stockx/BulkListOnStockXModal'
-import { ConfirmAliasMatchModal } from '@/components/alias/ConfirmAliasMatchModal'
-import { SetPriceModal } from '@/components/alias/SetPriceModal'
-import { NoAliasMatchModal } from '@/components/alias/NoAliasMatchModal'
-import { Toast } from '@/components/ui/toast'
-import { useListingOperations } from '@/hooks/useStockxListings'
-import type { SortingState } from '@tanstack/react-table'
-
-// Matrix V2 Phase 3 Components
-import { SavedViewChip } from '@/components/SavedViewChip'
-import { ColumnChooser, type ColumnConfig } from '@/components/ColumnChooser'
-import { MarketModal } from '@/components/MarketModal'
-
-// Portfolio V3 Components
-import { InventoryTableV3 } from './_components/InventoryTableV3'
-import { FilterTabs } from './_components/FilterTabs'
-import { InventoryV3Table } from './_components/InventoryV3Table'
-import { SyncToolbar } from './_components/SyncToolbar'
-import { BulkRepriceModal } from './_components/BulkRepriceModal'
-import { BulkOperationProgressModal, type BulkOperationResult } from './_components/BulkOperationProgressModal'
-import { BulkActionsSheet } from './_components/BulkActionsSheet'
-
-// Mobile Components
-import { MobileInventoryList } from './_components/mobile/MobileInventoryList'
-
-// Hooks
-import { useMediaQuery } from '@/hooks/useMediaQuery'
-
-// Bulk operations
-import { bulkPauseListings, bulkActivateListings, bulkRepriceListings, type BulkListingItem } from '@/lib/services/stockx/bulkListings'
+import { RefreshCw, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import type { AliasRegionId } from '@/hooks/useUserSettings'
+import type { InventoryV4ItemFull } from '@/lib/inventory-v4/types'
 
-export default function PortfolioPage() {
-  const { user } = useRequireAuth()
-  const router = useRouter()
-  const searchParams = useSearchParams()
+export default function InventoryPage() {
+  const [addModalOpen, setAddModalOpen] = useState(false)
+  const [filters, setFilters] = useState<InventoryV4Filters>(DEFAULT_FILTERS)
 
-  // Detect mobile breakpoint
-  const isMobile = useMediaQuery('(max-width: 768px)')
+  // Modal states
+  const [selectedItem, setSelectedItem] = useState<InventoryV4ItemFull | null>(null)
+  const [listModalOpen, setListModalOpen] = useState(false)
+  const [repriceModalOpen, setRepriceModalOpen] = useState(false)
+  /** Item for edit/duplicate mode in AddItemV4Modal. If id present = edit, if no id = duplicate */
+  const [editItem, setEditItem] = useState<InventoryV4ItemFull | null>(null)
 
-  // Parse URL params
-  const urlParams = parseParams(searchParams)
-
-  // Data fetching via V3 hook
-  const { items, loading, error: fetchError, refetch } = useInventoryV3()
-
-  // Filter out sold items (they belong in Sales page now)
-  const activeItems = useMemo(() => {
-    return items.filter(item => item.status !== 'sold')
-  }, [items])
-
-  // Get counts for filter tabs
-  const { data: counts } = useInventoryCounts(user?.id)
-
-  // Saved views
-  const savedViews = useSavedViews()
-
-  // Quick filter state
-  const [quickFilter, setQuickFilter] = useState<string | null>(null)
-
-  // Platform state ('stockx' or 'alias')
-  const [platform, setPlatform] = useState<'stockx' | 'alias'>('stockx')
-
-  // Quick filter logic
-  const applyQuickFilter = (filterKey: string) => {
-    setQuickFilter(quickFilter === filterKey ? null : filterKey)
-  }
-
-  // Filter state from URL
-  const [searchQuery, setSearchQuery] = useState<string>(urlParams.search || '')
-  const selectedStatus = urlParams.status || []
-  const selectedCategory = urlParams.category && urlParams.category.length > 0 ? urlParams.category : ['sneaker']
-  const selectedSize = urlParams.size_uk?.map(String) || []
-
-  // Sorting state
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'purchase_date', desc: true }, // Default: newest first
-  ])
-
-  // Bulk selection state
+  // Selection state for bulk actions
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
 
-  // Column visibility state - Updated to match new Portfolio table spec
-  const [columnConfig, setColumnConfig] = useState<ColumnConfig[]>([
-    { key: 'name', label: 'Name', visible: true, lock: true },
-    { key: 'size', label: 'Size (UK)', visible: true },
-    { key: 'status', label: 'Status', visible: true },
-    { key: 'unrealised_pl', label: 'Unrealised P/L', visible: true },
-    { key: 'invested', label: 'Purchase Price', visible: true },
-    { key: 'market_value', label: 'Market Value', visible: true },
-    { key: 'highest_bid', label: 'Highest Bid', visible: true },
-    { key: 'listed_price', label: 'Listed Price', visible: true },
-    { key: 'spread', label: 'Spread %', visible: false },
-    { key: 'performance_pct', label: 'Performance %', visible: true },
-    { key: 'platform', label: 'Platform', visible: true },
-    { key: 'purchase_date', label: 'Purchase Date', visible: false },
-    { key: 'actions', label: 'Actions', visible: true },
-  ])
+  // Map region filter to alias region ID
+  const aliasRegion: AliasRegionId = filters.region === 'UK' ? '1' : filters.region === 'EU' ? '2' : '3'
 
-  // Modal state
-  const [addItemModalOpen, setAddItemModalOpen] = useState(false)
-  const [editItem, setEditItem] = useState<EnrichedLineItem | null>(null)
-  const [marketModalOpen, setMarketModalOpen] = useState(false)
-  const [selectedMarketItem, setSelectedMarketItem] = useState<EnrichedLineItem | null>(null)
-  const [markAsSoldModalOpen, setMarkAsSoldModalOpen] = useState(false)
-  const [itemToSell, setItemToSell] = useState<EnrichedLineItem | null>(null)
-  const [watchlistPickerOpen, setWatchlistPickerOpen] = useState(false)
-  const [selectedItemForWatchlist, setSelectedItemForWatchlist] = useState<EnrichedLineItem | null>(null)
-  const [sellListModalOpen, setSellListModalOpen] = useState(false)
-  const [selectedItemsForSellList, setSelectedItemsForSellList] = useState<string[]>([])
-
-  // StockX modal state
-  const [listOnStockXModalOpen, setListOnStockXModalOpen] = useState(false)
-  const [itemToList, setItemToList] = useState<any | null>(null)
-  const [repriceModalOpen, setRepriceModalOpen] = useState(false)
-  const [listingToReprice, setListingToReprice] = useState<any | null>(null)
-  const [bulkListModalOpen, setBulkListModalOpen] = useState(false)
-
-  // Alias modal state
-  const [confirmAliasMatchOpen, setConfirmAliasMatchOpen] = useState(false)
-  const [noAliasMatchOpen, setNoAliasMatchOpen] = useState(false)
-  const [setPriceModalOpen, setSetPriceModalOpen] = useState(false)
-  const [aliasMatchSuggestion, setAliasMatchSuggestion] = useState<any | null>(null)
-  const [itemForAliasListing, setItemForAliasListing] = useState<EnrichedLineItem | null>(null)
-  const [aliasListingLoading, setAliasListingLoading] = useState(false)
-
-  // Toast state
-  const [toast, setToast] = useState<{ message: string; variant: 'default' | 'success' | 'error' } | null>(null)
-
-  // Sync state
-  const [syncing, setSyncing] = useState(false)
-  const [syncResult, setSyncResult] = useState<'success' | 'error' | null>(null)
-
-  // Bulk operations state
-  const [bulkRepriceModalOpen, setBulkRepriceModalOpen] = useState(false)
-  const [bulkProgressModalOpen, setBulkProgressModalOpen] = useState(false)
-  const [currentBulkOperation, setCurrentBulkOperation] = useState<'pause' | 'activate' | 'reprice'>('pause')
-  const [bulkOperationResult, setBulkOperationResult] = useState<BulkOperationResult>({
-    total: 0,
-    processed: 0,
-    successful: 0,
-    failed: 0,
-    skipped: 0,
-    inProgress: false,
-    errors: []
+  const { items, isLoading, error, refetch, pendingSyncs, isSyncing } = useInventoryV4({
+    aliasRegion,
+    // Fetch all non-removed items - we filter client-side
+    // Include 'active' for legacy items that haven't been migrated
+    statuses: ['in_stock', 'listed', 'consigned', 'sold', 'active'],
   })
+  const { symbol } = useCurrency()
+  const currencySymbol = symbol()
 
-  // Mobile bulk actions sheet state
-  const [bulkActionsSheetOpen, setBulkActionsSheetOpen] = useState(false)
+  // ==========================================================================
+  // DERIVED DATA FOR FILTERS
+  // ==========================================================================
 
-  // StockX operations
-  const { deactivateListing, activateListing, deleteListing } = useListingOperations()
+  const availableBrands = useMemo(() => {
+    const brands = new Set<string>()
+    items.forEach(item => {
+      if (item.style.brand) brands.add(item.style.brand)
+    })
+    return Array.from(brands).sort()
+  }, [items])
 
-  // Update URL params
-  const updateParams = (updates: Partial<TableParams>) => {
-    const merged: TableParams = {
-      status: selectedStatus,
-      category: selectedCategory,
-      size_uk: selectedSize,
-      search: searchQuery || undefined,
-      ...updates,
-    }
+  const availableSizes = useMemo(() => {
+    const sizes = new Set<string>()
+    items.forEach(item => {
+      if (item.size) sizes.add(item.size)
+    })
+    return Array.from(sizes).sort((a, b) => parseFloat(a) - parseFloat(b))
+  }, [items])
 
-    // Remove empty values
-    if (merged.status?.length === 0) delete merged.status
-    if (merged.category?.length === 0) delete merged.category
-    if (merged.size_uk?.length === 0) delete merged.size_uk
-    if (!merged.search?.trim()) delete merged.search
+  const customSources = useMemo(() => {
+    const sources = new Set<string>()
+    items.forEach(item => {
+      if (item.purchase_source) sources.add(item.purchase_source)
+    })
+    return Array.from(sources).sort()
+  }, [items])
 
-    const query = buildQuery(merged)
-    router.replace(`/portfolio/inventory${query}`)
-  }
+  // ==========================================================================
+  // FILTERING LOGIC
+  // ==========================================================================
 
-  // Callback when item is added via modal
-  const handleItemAdded = async () => {
-    // Small delay to ensure database transaction completes
-    await new Promise(resolve => setTimeout(resolve, 300))
-    refetch()
-  }
-
-  // Handle modal open/close and clear edit state when closing
-  const handleAddItemModalChange = (open: boolean) => {
-    setAddItemModalOpen(open)
-    if (!open) {
-      setEditItem(null)
-    }
-  }
-
-  // Apply active saved view filters
-  const applySavedView = (viewId: string) => {
-    const view = savedViews.views.find((v) => v.id === viewId)
-    if (view) {
-      updateParams({
-        status: view.filters.status ? [view.filters.status] : [],
-        category: view.filters.category ? [view.filters.category] : ['sneaker'],
-        size_uk: view.filters.size ? [view.filters.size] : [],
-        search: view.filters.search || undefined,
-      })
-      setSorting(view.sorting)
-      savedViews.setActiveView(viewId)
-    }
-  }
-
-  // Save current view
-  const saveCurrentView = (name: string) => {
-    savedViews.createView(
-      name,
-      {
-        status: selectedStatus[0],
-        category: selectedCategory[0],
-        size: selectedSize[0],
-        search: searchQuery || undefined,
-      },
-      sorting
-    )
-  }
-
-  // Filtered items
   const filteredItems = useMemo(() => {
-    return activeItems.filter((item) => {
-      // Status filter
-      if (selectedStatus.length > 0 && !selectedStatus.includes(item.status || '')) {
+    return items.filter(item => {
+      // Search filter
+      if (filters.search) {
+        const search = filters.search.toLowerCase()
+        const matchesName = item.style.name?.toLowerCase().includes(search)
+        const matchesSku = item.style_id.toLowerCase().includes(search)
+        const matchesBrand = item.style.brand?.toLowerCase().includes(search)
+        if (!matchesName && !matchesSku && !matchesBrand) return false
+      }
+
+      // Status filter (listed = has active listings, unlisted = no active listings)
+      if (filters.status !== 'all') {
+        const hasActiveListings = item.listings.some(l => l.status === 'active')
+        if (filters.status === 'listed' && !hasActiveListings) return false
+        if (filters.status === 'unlisted' && hasActiveListings) return false
+      }
+
+      // Platform (market data) filter
+      if (filters.platform !== 'all') {
+        const hasStockx = item.marketData?.netProceeds?.stockx !== null
+        const hasAlias = item.marketData?.netProceeds?.alias !== null
+
+        if (filters.platform === 'stockx' && !hasStockx) return false
+        if (filters.platform === 'alias' && !hasAlias) return false
+        if (filters.platform === 'both' && (!hasStockx || !hasAlias)) return false
+      }
+
+      // Source filter
+      if (filters.source !== 'all' && item.purchase_source !== filters.source) {
         return false
       }
 
-      // Category filter
-      if (selectedCategory.length > 0 && !selectedCategory.includes(item.category || 'other')) {
-        return false
+      // Profit filter
+      if (filters.profit !== 'all' && item.marketData?.realProfit != null) {
+        const profit = item.marketData.realProfit
+        if (filters.profit === 'profitable' && profit <= 0) return false
+        if (filters.profit === 'losing' && profit >= 0) return false
+      }
+
+      // Brand filter
+      if (filters.brands.length > 0) {
+        if (!item.style.brand || !filters.brands.includes(item.style.brand)) {
+          return false
+        }
       }
 
       // Size filter
-      const sizeStr = item.size_uk?.toString() || ''
-      if (selectedSize.length > 0 && !selectedSize.includes(sizeStr)) {
-        return false
-      }
-
-      // Search filter
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase()
-        const matches =
-          item.sku.toLowerCase().includes(q) ||
-          item.brand?.toLowerCase().includes(q) ||
-          item.model?.toLowerCase().includes(q) ||
-          (item.colorway?.toLowerCase().includes(q) || false)
-        if (!matches) return false
-      }
-
-      // Quick filters
-      if (quickFilter === 'listed-stockx') {
-        if (!item.stockx?.listingId) return false
-      } else if (quickFilter === 'profitable') {
-        const profit = (item.market?.price || 0) - (item.invested || 0)
-        if (profit <= 0) return false
-      } else if (quickFilter === 'loss-making') {
-        const profit = (item.market?.price || 0) - (item.invested || 0)
-        if (profit >= 0) return false
-      } else if (quickFilter === 'never-listed') {
-        if (item.stockx?.listingId || item.alias?.listingId) return false
-      } else if (quickFilter === 'added-this-week') {
-        const oneWeekAgo = new Date()
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-        if (new Date(item.created_at) <= oneWeekAgo) return false
+      if (filters.sizes.length > 0) {
+        if (!filters.sizes.includes(item.size)) {
+          return false
+        }
       }
 
       return true
     })
-  }, [activeItems, selectedStatus, selectedCategory, selectedSize, searchQuery, quickFilter, platform])
+  }, [items, filters])
 
-  // Export CSV
-  const exportCSV = () => {
-    const headers = [
-      'item',
-      'sku',
-      'brand',
-      'model',
-      'category',
-      'size_uk',
-      'purchase_date',
-      'buy_price',
-      'tax',
-      'shipping',
-      'total_cost',
-      'market_value',
-      'instant_sell',
-      'gain_loss_pct',
-      'status',
-      'location',
-      'created_at',
-    ]
-    const rows = filteredItems.map((item) => {
-      const invested = item.invested || 0
-      const market = item.market.price || 0
-      const gainLossPct = item.performancePct ?? ''
-      const fullTitle = [item.brand, item.model, item.colorway].filter(Boolean).join(' ')
+  // ==========================================================================
+  // SUMMARY CALCULATIONS
+  // ==========================================================================
 
-      return [
-        fullTitle,
-        item.sku,
-        item.brand ?? '',
-        item.model ?? '',
-        item.category ?? '',
-        item.size_uk ?? '',
-        item.purchaseDate ?? '',
-        item.avgCost.toFixed(2),
-        '', // tax (not available in V3)
-        '', // shipping (not available in V3)
-        invested.toFixed(2),
-        market !== 0 ? market.toFixed(2) : '',
-        item.instantSell?.gross ?? '',
-        gainLossPct !== '' ? gainLossPct.toFixed(2) : '',
-        item.status ?? '',
-        '', // location (not available in V3)
-        '', // created_at (not available in V3)
-      ].map((field) => `"${field}"`)
-    })
+  const summaryData = useMemo(() => {
+    const itemsWithCost = filteredItems.filter(i => i.purchase_price !== null)
+    const itemsWithMarket = filteredItems.filter(i => i.marketData?.bestNetProceeds !== null)
 
-    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    const date = new Date().toISOString().split('T')[0]
-    a.download = `archvd-portfolio-${date}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+    const totalCost = itemsWithCost.reduce((sum, i) => sum + (i.purchase_price ?? 0), 0)
+    const totalMarketValue = itemsWithMarket.reduce((sum, i) => sum + (i.marketData?.value ?? 0), 0)
+    const totalBestPayouts = itemsWithMarket.reduce((sum, i) => sum + (i.marketData?.bestNetProceeds ?? 0), 0)
+    const totalProfit = itemsWithMarket.reduce((sum, i) => sum + (i.marketData?.realProfit ?? 0), 0)
 
-  // Row action handlers
-  const handleRowClick = (item: EnrichedLineItem) => {
-    // Navigate to Product Market Page with slug-based URL and itemId for position data
-    const productName = `${item.brand || ''} ${item.model || ''}`.trim()
-    const sku = item.sku || ''
-    const slug = sku ? generateProductSlug(productName, sku) : null
-    const marketUrl = slug ? `/portfolio/market/${slug}?itemId=${item.id}` : `/portfolio/inventory/market/${item.id}`
-    router.push(marketUrl)
-  }
-
-  const handleEdit = (item: EnrichedLineItem) => {
-    setEditItem(item)
-    setAddItemModalOpen(true)
-  }
-
-  const handleToggleSold = async (item: EnrichedLineItem) => {
-    setItemToSell(item)
-    setMarkAsSoldModalOpen(true)
-  }
-
-  const handleAddExpense = (item: EnrichedLineItem) => {
-    // TODO: Implement add expense modal
-    console.log('Add expense:', item.sku)
-  }
-
-  const handleAddToWatchlist = (item: EnrichedLineItem) => {
-    setSelectedItemForWatchlist(item)
-    setWatchlistPickerOpen(true)
-  }
-
-  const handleDuplicateItem = (item: EnrichedLineItem) => {
-    // Set the item to duplicate (without ID) to pre-fill the add modal
-    const duplicatedItem = { ...item, id: undefined } as any
-    setEditItem(duplicatedItem)
-    setAddItemModalOpen(true)
-  }
-
-  const handleAdjustTaxRate = (item: EnrichedLineItem) => {
-    // TODO: Implement adjust tax rate modal
-    console.log('Adjust tax rate:', item.sku)
-  }
-
-  // StockX action handlers
-  const handleListOnStockX = (item: EnrichedLineItem) => {
-    setItemToList(item)
-    setListOnStockXModalOpen(true)
-  }
-
-  const handleRepriceListing = async (item: EnrichedLineItem) => {
-    const listingId = item.stockx?.listingId
-    if (!listingId) {
-      console.error('No listing ID found for item')
-      return
+    return {
+      totalItems: filteredItems.length,
+      totalCost: itemsWithCost.length > 0 ? totalCost : null,
+      totalMarketValue: itemsWithMarket.length > 0 ? totalMarketValue : null,
+      totalBestPayouts: itemsWithMarket.length > 0 ? totalBestPayouts : null,
+      totalProfit: itemsWithMarket.length > 0 ? totalProfit : null,
     }
+  }, [filteredItems])
 
-    // Fetch real listing price from StockX
-    try {
-      const response = await fetch(`/api/stockx/listings/${listingId}`)
-      const listingData = await response.json()
+  // ==========================================================================
+  // ACTION HANDLERS
+  // ==========================================================================
 
-      // Convert EnrichedLineItem to format expected by modal with real ask price
-      setListingToReprice({
-        stockx_listing_id: listingId,
-        ask_price: listingData.amount ? parseFloat(listingData.amount) : (item.stockx?.askPrice || item.market.price || 0),
-        market_lowest_ask: item.market.price,
-        product_name: `${item.brand} ${item.model}`,
-        sku: item.sku,
-      })
-    } catch (error) {
-      console.error('Failed to fetch listing details:', error)
-      // Fallback to cached data
-      setListingToReprice({
-        stockx_listing_id: listingId,
-        ask_price: item.stockx?.askPrice || item.market.price || 0,
-        market_lowest_ask: item.market.price,
-        product_name: `${item.brand} ${item.model}`,
-        sku: item.sku,
-      })
-    }
+  const handleListOnStockX = useCallback((item: InventoryV4ItemFull) => {
+    setSelectedItem(item)
+    setListModalOpen(true)
+  }, [])
 
+  const handleRepriceListing = useCallback((item: InventoryV4ItemFull) => {
+    setSelectedItem(item)
     setRepriceModalOpen(true)
-  }
+  }, [])
 
-  const handleDeactivateListing = async (item: EnrichedLineItem) => {
-    const listingId = item.stockx?.listingId
-    if (!listingId) return
+  const handleDeactivateListing = useCallback(async (item: InventoryV4ItemFull) => {
+    const stockxListing = item.listings.find(l => l.platform === 'stockx')
+    if (!stockxListing?.external_listing_id) {
+      toast.error('No StockX listing found')
+      return
+    }
 
     try {
-      await deactivateListing(listingId)
-      setToast({
-        message: 'Listing deactivated successfully',
-        variant: 'success'
-      })
-      refetch()
-    } catch (error: any) {
-      setToast({
-        message: error.message || 'Failed to deactivate listing',
-        variant: 'error'
-      })
-    }
-  }
-
-  const handleReactivateListing = async (item: EnrichedLineItem) => {
-    const listingId = item.stockx?.listingId
-    if (!listingId) return
-
-    try {
-      await activateListing(listingId)
-      setToast({
-        message: 'Listing reactivated successfully',
-        variant: 'success'
-      })
-      refetch()
-    } catch (error: any) {
-      setToast({
-        message: error.message || 'Failed to reactivate listing',
-        variant: 'error'
-      })
-    }
-  }
-
-  const handleDeleteListing = async (item: EnrichedLineItem) => {
-    const listingId = item.stockx?.listingId
-    if (!listingId) return
-    if (!confirm('Are you sure you want to delete this listing?')) return
-
-    try {
-      await deleteListing(listingId)
-      setToast({
-        message: 'Listing deleted successfully',
-        variant: 'success'
-      })
-      refetch()
-    } catch (error: any) {
-      setToast({
-        message: error.message || 'Failed to delete listing',
-        variant: 'error'
-      })
-    }
-  }
-
-  const handlePrintStockXLabel = (item: EnrichedLineItem) => {
-    // TODO: Implement print label functionality
-    console.log('Print StockX label:', item.sku)
-  }
-
-  // Bulk StockX action handlers
-  const getSelectedItemsWithListings = (): BulkListingItem[] => {
-    const selected = filteredItems.filter(item => selectedItems.has(item.id))
-    return selected.map(item => ({
-      id: item.id,
-      stockxListingId: item.stockx?.listingId || null,
-      sku: item.sku,
-      productName: `${item.brand} ${item.model}`
-    }))
-  }
-
-  const handleBulkPause = () => {
-    const items = getSelectedItemsWithListings()
-    const eligible = items.filter(i => i.stockxListingId)
-    const skipped = items.length - eligible.length
-
-    if (eligible.length > 50) {
-      toast.error('Bulk action limited to 50 listings at a time. Please select fewer items.')
-      return
-    }
-
-    if (eligible.length === 0) {
-      toast.error('No items with StockX listings selected.')
-      return
-    }
-
-    setCurrentBulkOperation('pause')
-    setBulkOperationResult({
-      total: eligible.length,
-      processed: 0,
-      successful: 0,
-      failed: 0,
-      skipped,
-      inProgress: true,
-      errors: []
-    })
-    setBulkProgressModalOpen(true)
-
-    bulkPauseListings(eligible, (progress) => {
-      setBulkOperationResult({
-        ...progress,
-        skipped,
-        inProgress: progress.processed < progress.total
-      })
-    }).then((finalResult) => {
-      setBulkOperationResult({
-        ...finalResult,
-        skipped,
-        inProgress: false
-      })
-      refetch()
-      setSelectedItems(new Set())
-    })
-  }
-
-  const handleBulkActivate = () => {
-    const items = getSelectedItemsWithListings()
-    const eligible = items.filter(i => i.stockxListingId)
-    const skipped = items.length - eligible.length
-
-    if (eligible.length > 50) {
-      toast.error('Bulk action limited to 50 listings at a time. Please select fewer items.')
-      return
-    }
-
-    if (eligible.length === 0) {
-      toast.error('No items with StockX listings selected.')
-      return
-    }
-
-    setCurrentBulkOperation('activate')
-    setBulkOperationResult({
-      total: eligible.length,
-      processed: 0,
-      successful: 0,
-      failed: 0,
-      skipped,
-      inProgress: true,
-      errors: []
-    })
-    setBulkProgressModalOpen(true)
-
-    bulkActivateListings(eligible, (progress) => {
-      setBulkOperationResult({
-        ...progress,
-        skipped,
-        inProgress: progress.processed < progress.total
-      })
-    }).then((finalResult) => {
-      setBulkOperationResult({
-        ...finalResult,
-        skipped,
-        inProgress: false
-      })
-      refetch()
-      setSelectedItems(new Set())
-    })
-  }
-
-  const handleBulkRepriceOpen = () => {
-    const items = getSelectedItemsWithListings()
-    const eligible = items.filter(i => i.stockxListingId)
-
-    if (eligible.length > 50) {
-      toast.error('Bulk action limited to 50 listings at a time. Please select fewer items.')
-      return
-    }
-
-    if (eligible.length === 0) {
-      toast.error('No items with StockX listings selected.')
-      return
-    }
-
-    setBulkRepriceModalOpen(true)
-  }
-
-  const handleBulkRepriceConfirm = (askPrice: number) => {
-    const items = getSelectedItemsWithListings()
-    const eligible = items.filter(i => i.stockxListingId)
-    const skipped = items.length - eligible.length
-
-    setBulkRepriceModalOpen(false)
-    setCurrentBulkOperation('reprice')
-    setBulkOperationResult({
-      total: eligible.length,
-      processed: 0,
-      successful: 0,
-      failed: 0,
-      skipped,
-      inProgress: true,
-      errors: []
-    })
-    setBulkProgressModalOpen(true)
-
-    bulkRepriceListings(eligible, askPrice, (progress) => {
-      setBulkOperationResult({
-        ...progress,
-        skipped,
-        inProgress: progress.processed < progress.total
-      })
-    }).then((finalResult) => {
-      setBulkOperationResult({
-        ...finalResult,
-        skipped,
-        inProgress: false
-      })
-      refetch()
-      setSelectedItems(new Set())
-    })
-  }
-
-  // Alias action handlers
-  const handlePlaceAliasListing = async (item: EnrichedLineItem) => {
-    setItemForAliasListing(item)
-    setAliasListingLoading(true)
-
-    try {
-      // Check if already has a listing
-      if (item.alias?.listingId) {
-        setToast({
-          message: 'This item already has an Alias listing.',
-          variant: 'default',
-        })
-        setAliasListingLoading(false)
-        return
-      }
-
-      // Check if mapped to Alias
-      if (!item.alias?.mapped || !item.alias?.catalogId) {
-        // Not mapped - need to find a match first
-        console.log('[Alias] Item not mapped, calling SKU matcher...')
-
-        const matchResponse = await fetch('/api/alias/match', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sku: item.sku,
-            productName: `${item.brand} ${item.model}`,
-            brand: item.brand,
-          }),
-        })
-
-        if (!matchResponse.ok) {
-          throw new Error('Failed to match item to Alias catalog')
-        }
-
-        const matchData = await matchResponse.json()
-
-        if (matchData.catalogId && matchData.confidence > 0) {
-          // Found a match - show confirmation modal
-          setAliasMatchSuggestion({
-            catalogId: matchData.catalogId,
-            name: matchData.catalogItem?.name || 'Unknown',
-            sku: matchData.catalogItem?.sku || item.sku,
-            brand: matchData.catalogItem?.brand || item.brand,
-            confidence: matchData.confidence,
-            catalogItem: matchData.catalogItem, // Store full catalog item for size_unit
-          })
-          setConfirmAliasMatchOpen(true)
-          setAliasListingLoading(false)
-        } else {
-          // No match found
-          setNoAliasMatchOpen(true)
-          setAliasListingLoading(false)
-        }
-      } else {
-        // Already mapped - fetch catalog item and show price modal
-        const catalogResponse = await fetch(`/api/alias/catalog/${item.alias.catalogId}`)
-        if (catalogResponse.ok) {
-          const catalogData = await catalogResponse.json()
-
-          setAliasMatchSuggestion({
-            catalogId: item.alias.catalogId,
-            name: catalogData.item?.name || 'Unknown',
-            sku: catalogData.item?.sku || item.sku,
-            brand: catalogData.item?.brand || item.brand,
-            confidence: 1.0,
-            catalogItem: catalogData.item,
-          })
-
-          // Skip match confirmation, go straight to price modal
-          setSetPriceModalOpen(true)
-          setAliasListingLoading(false)
-        } else {
-          throw new Error('Failed to fetch catalog item')
-        }
-      }
-    } catch (error) {
-      console.error('[Alias] Error in handlePlaceAliasListing:', error)
-      setToast({
-        message: error instanceof Error ? error.message : 'Failed to create Alias listing',
-        variant: 'error',
-      })
-      setAliasListingLoading(false)
-    }
-  }
-
-  const handleConfirmAliasMatch = async () => {
-    if (!itemForAliasListing || !aliasMatchSuggestion) return
-
-    setAliasListingLoading(true)
-
-    try {
-      // Create the mapping first
-      const linkResponse = await fetch('/api/alias/link', {
+      const res = await fetch('/api/stockx/listings/deactivate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          inventory_id: itemForAliasListing.id,
-          alias_catalog_id: aliasMatchSuggestion.catalogId,
-          match_confidence: aliasMatchSuggestion.confidence,
-        }),
+        body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
       })
 
-      if (!linkResponse.ok) {
-        const errorData = await linkResponse.json()
-        console.error('[Alias] Link API error:', errorData)
-        const errorMessage = errorData.details || errorData.message || errorData.error || 'Failed to create Alias mapping'
-        throw new Error(errorMessage)
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to deactivate listing')
       }
 
-      // Close confirmation modal and show price selection
-      setConfirmAliasMatchOpen(false)
-      setSetPriceModalOpen(true)
-    } catch (error) {
-      console.error('[Alias] Error confirming match:', error)
-      setToast({
-        message: error instanceof Error ? error.message : 'Failed to confirm match',
-        variant: 'error',
-      })
-      setAliasListingLoading(false)
+      toast.success('Listing paused')
+      refetch()
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to pause listing')
     }
-  }
+  }, [refetch])
 
-  const handleSetPrice = async (priceGBP: number) => {
-    console.log('═══════════════════════════════════════')
-    console.log('[Alias] ⚠️ handleSetPrice CALLED')
-    console.log('[Alias] Price:', priceGBP)
-    console.log('[Alias] Item:', itemForAliasListing?.id)
-    console.log('[Alias] Catalog:', aliasMatchSuggestion?.catalogId)
-    console.log('[Alias] Stack trace:', new Error().stack)
-    console.log('═══════════════════════════════════════')
-
-    if (!itemForAliasListing || !aliasMatchSuggestion) {
-      console.error('[Alias] handleSetPrice: Missing required data', {
-        hasItem: !!itemForAliasListing,
-        hasSuggestion: !!aliasMatchSuggestion,
-      })
+  const handleReactivateListing = useCallback(async (item: InventoryV4ItemFull) => {
+    const stockxListing = item.listings.find(l => l.platform === 'stockx')
+    if (!stockxListing?.external_listing_id) {
+      toast.error('No StockX listing found')
       return
     }
 
-    setAliasListingLoading(true)
-
     try {
-      await createAliasListingForItem(
-        itemForAliasListing,
-        aliasMatchSuggestion.catalogId,
-        aliasMatchSuggestion.catalogItem,
-        priceGBP
-      )
-    } catch (error) {
-      console.error('[Alias] Error creating listing:', error)
-      setToast({
-        message: error instanceof Error ? error.message : 'Failed to create listing',
-        variant: 'error',
-      })
-    } finally {
-      setAliasListingLoading(false)
-      setSetPriceModalOpen(false)
-      setItemForAliasListing(null)
-      setAliasMatchSuggestion(null)
-    }
-  }
-
-  const createAliasListingForItem = async (item: EnrichedLineItem, catalogId: string, catalogItem?: any, priceGBP?: number) => {
-    try {
-      // CRITICAL: priceGBP MUST be provided by user - no automatic pricing allowed
-      if (!priceGBP || priceGBP <= 0) {
-        throw new Error('Price must be set by user before creating listing')
-      }
-
-      // If catalogItem not provided, fetch it to get size_unit
-      let sizeUnit = 'SIZE_UNIT_US' // Default fallback
-      if (!catalogItem) {
-        console.log('[Alias] Fetching catalog item for size_unit:', catalogId)
-        const catalogResponse = await fetch(`/api/alias/catalog/${catalogId}`)
-        if (catalogResponse.ok) {
-          const catalogData = await catalogResponse.json()
-          sizeUnit = catalogData.item?.size_unit || 'SIZE_UNIT_US'
-          console.log('[Alias] Got size_unit from catalog:', sizeUnit)
-        }
-      } else {
-        sizeUnit = catalogItem.size_unit || 'SIZE_UNIT_US'
-        console.log('[Alias] Using size_unit from catalogItem:', sizeUnit)
-      }
-
-      // Convert user's price from GBP to cents
-      const priceCents = Math.round(priceGBP * 100)
-
-      // Use catalog's size_unit (matches what Alias expects for this product)
-      const listingData = {
-        catalog_id: catalogId,
-        price_cents: priceCents,
-        size: parseFloat(String(item.size_uk ?? '')), // Convert string to number
-        size_unit: sizeUnit, // Use catalog's size_unit
-        condition: 'CONDITION_NEW', // Alias API enum value
-        packaging_condition: 'PACKAGING_CONDITION_GOOD_CONDITION',
-        activate: true, // Activate immediately
-        inventory_id: item.id,
-      }
-
-      console.log('[Alias] Creating listing with data:', listingData)
-
-      const createResponse = await fetch('/api/alias/listings/create', {
+      const res = await fetch('/api/stockx/listings/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(listingData),
+        body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
       })
 
-      if (!createResponse.ok) {
-        const errorData = await createResponse.json()
-        console.error('[Alias] Create listing API error:', errorData)
-        throw new Error(errorData.error || errorData.message || 'Failed to create listing')
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to activate listing')
       }
 
-      const createData = await createResponse.json()
-
-      setToast({
-        message: 'Alias listing created successfully',
-        variant: 'success',
-      })
-
-      // Refetch inventory to show updated data
+      toast.success('Listing activated')
       refetch()
-    } catch (error) {
-      console.error('[Alias] Error creating listing:', error)
-      setToast({
-        message: error instanceof Error ? error.message : 'Failed to create Alias listing',
-        variant: 'error',
-      })
-    } finally {
-      setAliasListingLoading(false)
-      setItemForAliasListing(null)
-      setAliasMatchSuggestion(null)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to activate listing')
     }
-  }
+  }, [refetch])
 
-  const handleEditAliasListing = (item: EnrichedLineItem) => {
-    // TODO: Implement Edit Alias listing
-    console.log('Edit Alias listing:', item.sku)
-  }
-
-  const handleCancelAliasListing = (item: EnrichedLineItem) => {
-    // TODO: Implement Cancel Alias listing
-    console.log('Cancel Alias listing:', item.sku)
-  }
-
-  // Status action handlers
-  const handleAddToSellList = (item: EnrichedLineItem) => {
-    setSelectedItemsForSellList([item.id])
-    setSellListModalOpen(true)
-  }
-
-  const handleMarkListed = (item: EnrichedLineItem) => {
-    // TODO: Implement mark as listed
-    console.log('Mark as listed:', item.sku)
-  }
-
-  const handleMarkUnlisted = (item: EnrichedLineItem) => {
-    // TODO: Implement mark as unlisted
-    console.log('Mark as unlisted:', item.sku)
-  }
-
-  const handleTogglePersonals = (item: EnrichedLineItem) => {
-    // TODO: Implement toggle personals
-    console.log('Toggle personals:', item.sku)
-  }
-
-  const handleDeleteItem = async (item: EnrichedLineItem) => {
-    const itemName = `${item.brand} ${item.model} (${item.sku})`
-    if (!confirm(`Are you sure you want to permanently delete "${itemName}"?\n\nThis will remove the item and all associated data (expenses, listings, etc.). This action cannot be undone.`)) {
-      return
-    }
+  const handleDeleteItem = useCallback(async (item: InventoryV4ItemFull) => {
+    if (!confirm(`Delete ${item.style.name || item.style_id}?`)) return
 
     try {
-      const response = await fetch(`/api/items/${item.id}/delete`, {
+      const res = await fetch(`/api/items/${item.id}/delete`, {
         method: 'DELETE',
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Failed to delete item')
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to delete item')
       }
 
-      // Refetch inventory data
+      toast.success('Item deleted')
       refetch()
-    } catch (error) {
-      console.error('Error deleting item:', error)
-      alert(`Failed to delete item: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete item')
     }
-  }
+  }, [refetch])
 
-  const handleBulkDelete = async () => {
-    const selectedCount = selectedItems.size
-    if (selectedCount === 0) return
+  // Edit item - open edit modal with item data
+  const handleEdit = useCallback((item: InventoryV4ItemFull) => {
+    setEditItem(item) // Keep the id for edit mode
+    setAddModalOpen(true)
+  }, [])
 
-    // Get selected item names for confirmation
-    const itemsToDelete = filteredItems.filter(item => selectedItems.has(item.id))
-    const itemNames = itemsToDelete.slice(0, 5).map(i => `${i.brand} ${i.model} (${i.sku})`).join('\n')
-    const moreCount = selectedCount > 5 ? `\n...and ${selectedCount - 5} more` : ''
+  // Duplicate item - open modal with item data but no id (creates new item)
+  const handleDuplicate = useCallback((item: InventoryV4ItemFull) => {
+    // Remove id to trigger "duplicate" mode (creates new item when saved)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, ...itemWithoutId } = item
+    setEditItem(itemWithoutId as unknown as InventoryV4ItemFull)
+    setAddModalOpen(true)
+  }, [])
 
-    if (!confirm(`Are you sure you want to permanently delete ${selectedCount} item${selectedCount > 1 ? 's' : ''}?\n\n${itemNames}${moreCount}\n\nThis will remove all items and their associated data (expenses, listings, etc.). This action cannot be undone.`)) {
+  // Adjust tax rate - placeholder for modal
+  const handleAdjustTaxRate = useCallback((_item: InventoryV4ItemFull) => {
+    toast.info('Tax rate adjustment coming soon')
+  }, [])
+
+  // Delete StockX listing (not the item itself)
+  const handleDeleteListing = useCallback(async (item: InventoryV4ItemFull) => {
+    const stockxListing = item.listings.find(l => l.platform === 'stockx')
+    if (!stockxListing?.external_listing_id) {
+      toast.error('No StockX listing found')
       return
     }
 
+    if (!confirm('Delete this StockX listing? This cannot be undone.')) return
+
     try {
-      // Delete all selected items
-      const deletePromises = itemsToDelete.map(item =>
-        fetch(`/api/items/${item.id}/delete`, { method: 'DELETE' })
-          .then(res => {
-            if (!res.ok) throw new Error(`Failed to delete ${item.sku}`)
-            return res
-          })
-      )
+      const res = await fetch('/api/stockx/listings/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
+      })
 
-      await Promise.all(deletePromises)
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to delete listing')
+      }
 
-      // Clear selection and refetch
-      setSelectedItems(new Set())
+      toast.success('Listing deleted')
       refetch()
-    } catch (error) {
-      console.error('Error deleting items:', error)
-      alert(`Failed to delete some items: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete listing')
     }
-  }
+  }, [refetch])
 
-  // Active filter count
-  const activeFilterCount =
-    (selectedStatus.length > 0 ? 1 : 0) +
-    (selectedCategory.length > 0 && selectedCategory[0] !== 'sneaker' ? 1 : 0) +
-    (selectedSize.length > 0 ? 1 : 0) +
-    (searchQuery ? 1 : 0) +
-    (quickFilter ? 1 : 0)
+  // Print StockX label
+  const handlePrintStockXLabel = useCallback((item: InventoryV4ItemFull) => {
+    const stockxListing = item.listings.find(l => l.platform === 'stockx')
+    if (!stockxListing?.external_listing_id) {
+      toast.error('No StockX listing found')
+      return
+    }
+    // Open StockX print label page in new tab
+    window.open(`https://stockx.com/selling/listings/${stockxListing.external_listing_id}/label`, '_blank')
+  }, [])
 
-  // Convert columnConfig to columnVisibility object for InventoryV3Table
-  const columnVisibility = useMemo(() => {
-    return columnConfig.reduce((acc, col) => {
-      acc[col.key] = col.visible
-      return acc
-    }, {} as Record<string, boolean>)
-  }, [columnConfig])
+  // ==========================================================================
+  // ALIAS ACTION HANDLERS (placeholders)
+  // ==========================================================================
 
-  // Build filter tab configs - Updated to use new status enum
-  const statusTabs = [
-    { key: 'active', label: 'Active', count: counts.status['active'] ?? 0 },
-    { key: 'listed', label: 'Listed', count: counts.status['listed'] ?? 0 },
-    { key: 'worn', label: 'Worn', count: counts.status['worn'] ?? 0 },
-  ]
+  const handleAttachAliasProduct = useCallback((_item: InventoryV4ItemFull) => {
+    toast.info('Attach Alias product coming soon')
+  }, [])
 
-  const categoryTabs = [
-    { key: 'sneaker', label: 'Sneakers', count: counts.category['sneaker'] ?? 0 },
-    { key: 'pokemon', label: 'Pokémon (sealed)', count: counts.category['pokemon'] ?? 0 },
-    { key: 'apparel', label: 'Apparel', count: counts.category['apparel'] ?? 0 },
-    { key: 'accessory', label: 'Accessories', count: counts.category['accessory'] ?? 0 },
-    { key: 'other', label: 'Other', count: counts.category['other'] ?? 0 },
-  ]
+  const handlePlaceAliasListing = useCallback((_item: InventoryV4ItemFull) => {
+    toast.info('Place Alias listing coming soon')
+  }, [])
 
-  const sizeTabs = Object.entries(counts.size)
-    .sort((a, b) => b[1] - a[1]) // Sort by count descending
-    .slice(0, 10) // Top 10 sizes
-    .map(([key, count]) => ({ key, label: key, count }))
+  const handleEditAliasListing = useCallback((_item: InventoryV4ItemFull) => {
+    toast.info('Edit Alias listing coming soon')
+  }, [])
+
+  const handleCancelAliasListing = useCallback((_item: InventoryV4ItemFull) => {
+    toast.info('Cancel Alias listing coming soon')
+  }, [])
+
+  // ==========================================================================
+  // STATUS ACTION HANDLERS
+  // ==========================================================================
+
+  const handleAddToWatchlist = useCallback((_item: InventoryV4ItemFull) => {
+    toast.info('Add to watchlist coming soon')
+  }, [])
+
+  const handleAddToSellList = useCallback((_item: InventoryV4ItemFull) => {
+    toast.info('Add to sell list coming soon')
+  }, [])
+
+  const handleMarkListed = useCallback(async (item: InventoryV4ItemFull) => {
+    try {
+      const res = await fetch(`/api/items/${item.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'listed' }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update status')
+      }
+
+      toast.success('Marked as listed')
+      refetch()
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update status')
+    }
+  }, [refetch])
+
+  const handleMarkSold = useCallback(async (item: InventoryV4ItemFull) => {
+    const newStatus = item.status === 'sold' ? 'in_stock' : 'sold'
+    try {
+      const res = await fetch(`/api/items/${item.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update status')
+      }
+
+      toast.success(newStatus === 'sold' ? 'Marked as sold' : 'Marked as in stock')
+      refetch()
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update status')
+    }
+  }, [refetch])
+
+  const handleMarkUnlisted = useCallback(async (item: InventoryV4ItemFull) => {
+    try {
+      const res = await fetch(`/api/items/${item.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'in_stock' }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update status')
+      }
+
+      toast.success('Marked as unlisted')
+      refetch()
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update status')
+    }
+  }, [refetch])
+
+  const handleTogglePersonals = useCallback((_item: InventoryV4ItemFull) => {
+    toast.info('Toggle personals coming soon')
+  }, [])
+
+  // Helper to convert V4 item to modal-compatible format (LegacyItemShape)
+  const selectedItemForModal = useMemo(() => {
+    if (!selectedItem) return null
+    const stockxListing = selectedItem.listings.find(l => l.platform === 'stockx')
+    const marketData = selectedItem.marketData
+
+    return {
+      id: selectedItem.id,
+      sku: selectedItem.style_id,
+      brand: selectedItem.style.brand || '',
+      model: selectedItem.style.name || '',
+      size_uk: selectedItem.size,
+      image_url: selectedItem.style.primary_image_url,
+      invested: selectedItem.purchase_price ?? undefined,
+      stockx: {
+        mapped: !!selectedItem.style.stockx_product_id,
+        productId: selectedItem.style.stockx_product_id ?? undefined,
+        variantId: marketData?.variantIds?.stockxVariantId ?? undefined,
+        listingId: stockxListing?.external_listing_id ?? undefined,
+        listingStatus: stockxListing?.status === 'active' ? 'ACTIVE' : stockxListing?.status === 'paused' ? 'INACTIVE' : undefined,
+        askPrice: stockxListing?.listed_price,
+        // Market data fields (used by legacyItemToModalItem -> MarketDataTab)
+        lowestAsk: marketData?.inputs?.stockxAsk ?? undefined,
+        highestBid: marketData?.bids?.stockxBid ?? undefined,
+        lastSale: undefined, // Not currently tracked in V4 marketData
+        salesLast72h: undefined, // Not currently tracked in V4 marketData
+      },
+      // V4 listing for modal
+      _v4StockxListing: stockxListing,
+    }
+  }, [selectedItem])
 
   return (
-    <div className="mx-auto max-w-[1400px] px-3 md:px-6 lg:px-8 py-2 md:py-4 space-y-2 md:space-y-3 text-fg">
-      {/* Compact Page Header */}
-      <div className="flex items-center justify-between gap-4 py-2">
-        {/* Left: Title + Subtitle */}
-        <div className="flex-1 min-w-0">
-          <h1 className="font-display text-xl md:text-2xl font-semibold text-fg tracking-tight">
-            Portfolio
-          </h1>
-          <p className="text-[11px] text-muted/70 max-w-2xl hidden md:block mt-0.5">
-            Track and manage your collectibles inventory with live market data
-          </p>
-        </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b border-white/10 bg-black/20">
+        <div className="max-w-[1600px] mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-white">Inventory</h1>
+              <p className="text-sm text-white/50 mt-1">
+                Unified market pricing with fee-adjusted profits
+              </p>
+            </div>
 
-        {/* Right: Action Buttons */}
-        <div className="hidden md:flex items-center gap-2">
-          {/* Sync Button */}
-          <Button
-            onClick={async () => {
-              setSyncing(true)
-              setSyncResult(null)
-              try {
-                const endpoint = platform === 'alias' ? '/api/alias/sync/inventory' : '/api/stockx/sync-all'
-                const requestBody = platform === 'alias' ? { limit: 100 } : {}
-                const res = await fetch(endpoint, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(requestBody)
-                })
-                if (!res.ok) throw new Error('Sync failed')
-                setSyncResult('success')
-                setTimeout(() => setSyncResult(null), 3000)
-                void refetch()
-              } catch (error) {
-                console.error('Sync error:', error)
-                setSyncResult('error')
-                setTimeout(() => setSyncResult(null), 3000)
-              } finally {
-                setSyncing(false)
-              }
-            }}
-            disabled={syncing}
-            size="sm"
-            variant="outline"
-            className="h-8 px-3 text-xs border-border/60 hover:border-border text-muted hover:text-fg"
-          >
-            <RefreshCw className={cn('h-3 w-3 mr-1.5', syncing && 'animate-spin')} />
-            {syncing ? 'Syncing...' : 'Sync'}
-          </Button>
+            <div className="flex items-center gap-3">
+              {/* Sync indicator */}
+              {isSyncing && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <RefreshCw className="h-4 w-4 text-blue-400 animate-spin" />
+                  <span className="text-sm text-blue-300">
+                    Syncing {pendingSyncs} items...
+                  </span>
+                </div>
+              )}
 
-          {/* Add Item */}
-          <Button
-            onClick={() => setAddItemModalOpen(true)}
-            size="sm"
-            className="h-8 px-3 text-xs bg-[#00FF94] hover:bg-[#00E085] text-black font-medium"
-          >
-            <Plus className="h-3 w-3 mr-1.5" />
-            Add Item
-          </Button>
-
-          {/* Column Chooser */}
-          <ColumnChooser
-            columns={columnConfig}
-            onChange={(updated) => {
-              setColumnConfig(prev =>
-                prev.map(col => ({
-                  ...col,
-                  visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
-                }))
-              )
-            }}
-          />
-
-          {/* Export Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+              {/* Refresh button */}
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-3 text-xs border-border/60 hover:border-border text-muted hover:text-fg"
+                onClick={() => refetch()}
+                disabled={isLoading}
+                className="gap-2"
               >
-                <Download className="h-3 w-3 mr-1.5" />
-                Export
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => console.log('Export CSV')}>
-                Export as CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => console.log('Export JSON')}>
-                Export as JSON
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+              {/* Add Item button */}
+              <Button
+                size="sm"
+                onClick={() => setAddModalOpen(true)}
+                className="gap-2 text-black hover:opacity-90"
+                style={{ backgroundColor: '#FF7900' }}
+              >
+                <Plus className="h-4 w-4" />
+                Add Item
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Compact Filter Bar */}
-      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 py-3 bg-elev-0/30 border-y border-border/20">
-        <div className="flex flex-col gap-2.5">
-          <div className="flex items-center gap-2 overflow-x-auto">
-          {/* Search - Match top bar style */}
-          <div className="relative flex-shrink-0 w-[280px] md:w-[360px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/70" />
-            <Input
-              placeholder="Search SKU, brand, model..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onBlur={() => updateParams({ search: searchQuery || undefined })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  updateParams({ search: searchQuery || undefined })
-                }
-              }}
-              className={cn(
-                'pl-9 pr-3 h-10 bg-elev-1/50 border border-white/10 rounded-lg transition-all text-fg text-sm',
-                'hover:bg-elev-2/80 hover:border-accent/30',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent shadow-sm',
-                searchQuery && 'ring-2 ring-[#00FF94]/30 border-[#00FF94]/30'
-              )}
+      {/* Error state */}
+      {error && (
+        <div className="max-w-[1600px] mx-auto px-4 py-4">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+            <p className="text-red-400 text-sm">{error.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Summary cards */}
+      {!isLoading && filteredItems.length > 0 && (
+        <div className="max-w-[1600px] mx-auto px-4 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <SummaryCard
+              label="Total Items"
+              value={summaryData.totalItems.toString()}
+            />
+            <SummaryCard
+              label="Total Market Value"
+              value={summaryData.totalMarketValue !== null ? summaryData.totalMarketValue.toFixed(2) : '—'}
+              currencySymbol={currencySymbol}
+            />
+            <SummaryCard
+              label="Best Payouts Total"
+              value={summaryData.totalBestPayouts !== null ? summaryData.totalBestPayouts.toFixed(2) : '—'}
+              currencySymbol={currencySymbol}
+            />
+            <SummaryCard
+              label="Total Profit/Loss"
+              value={summaryData.totalProfit !== null ? summaryData.totalProfit.toFixed(2) : '—'}
+              currencySymbol={currencySymbol}
+              colored
             />
           </div>
-
-            {/* Quick Filters - Premium style with emojis */}
-            <Button
-              onClick={() => applyQuickFilter('listed-stockx')}
-              className={cn(
-                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
-                quickFilter === 'listed-stockx'
-                  ? '!bg-[#00FF94]/15 !text-[#00FF94] !border-[#00FF94]/30 hover:!bg-[#00FF94]/25 !shadow-sm'
-                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
-              )}
-            >
-              <span>🏷️</span>
-              Listed on StockX
-            </Button>
-            <Button
-              onClick={() => applyQuickFilter('profitable')}
-              className={cn(
-                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
-                quickFilter === 'profitable'
-                  ? '!bg-emerald-500/15 !text-emerald-400 !border-emerald-500/30 hover:!bg-emerald-500/25 !shadow-sm'
-                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
-              )}
-            >
-              <span>💰</span>
-              Profitable
-            </Button>
-            <Button
-              onClick={() => applyQuickFilter('loss-making')}
-              className={cn(
-                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
-                quickFilter === 'loss-making'
-                  ? '!bg-red-500/15 !text-red-400 !border-red-500/30 hover:!bg-red-500/25 !shadow-sm'
-                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
-              )}
-            >
-              <span>📉</span>
-              Loss Making
-            </Button>
-            <Button
-              onClick={() => applyQuickFilter('never-listed')}
-              className={cn(
-                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
-                quickFilter === 'never-listed'
-                  ? '!bg-blue-500/15 !text-blue-400 !border-blue-500/30 hover:!bg-blue-500/25 !shadow-sm'
-                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
-              )}
-            >
-              <span>📦</span>
-              Never Listed
-            </Button>
-            <Button
-              onClick={() => applyQuickFilter('added-this-week')}
-              className={cn(
-                'h-10 px-3.5 text-xs font-medium transition-all flex-shrink-0 rounded-lg gap-1.5 border',
-                quickFilter === 'added-this-week'
-                  ? '!bg-amber-500/15 !text-amber-400 !border-amber-500/30 hover:!bg-amber-500/25 !shadow-sm'
-                  : '!bg-elev-1/50 !border-white/10 !text-muted hover:!bg-elev-2/80 hover:!text-fg hover:!border-accent/30'
-              )}
-            >
-              <span>⏰</span>
-              Added This Week
-            </Button>
-          </div>
-
-          {/* Optional Second Row: Clear Filters / Save View */}
-          {activeFilterCount > 0 && (
-            <div className="flex items-center justify-between pt-1 border-t border-border/30">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery('')
-                  setQuickFilter(null)
-                  updateParams({ status: [], category: ['sneaker'], size_uk: [], search: undefined })
-                }}
-                className="h-7 text-xs text-muted hover:text-fg"
-              >
-                Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
-              </Button>
-
-              <Button
-                variant="outline"
-                className="h-7 text-xs border-[#00FF94]/40 text-[#00FF94] hover:bg-[#00FF94]/10 hover:border-[#00FF94]"
-                onClick={() => {
-                  const name = prompt('Enter a name for this view:')
-                  if (name) saveCurrentView(name)
-                }}
-                size="sm"
-              >
-                <Bookmark className="h-3 w-3 mr-1.5" /> Save View
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Fetch Error Alert */}
-      {fetchError && (
-        <div className="border-l-4 border-l-danger bg-elev-1 p-4 rounded-lg">
-          <p className="text-sm text-danger font-medium">Error: {fetchError}</p>
         </div>
       )}
 
-      {/* Mobile Primary Actions Row - Always visible on mobile */}
-      <div className="flex sm:hidden gap-2 mb-3">
-        {/* Sync StockX */}
-        <Button
-          onClick={async () => {
-            setSyncing(true)
-            setSyncResult(null)
-            try {
-              const endpoint = platform === 'alias' ? '/api/alias/sync/inventory' : '/api/stockx/sync-all'
-              const requestBody = platform === 'alias' ? { limit: 100 } : {}
-              const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-              })
-              if (!res.ok) throw new Error('Sync failed')
-              setSyncResult('success')
-              setTimeout(() => setSyncResult(null), 3000)
-              void refetch()
-            } catch (error) {
-              console.error('Sync error:', error)
-              setSyncResult('error')
-              setTimeout(() => setSyncResult(null), 3000)
-            } finally {
-              setSyncing(false)
-            }
-          }}
-          disabled={syncing}
-          className="flex-1 bg-[#00FF94] hover:bg-[#00E085] text-black font-semibold rounded-xl py-2"
-        >
-          <RefreshCw className={cn('h-4 w-4 mr-2', syncing && 'animate-spin')} />
-          {syncing ? 'Syncing...' : 'Sync StockX'}
-        </Button>
+      {/* Toolbar */}
+      <div className="max-w-[1600px] mx-auto px-4 pb-4">
+        <InventoryV4Toolbar
+          filters={filters}
+          onFiltersChange={setFilters}
+          availableBrands={availableBrands}
+          availableSizes={availableSizes}
+          customSources={customSources}
+          totalItems={items.length}
+          filteredItems={filteredItems.length}
+        />
+      </div>
 
-        {/* Add Item */}
-        <Button
-          onClick={() => setAddItemModalOpen(true)}
-          className="flex-1 bg-soft hover:bg-soft/80 text-fg font-semibold rounded-xl py-2"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Item
-        </Button>
-
-        {/* Columns */}
-        <div className="flex-shrink-0">
-          <ColumnChooser
-            columns={columnConfig}
-            onChange={(updated) => {
-              setColumnConfig(prev =>
-                prev.map(col => ({
-                  ...col,
-                  visible: updated.find(u => u.key === col.key)?.visible ?? col.visible
-                }))
-              )
-            }}
+      {/* Table */}
+      <div className="max-w-[1600px] mx-auto px-4 pb-8">
+        <div className="bg-black/20 rounded-xl border border-white/10 overflow-hidden">
+          <InventoryV4Table
+            items={filteredItems}
+            loading={isLoading}
+            // Selection
+            selectedItems={selectedItems}
+            onSelectionChange={setSelectedItems}
+            // Item actions
+            onEdit={handleEdit}
+            onDuplicate={handleDuplicate}
+            onAdjustTaxRate={handleAdjustTaxRate}
+            onDelete={handleDeleteItem}
+            // StockX actions
+            onListOnStockX={handleListOnStockX}
+            onRepriceListing={handleRepriceListing}
+            onDeactivateListing={handleDeactivateListing}
+            onReactivateListing={handleReactivateListing}
+            onDeleteListing={handleDeleteListing}
+            onPrintStockXLabel={handlePrintStockXLabel}
+            // Alias actions
+            onAttachAliasProduct={handleAttachAliasProduct}
+            onPlaceAliasListing={handlePlaceAliasListing}
+            onEditAliasListing={handleEditAliasListing}
+            onCancelAliasListing={handleCancelAliasListing}
+            // Status actions
+            onAddToWatchlist={handleAddToWatchlist}
+            onAddToSellList={handleAddToSellList}
+            onMarkListed={handleMarkListed}
+            onMarkSold={handleMarkSold}
+            onMarkUnlisted={handleMarkUnlisted}
+            onTogglePersonals={handleTogglePersonals}
           />
         </div>
-
-        {/* More - Opens bulk actions sheet */}
-        <Button
-          onClick={() => setBulkActionsSheetOpen(true)}
-          variant="outline"
-          className="px-3 bg-soft hover:bg-soft/80 border-border rounded-xl flex items-center gap-1"
-          disabled={selectedItems.size === 0}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-          More
-        </Button>
       </div>
 
-      {/* Unified Actions Toolbar - Desktop only, visible when items are selected */}
-      {selectedItems.size > 0 && (
-        <div className={cn(
-          "hidden sm:flex sticky top-0 z-50 rounded-xl p-4 mb-4 shadow-lg transition-all duration-200 border-t border-[#00FF94]/8 overflow-x-auto",
-          "bg-gradient-to-br from-[#00FF94]/8 to-[#00FF94]/2 border-2 border-[#00FF94]/20 shadow-xl shadow-[#00FF94]/5"
-        )}>
-          <div className="flex items-center gap-4 min-w-max">
-            {/* Left: Selection info */}
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-fg">
-                {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedItems(new Set())}
-                className="text-xs"
-              >
-                Clear
-              </Button>
-            </div>
-
-          {/* Export - isolated on left */}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={selectedItems.size === 0}
-            onClick={() => {
-              const selectedData = filteredItems.filter(item => selectedItems.has(item.id))
-              const csv = [
-                ['SKU', 'Brand', 'Model', 'Size', 'Cost', 'Market', 'P&L'].join(','),
-                ...selectedData.map(item => [
-                  item.sku,
-                  item.brand,
-                  item.model,
-                  item.size_uk,
-                  item.invested,
-                  item.market?.price || 0,
-                  (item.market?.price || 0) - (item.invested || 0)
-                ].join(','))
-              ].join('\n')
-              const blob = new Blob([csv], { type: 'text/csv' })
-              const url = URL.createObjectURL(blob)
-              const a = document.createElement('a')
-              a.href = url
-              a.download = `selected-items-${new Date().toISOString().split('T')[0]}.csv`
-              a.click()
-            }}
-            className="text-xs border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500 font-semibold transition-all duration-120"
-          >
-            <Download className="h-3 w-3 mr-1" />
-            Export
-          </Button>
-
-          <div className="flex-1" />
-
-          {/* Right: Main action buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Add to Sell List - requires selection */}
-            <Button
-              size="sm"
-              disabled={selectedItems.size === 0}
-              onClick={() => {
-                setSelectedItemsForSellList(Array.from(selectedItems))
-                setSellListModalOpen(true)
-              }}
-              className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-120"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add to Sell List
-            </Button>
-
-            {/* Delete - requires selection */}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={selectedItems.size === 0}
-              onClick={handleBulkDelete}
-              className="text-xs border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500 font-semibold transition-all duration-120 disabled:opacity-50"
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Delete {selectedItems.size > 0 ? selectedItems.size : ''}
-            </Button>
-
-            {/* StockX-specific bulk actions - only show when items are selected on StockX tab */}
-            {platform === 'stockx' && (
-              <>
-                {/* Reprice - requires selection */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkRepriceOpen}
-                  className="text-xs border-purple-500/40 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500 font-semibold transition-all duration-120"
-                >
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Reprice on StockX
-                </Button>
-
-                {/* Activate - requires selection */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkActivate}
-                  className="text-xs border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-500 font-semibold transition-all duration-120"
-                >
-                  <PlayCircle className="h-3 w-3 mr-1" />
-                  Activate on StockX
-                </Button>
-
-                {/* Pause - requires selection */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBulkPause}
-                  className="text-xs border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500 font-semibold transition-all duration-120"
-                >
-                  <PauseCircle className="h-3 w-3 mr-1" />
-                  Pause on StockX
-                </Button>
-
-                {/* List on StockX - requires selection */}
-                <Button
-                  size="sm"
-                  onClick={() => setBulkListModalOpen(true)}
-                  className="text-xs bg-[#00FF94] hover:bg-[#00E085] text-black font-semibold shadow-lg transition-all duration-120"
-                >
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  List on StockX
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-        </div>
-      )}
-
-      {/* Platform Tabs - Premium selectors */}
-      <div className="-mx-3 md:-mx-6 lg:-mx-8 px-3 md:px-6 lg:px-8 pt-3 pb-0">
-        <Tabs value={platform} onValueChange={(value) => setPlatform(value as 'stockx' | 'alias')}>
-          <TabsList className="bg-transparent border-0 gap-2 p-0 h-auto">
-            <TabsTrigger
-              value="stockx"
-              className={cn(
-                "relative px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg border",
-                "data-[state=active]:shadow-sm",
-                platform === 'stockx'
-                  ? "text-white bg-gradient-to-br from-[#00FF94]/20 to-[#00FF94]/10 border-[#00FF94]/30 shadow-[0_0_20px_rgba(0,255,148,0.15)]"
-                  : "text-muted border-white/10 bg-elev-1/50 hover:text-fg hover:bg-elev-2/80 hover:border-accent/30"
-              )}
-            >
-              StockX
-            </TabsTrigger>
-            <TabsTrigger
-              value="alias"
-              className={cn(
-                "relative px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg border",
-                "data-[state=active]:shadow-sm",
-                platform === 'alias'
-                  ? "text-white bg-gradient-to-br from-[#A855F7]/20 to-[#A855F7]/10 border-[#A855F7]/30 shadow-[0_0_20px_rgba(168,85,247,0.15)]"
-                  : "text-muted border-white/10 bg-elev-1/50 hover:text-fg hover:bg-elev-2/80 hover:border-[#A855F7]/30"
-              )}
-            >
-              Alias
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* Mobile vs Desktop View */}
-      {isMobile ? (
-        /* Mobile Card View */
-        <MobileInventoryList
-          items={filteredItems}
-          loading={loading}
-          selectedItems={selectedItems}
-          onSelectionChange={setSelectedItems}
-          onRefetch={refetch}
-          // StockX action handlers
-          onListOnStockX={handleListOnStockX}
-          onRepriceListing={handleRepriceListing}
-          onDeactivateListing={handleDeactivateListing}
-          onReactivateListing={handleReactivateListing}
-          onDeleteItem={handleDeleteItem}
-          // Bulk action handlers
-          onBulkList={() => setBulkListModalOpen(true)}
-          onBulkPause={handleBulkPause}
-          onBulkActivate={handleBulkActivate}
-          onBulkReprice={handleBulkRepriceOpen}
-          onBulkDelete={handleBulkDelete}
-          onBulkExport={() => {
-            const selectedData = filteredItems.filter(item => selectedItems.has(item.id))
-            const csv = [
-              ['SKU', 'Brand', 'Model', 'Size', 'Cost', 'Market', 'P&L'].join(','),
-              ...selectedData.map(item => [
-                item.sku,
-                item.brand,
-                item.model,
-                item.size_uk,
-                item.invested,
-                item.market?.price || 0,
-                (item.market?.price || 0) - (item.invested || 0)
-              ].join(','))
-            ].join('\n')
-            const blob = new Blob([csv], { type: 'text/csv' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `selected-items-${new Date().toISOString().split('T')[0]}.csv`
-            a.click()
-          }}
-        />
-      ) : (
-        /* Desktop Table View */
-        <InventoryV3Table
-          items={filteredItems}
-          loading={loading}
-          sorting={sorting}
-          onSortingChange={setSorting}
-          platform={platform}
-          columnVisibility={columnVisibility}
-          onRowClick={handleRowClick}
-          selectedItems={selectedItems}
-          onSelectionChange={setSelectedItems}
-          // Item actions
-          onEdit={handleEdit}
-          onDuplicate={handleDuplicateItem}
-          onAdjustTaxRate={handleAdjustTaxRate}
-          onDelete={handleDeleteItem}
-          // StockX actions
-          onListOnStockX={handleListOnStockX}
-          onRepriceListing={handleRepriceListing}
-          onDeactivateListing={handleDeactivateListing}
-          onReactivateListing={handleReactivateListing}
-          onDeleteListing={handleDeleteListing}
-          onPrintStockXLabel={handlePrintStockXLabel}
-          // Alias actions
-          onPlaceAliasListing={handlePlaceAliasListing}
-          onEditAliasListing={handleEditAliasListing}
-          onCancelAliasListing={handleCancelAliasListing}
-          // Status actions
-          onAddToWatchlist={handleAddToWatchlist}
-          onAddToSellList={handleAddToSellList}
-          onMarkListed={handleMarkListed}
-          onMarkSold={handleToggleSold}
-          onMarkUnlisted={handleMarkUnlisted}
-          onTogglePersonals={handleTogglePersonals}
-          onAddExpense={handleAddExpense}
-        />
-      )}
-
-      {/* Add Item Modal */}
-      <AddItemModal
-        open={addItemModalOpen}
-        onOpenChange={handleAddItemModalChange}
-        onSuccess={handleItemAdded}
+      {/* Add Item Modal (also handles edit/duplicate) */}
+      <AddItemV4Modal
+        open={addModalOpen}
+        onOpenChange={(open) => {
+          setAddModalOpen(open)
+          // Clear editItem when modal closes
+          if (!open) setEditItem(null)
+        }}
+        onSuccess={refetch}
         editItem={editItem}
       />
 
-      {/* Mark as Sold Modal */}
-      <MarkAsSoldModal
-        open={markAsSoldModalOpen}
-        onOpenChange={setMarkAsSoldModalOpen}
-        item={itemToSell ? {
-          id: itemToSell.id,
-          sku: itemToSell.sku,
-          brand: itemToSell.brand,
-          model: itemToSell.model,
-          purchase_price: itemToSell.invested, // WHY: V3 uses invested instead of purchase_price
-          tax: 0, // WHY: tax is included in invested
-          shipping: 0, // WHY: shipping is included in invested
-        } : null}
-        onSuccess={handleItemAdded}
-      />
-
-      {/* Market Modal */}
-      {selectedMarketItem && (
-        <MarketModal
-          open={marketModalOpen}
-          onOpenChange={setMarketModalOpen}
-          product={{
-            name: `${selectedMarketItem.brand} ${selectedMarketItem.model}`,
-            sku: selectedMarketItem.sku,
-            brand: selectedMarketItem.brand || '',
-          }}
-          sizes={['UK6', 'UK7', 'UK8', 'UK9', 'UK10', 'UK11', 'UK12']}
-          activeSize={selectedMarketItem.size_uk?.toString() || 'UK9'}
-          onSizeChange={() => {}}
-          range="30d"
-          onRangeChange={() => {}}
-          series={selectedMarketItem.market.spark30d.map((d) => ({
-            date: d.date,
-            price: d.price || 0,
-          }))}
-          sourceBadge={selectedMarketItem.market.provider || 'unknown'}
-          lastUpdatedISO={selectedMarketItem.market.updatedAt || new Date().toISOString()}
-        />
-      )}
-
-      {/* Add to Watchlist Picker */}
-      {selectedItemForWatchlist && (
-        <AddToWatchlistPicker
-          open={watchlistPickerOpen}
-          onOpenChange={setWatchlistPickerOpen}
-          sku={selectedItemForWatchlist.sku}
-          defaultSize={selectedItemForWatchlist.size_uk?.toString() || undefined}
-        />
-      )}
-
-      {/* Add to Sell List Modal */}
-      <AddToSellListModal
-        isOpen={sellListModalOpen}
-        onClose={() => {
-          setSellListModalOpen(false)
-          setSelectedItemsForSellList([])
-        }}
-        inventoryItemIds={selectedItemsForSellList}
-        onSuccess={() => {
-          // Clear selection and show success
-          setSelectedItems(new Set())
-          alert('Items added to sell list successfully!')
-        }}
-      />
-
       {/* List on StockX Modal */}
-      {itemToList && (
+      {selectedItemForModal && (
         <ListOnStockXModal
-          open={listOnStockXModalOpen}
+          open={listModalOpen}
           onClose={() => {
-            setListOnStockXModalOpen(false)
-            setItemToList(null)
+            setListModalOpen(false)
+            setSelectedItem(null)
+          }}
+          item={{
+            ...selectedItemForModal,
+            image_url: selectedItemForModal.image_url ?? undefined,
           }}
           onSuccess={() => {
+            setListModalOpen(false)
+            setSelectedItem(null)
             refetch()
-            setListOnStockXModalOpen(false)
-            setItemToList(null)
           }}
-          item={itemToList}
         />
       )}
 
       {/* Reprice Listing Modal */}
-      {listingToReprice && (
+      {selectedItem && selectedItem.listings.find(l => l.platform === 'stockx') && (
         <RepriceListingModal
           open={repriceModalOpen}
           onClose={() => {
             setRepriceModalOpen(false)
-            setListingToReprice(null)
+            setSelectedItem(null)
           }}
           onSuccess={() => {
-            refetch()
             setRepriceModalOpen(false)
-            setListingToReprice(null)
+            setSelectedItem(null)
+            refetch()
           }}
-          listing={listingToReprice}
-          invested={(itemToList?.invested || itemToList?.avgCost || 0)}
-        />
-      )}
-
-      {/* Bulk List on StockX Modal */}
-      <BulkListOnStockXModal
-        open={bulkListModalOpen}
-        onClose={() => setBulkListModalOpen(false)}
-        onSuccess={() => {
-          refetch()
-          setBulkListModalOpen(false)
-          setSelectedItems(new Set())
-        }}
-        items={filteredItems.filter(item => selectedItems.has(item.id))}
-      />
-
-      {/* Confirm Alias Match Modal */}
-      {itemForAliasListing && aliasMatchSuggestion && (
-        <ConfirmAliasMatchModal
-          open={confirmAliasMatchOpen}
-          onClose={() => {
-            setConfirmAliasMatchOpen(false)
-            setItemForAliasListing(null)
-            setAliasMatchSuggestion(null)
-            setAliasListingLoading(false)
+          listing={{
+            stockx_listing_id: selectedItem.listings.find(l => l.platform === 'stockx')!.external_listing_id!,
+            ask_price: selectedItem.listings.find(l => l.platform === 'stockx')!.listed_price,
+            product_name: selectedItem.style.name ?? undefined,
+            sku: selectedItem.style_id,
+            alias_image_url: selectedItem.style.primary_image_url ?? undefined,
           }}
-          onConfirm={handleConfirmAliasMatch}
-          inventorySku={itemForAliasListing.sku}
-          inventoryName={`${itemForAliasListing.brand} ${itemForAliasListing.model}`}
-          suggestion={aliasMatchSuggestion}
-          loading={aliasListingLoading}
+          invested={selectedItem.purchase_price ?? 0}
         />
       )}
+    </div>
+  )
+}
 
-      {/* Set Price Modal */}
-      {itemForAliasListing && aliasMatchSuggestion && (
-        <SetPriceModal
-          open={setPriceModalOpen}
-          onOpenChange={(open) => {
-            setSetPriceModalOpen(open)
-            if (!open) {
-              setItemForAliasListing(null)
-              setAliasMatchSuggestion(null)
-              setAliasListingLoading(false)
-            }
-          }}
-          onConfirm={handleSetPrice}
-          productName={`${itemForAliasListing.brand} ${itemForAliasListing.model}`}
-          imageUrl={itemForAliasListing.alias_image_url || itemForAliasListing.image?.url || itemForAliasListing.stockx_image_url || itemForAliasListing.image_url || undefined}
-          marketPrice={itemForAliasListing.alias?.lowestAsk || itemForAliasListing.market?.price || undefined}
-          loading={aliasListingLoading}
-        />
-      )}
+// =============================================================================
+// SUMMARY CARD
+// =============================================================================
 
-      {/* No Alias Match Modal */}
-      {itemForAliasListing && (
-        <NoAliasMatchModal
-          open={noAliasMatchOpen}
-          onClose={() => {
-            setNoAliasMatchOpen(false)
-            setItemForAliasListing(null)
-          }}
-          inventorySku={itemForAliasListing.sku}
-          inventoryName={`${itemForAliasListing.brand} ${itemForAliasListing.model}`}
-        />
-      )}
+function SummaryCard({
+  label,
+  value,
+  currencySymbol,
+  colored = false,
+}: {
+  label: string
+  value: string
+  currencySymbol?: string
+  colored?: boolean
+}) {
+  const numValue = Number(value)
+  const isNumeric = Number.isFinite(numValue)
+  const isPositive = isNumeric && numValue >= 0
+  const isNegative = isNumeric && numValue < 0
 
-      {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          variant={toast.variant}
-          onClose={() => setToast(null)}
-        />
-      )}
+  // Format: -£12.34 (sign before symbol) instead of £-12.34
+  // Don't prefix currency for non-numeric values like "—"
+  const displayValue = !isNumeric
+    ? value
+    : isNegative && currencySymbol
+      ? `-${currencySymbol}${Math.abs(numValue).toFixed(2)}`
+      : `${currencySymbol ?? ''}${value}`
 
-      {/* Bulk Reprice Modal */}
-      <BulkRepriceModal
-        open={bulkRepriceModalOpen}
-        onClose={() => setBulkRepriceModalOpen(false)}
-        onConfirm={handleBulkRepriceConfirm}
-        listingCount={getSelectedItemsWithListings().filter(i => i.stockxListingId).length}
-      />
-
-      {/* Bulk Operation Progress Modal */}
-      <BulkOperationProgressModal
-        open={bulkProgressModalOpen}
-        onClose={() => setBulkProgressModalOpen(false)}
-        operation={currentBulkOperation}
-        result={bulkOperationResult}
-      />
-
-      {/* Mobile Bulk Actions Sheet */}
-      <BulkActionsSheet
-        open={bulkActionsSheetOpen}
-        onOpenChange={setBulkActionsSheetOpen}
-        selectedCount={selectedItems.size}
-        platform={platform}
-        onBulkList={() => setBulkListModalOpen(true)}
-        onBulkPause={handleBulkPause}
-        onBulkActivate={handleBulkActivate}
-        onBulkReprice={handleBulkRepriceOpen}
-        onBulkAddToSellList={() => {
-          setSelectedItemsForSellList(Array.from(selectedItems))
-          setSellListModalOpen(true)
-        }}
-        onBulkDelete={handleBulkDelete}
-      />
+  return (
+    <div className="bg-black/30 rounded-lg border border-white/10 p-4">
+      <div className="text-[11px] uppercase tracking-wider text-white/40 mb-1">
+        {label}
+      </div>
+      <div
+        className={`text-xl font-semibold tabular-nums ${
+          colored && isNumeric
+            ? isPositive
+              ? 'text-emerald-400'
+              : 'text-red-400'
+            : 'text-white'
+        }`}
+      >
+        {displayValue}
+      </div>
     </div>
   )
 }
