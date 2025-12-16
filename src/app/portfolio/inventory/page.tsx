@@ -13,13 +13,16 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useInventoryV4 } from '@/hooks/useInventoryV4'
 import { useCurrency } from '@/hooks/useCurrency'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { InventoryV4Table } from './_components/InventoryV4Table'
 import { InventoryV4Toolbar, DEFAULT_FILTERS, type InventoryV4Filters } from './_components/InventoryV4Toolbar'
 import { AddItemV4Modal } from './_components/AddItemV4Modal'
+import { MobileInventoryV4Card } from './_components/mobile/MobileInventoryV4Card'
 import { ListOnStockXModal } from '@/components/stockx/ListOnStockXModal'
 import { RepriceListingModal } from '@/components/stockx/RepriceListingModal'
 import { RefreshCw, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import type { AliasRegionId } from '@/hooks/useUserSettings'
 import type { InventoryV4ItemFull } from '@/lib/inventory-v4/types'
@@ -49,6 +52,9 @@ export default function InventoryPage() {
   })
   const { symbol } = useCurrency()
   const currencySymbol = symbol()
+
+  // Mobile detection - show cards on screens < 1024px (tablet/mobile)
+  const isMobile = useMediaQuery('(max-width: 1023px)')
 
   // ==========================================================================
   // DERIVED DATA FOR FILTERS
@@ -538,41 +544,118 @@ export default function InventoryPage() {
         />
       </div>
 
-      {/* Table */}
+      {/* Table (Desktop) / Cards (Mobile) */}
       <div className="max-w-[1600px] mx-auto px-4 pb-8">
-        <div className="bg-black/20 rounded-xl border border-white/10 overflow-hidden">
-          <InventoryV4Table
-            items={filteredItems}
-            loading={isLoading}
-            // Selection
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            // Item actions
-            onEdit={handleEdit}
-            onDuplicate={handleDuplicate}
-            onAdjustTaxRate={handleAdjustTaxRate}
-            onDelete={handleDeleteItem}
-            // StockX actions
-            onListOnStockX={handleListOnStockX}
-            onRepriceListing={handleRepriceListing}
-            onDeactivateListing={handleDeactivateListing}
-            onReactivateListing={handleReactivateListing}
-            onDeleteListing={handleDeleteListing}
-            onPrintStockXLabel={handlePrintStockXLabel}
-            // Alias actions
-            onAttachAliasProduct={handleAttachAliasProduct}
-            onPlaceAliasListing={handlePlaceAliasListing}
-            onEditAliasListing={handleEditAliasListing}
-            onCancelAliasListing={handleCancelAliasListing}
-            // Status actions
-            onAddToWatchlist={handleAddToWatchlist}
-            onAddToSellList={handleAddToSellList}
-            onMarkListed={handleMarkListed}
-            onMarkSold={handleMarkSold}
-            onMarkUnlisted={handleMarkUnlisted}
-            onTogglePersonals={handleTogglePersonals}
-          />
-        </div>
+        {isMobile ? (
+          /* Mobile: Card Layout */
+          <div className="space-y-3">
+            {/* Select All Header */}
+            {filteredItems.length > 0 && (
+              <div className="flex items-center gap-3 px-2 py-2 bg-black/20 rounded-lg border border-white/10">
+                <Checkbox
+                  checked={selectedItems.size === filteredItems.length && filteredItems.length > 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedItems(new Set(filteredItems.map(i => i.id)))
+                    } else {
+                      setSelectedItems(new Set())
+                    }
+                  }}
+                  aria-label="Select all items"
+                />
+                <span className="text-sm text-white/60">
+                  {selectedItems.size > 0
+                    ? `${selectedItems.size} selected`
+                    : `Select all (${filteredItems.length})`}
+                </span>
+              </div>
+            )}
+
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="h-6 w-6 text-white/40 animate-spin" />
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && filteredItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-white/40 text-sm">No items found</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => setAddModalOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add your first item
+                </Button>
+              </div>
+            )}
+
+            {/* Item Cards */}
+            {!isLoading && filteredItems.map(item => (
+              <MobileInventoryV4Card
+                key={item.id}
+                item={item}
+                isSelected={selectedItems.has(item.id)}
+                onSelectionChange={(checked) => {
+                  const newSelected = new Set(selectedItems)
+                  if (checked) {
+                    newSelected.add(item.id)
+                  } else {
+                    newSelected.delete(item.id)
+                  }
+                  setSelectedItems(newSelected)
+                }}
+                onEdit={() => handleEdit(item)}
+                onDuplicate={() => handleDuplicate(item)}
+                onDelete={() => handleDeleteItem(item)}
+                onListOnStockX={() => handleListOnStockX(item)}
+                onRepriceListing={() => handleRepriceListing(item)}
+                onDeactivateListing={() => handleDeactivateListing(item)}
+                onReactivateListing={() => handleReactivateListing(item)}
+                onMarkSold={() => handleMarkSold(item)}
+              />
+            ))}
+          </div>
+        ) : (
+          /* Desktop: Table Layout */
+          <div className="bg-black/20 rounded-xl border border-white/10 overflow-hidden">
+            <InventoryV4Table
+              items={filteredItems}
+              loading={isLoading}
+              // Selection
+              selectedItems={selectedItems}
+              onSelectionChange={setSelectedItems}
+              // Item actions
+              onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
+              onAdjustTaxRate={handleAdjustTaxRate}
+              onDelete={handleDeleteItem}
+              // StockX actions
+              onListOnStockX={handleListOnStockX}
+              onRepriceListing={handleRepriceListing}
+              onDeactivateListing={handleDeactivateListing}
+              onReactivateListing={handleReactivateListing}
+              onDeleteListing={handleDeleteListing}
+              onPrintStockXLabel={handlePrintStockXLabel}
+              // Alias actions
+              onAttachAliasProduct={handleAttachAliasProduct}
+              onPlaceAliasListing={handlePlaceAliasListing}
+              onEditAliasListing={handleEditAliasListing}
+              onCancelAliasListing={handleCancelAliasListing}
+              // Status actions
+              onAddToWatchlist={handleAddToWatchlist}
+              onAddToSellList={handleAddToSellList}
+              onMarkListed={handleMarkListed}
+              onMarkSold={handleMarkSold}
+              onMarkUnlisted={handleMarkUnlisted}
+              onTogglePersonals={handleTogglePersonals}
+            />
+          </div>
+        )}
       </div>
 
       {/* Add Item Modal (also handles edit/duplicate) */}
