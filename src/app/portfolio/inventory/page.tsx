@@ -151,12 +151,17 @@ export default function InventoryPage() {
   }, [items, filters])
 
   // Mobile virtual scrolling setup (must be after filteredItems)
-  const MOBILE_CARD_HEIGHT = 220 // Approximate height of each mobile card
+  // Use dynamic measurement for variable-height cards (names wrap, conditional sections)
+  const MOBILE_CARD_HEIGHT_ESTIMATE = 240 // Fallback estimate, actual height measured
   const mobileVirtualizer = useVirtualizer({
     count: filteredItems.length,
     getScrollElement: () => mobileListRef.current,
-    estimateSize: () => MOBILE_CARD_HEIGHT,
-    overscan: 3, // Render 3 extra cards above/below viewport (reduced for mobile perf)
+    estimateSize: () => MOBILE_CARD_HEIGHT_ESTIMATE,
+    overscan: 3,
+    // Measure actual element height for accurate positioning
+    measureElement: (element) => {
+      return element.getBoundingClientRect().height
+    },
   })
 
   // Scroll to top when filters change (better UX on search/filter)
@@ -640,15 +645,18 @@ export default function InventoryPage() {
                     return (
                       <div
                         key={item.id}
+                        data-index={virtualItem.index}
+                        ref={mobileVirtualizer.measureElement}
                         style={{
                           position: 'absolute',
                           top: 0,
                           left: 0,
                           width: '100%',
                           transform: `translateY(${virtualItem.start}px)`,
-                          paddingBottom: '12px', // Space between cards
                         }}
                       >
+                        {/* Gap included inside measured element */}
+                        <div className="pb-3">
                         <MobileInventoryV4Card
                           item={item}
                           isSelected={selectedItems.has(item.id)}
@@ -670,6 +678,7 @@ export default function InventoryPage() {
                           onReactivateListing={() => handleReactivateListing(item)}
                           onMarkSold={() => handleMarkSold(item)}
                         />
+                        </div>
                       </div>
                     )
                   })}
