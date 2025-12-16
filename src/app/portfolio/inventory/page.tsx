@@ -10,7 +10,8 @@
  * - Comprehensive filtering toolbar
  */
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useInventoryV4 } from '@/hooks/useInventoryV4'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -55,6 +56,9 @@ export default function InventoryPage() {
 
   // Mobile detection - show cards on screens < 1024px (tablet/mobile)
   const isMobile = useMediaQuery('(max-width: 1023px)')
+
+  // Mobile virtual scrolling ref (virtualizer setup after filteredItems)
+  const mobileListRef = useRef<HTMLDivElement>(null)
 
   // ==========================================================================
   // DERIVED DATA FOR FILTERS
@@ -145,6 +149,15 @@ export default function InventoryPage() {
       return true
     })
   }, [items, filters])
+
+  // Mobile virtual scrolling setup (must be after filteredItems)
+  const MOBILE_CARD_HEIGHT = 220 // Approximate height of each mobile card
+  const mobileVirtualizer = useVirtualizer({
+    count: filteredItems.length,
+    getScrollElement: () => mobileListRef.current,
+    estimateSize: () => MOBILE_CARD_HEIGHT,
+    overscan: 5, // Render 5 extra cards above/below viewport
+  })
 
   // ==========================================================================
   // SUMMARY CALCULATIONS
@@ -547,7 +560,7 @@ export default function InventoryPage() {
       {/* Table (Desktop) / Cards (Mobile) */}
       <div className="max-w-[1600px] mx-auto px-4 pb-8">
         {isMobile ? (
-          /* Mobile: Card Layout */
+          /* Mobile: Card Layout with Virtual Scrolling */
           <div className="space-y-3">
             {/* Select All Header */}
             {filteredItems.length > 0 && (
@@ -594,31 +607,61 @@ export default function InventoryPage() {
               </div>
             )}
 
-            {/* Item Cards */}
-            {!isLoading && filteredItems.map(item => (
-              <MobileInventoryV4Card
-                key={item.id}
-                item={item}
-                isSelected={selectedItems.has(item.id)}
-                onSelectionChange={(checked) => {
-                  const newSelected = new Set(selectedItems)
-                  if (checked) {
-                    newSelected.add(item.id)
-                  } else {
-                    newSelected.delete(item.id)
-                  }
-                  setSelectedItems(newSelected)
-                }}
-                onEdit={() => handleEdit(item)}
-                onDuplicate={() => handleDuplicate(item)}
-                onDelete={() => handleDeleteItem(item)}
-                onListOnStockX={() => handleListOnStockX(item)}
-                onRepriceListing={() => handleRepriceListing(item)}
-                onDeactivateListing={() => handleDeactivateListing(item)}
-                onReactivateListing={() => handleReactivateListing(item)}
-                onMarkSold={() => handleMarkSold(item)}
-              />
-            ))}
+            {/* Virtualized Item Cards */}
+            {!isLoading && filteredItems.length > 0 && (
+              <div
+                ref={mobileListRef}
+                className="overflow-auto"
+                style={{ height: 'calc(100vh - 400px)', minHeight: '300px' }}
+              >
+                <div
+                  style={{
+                    height: `${mobileVirtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {mobileVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const item = filteredItems[virtualItem.index]
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualItem.start}px)`,
+                          paddingBottom: '12px', // Space between cards
+                        }}
+                      >
+                        <MobileInventoryV4Card
+                          item={item}
+                          isSelected={selectedItems.has(item.id)}
+                          onSelectionChange={(checked) => {
+                            const newSelected = new Set(selectedItems)
+                            if (checked) {
+                              newSelected.add(item.id)
+                            } else {
+                              newSelected.delete(item.id)
+                            }
+                            setSelectedItems(newSelected)
+                          }}
+                          onEdit={() => handleEdit(item)}
+                          onDuplicate={() => handleDuplicate(item)}
+                          onDelete={() => handleDeleteItem(item)}
+                          onListOnStockX={() => handleListOnStockX(item)}
+                          onRepriceListing={() => handleRepriceListing(item)}
+                          onDeactivateListing={() => handleDeactivateListing(item)}
+                          onReactivateListing={() => handleReactivateListing(item)}
+                          onMarkSold={() => handleMarkSold(item)}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* Desktop: Table Layout */

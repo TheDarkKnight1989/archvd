@@ -25,7 +25,7 @@
  * 14. ⋮ - actions menu (48px)
  */
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef } from 'react'
 import {
   createColumnHelper,
   flexRender,
@@ -34,6 +34,7 @@ import {
   useReactTable,
   type SortingState,
 } from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '@/lib/utils/cn'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -1320,6 +1321,18 @@ export function InventoryV4Table({
     getSortedRowModel: getSortedRowModel(),
   })
 
+  // Virtual scrolling setup
+  const ROW_HEIGHT = 60 // matches min-h-[60px]
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  const { rows } = table.getRowModel()
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10, // Render 10 extra rows above/below viewport for smooth scrolling
+  })
+
   // Loading state - uses same CSS Grid layout
   if (loading && items.length === 0) {
     return (
@@ -1457,19 +1470,27 @@ export function InventoryV4Table({
   // Column IDs that should be hidden on tablet
   const TABLET_HIDDEN_COLUMNS = ['volume', 'days_held']
 
+  // Get virtual rows
+  const virtualRows = rowVirtualizer.getVirtualItems()
+  const totalHeight = rowVirtualizer.getTotalSize()
+
   return (
     <div className="max-w-[1650px] mx-auto">
       {/* CSS Grid Table Container */}
       <div className="rounded-2xl border border-border bg-elev-1 overflow-hidden shadow-soft">
-        {/* Scrollable container for horizontal overflow */}
-        <div className="overflow-x-auto">
+        {/* Scrollable container for horizontal overflow AND virtual scrolling */}
+        <div
+          ref={tableContainerRef}
+          className="overflow-auto"
+          style={{ maxHeight: 'calc(100vh - 320px)', minHeight: '400px' }}
+        >
           {/* Grid Table */}
           <div
             className="min-w-[1100px]"
             role="table"
             aria-label="Inventory table"
           >
-            {/* Header Row */}
+            {/* Header Row - Sticky */}
             <div
               role="rowgroup"
               className="sticky top-0 z-10 font-semibold rounded-t-lg"
@@ -1519,38 +1540,53 @@ export function InventoryV4Table({
               ))}
             </div>
 
-            {/* Body Rows */}
-            <div role="rowgroup" className="divide-y divide-border/30">
-              {table.getRowModel().rows.map((row) => (
-                <div
-                  key={row.id}
-                  role="row"
-                  className={cn(
-                    'grid items-center gap-0 transition-colors',
-                    onRowClick && 'cursor-pointer hover:bg-soft/50',
-                    selectedItems.has(row.original.id.toString()) && 'bg-white/[0.04]'
-                  )}
-                  style={{ gridTemplateColumns: GRID_TEMPLATE_DESKTOP }}
-                  onClick={() => onRowClick?.(row.original)}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    const isHiddenOnTablet = TABLET_HIDDEN_COLUMNS.includes(cell.column.id)
+            {/* Body Rows - Virtualized */}
+            <div
+              role="rowgroup"
+              style={{
+                height: `${totalHeight}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {virtualRows.map((virtualRow) => {
+                const row = rows[virtualRow.index]
+                return (
+                  <div
+                    key={row.id}
+                    role="row"
+                    data-index={virtualRow.index}
+                    className={cn(
+                      'grid items-center gap-0 transition-colors absolute w-full border-b border-border/30',
+                      onRowClick && 'cursor-pointer hover:bg-soft/50',
+                      selectedItems.has(row.original.id.toString()) && 'bg-white/[0.04]'
+                    )}
+                    style={{
+                      gridTemplateColumns: GRID_TEMPLATE_DESKTOP,
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                    onClick={() => onRowClick?.(row.original)}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const isHiddenOnTablet = TABLET_HIDDEN_COLUMNS.includes(cell.column.id)
 
-                    return (
-                      <div
-                        key={cell.id}
-                        role="cell"
-                        className={cn(
-                          'py-2 px-2 min-h-[60px] flex items-center',
-                          isHiddenOnTablet && 'hidden xl:flex' // Hide on tablet, show on desktop
-                        )}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
+                      return (
+                        <div
+                          key={cell.id}
+                          role="cell"
+                          className={cn(
+                            'py-2 px-2 h-full flex items-center',
+                            isHiddenOnTablet && 'hidden xl:flex' // Hide on tablet, show on desktop
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
