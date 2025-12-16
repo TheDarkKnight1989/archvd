@@ -10,7 +10,7 @@
  * - Platform comparison (StockX vs Alias lowest asks)
  */
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, TrendingUp, TrendingDown, Zap, Crown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -128,16 +128,17 @@ export function MobileInventoryV4Card({
   const stockxAsk = marketData?.inputs?.stockxAsk ?? null
   const aliasAsk = marketData?.inputs?.aliasAsk ?? null
 
-  // Prefetch state - only prefetch once per card
-  const [hasPrefetched, setHasPrefetched] = useState(false)
+  // Prefetch guard - useRef to avoid re-renders on prefetch
+  const hasPrefetchedRef = useRef(false)
 
   // Prefetch on first interaction intent (hover/focus/touch)
+  // Uses ref instead of state to prevent re-renders and spam during scroll
   const handlePrefetch = useCallback(() => {
-    if (!hasPrefetched && marketUrl !== '/portfolio/inventory') {
+    if (!hasPrefetchedRef.current && marketUrl !== '/portfolio/inventory') {
       router.prefetch(marketUrl)
-      setHasPrefetched(true)
+      hasPrefetchedRef.current = true
     }
-  }, [hasPrefetched, marketUrl, router])
+  }, [marketUrl, router])
 
   // Handle card click (navigate to market page)
   const handleCardClick = () => {
@@ -166,8 +167,8 @@ export function MobileInventoryV4Card({
         aria-label={`${item.style_id} US ${item.size}`}
         className={cn(
           'relative bg-gradient-to-br from-elev-1 to-elev-1/80 rounded-xl border-2 transition-all duration-200 overflow-hidden cursor-pointer',
-          // Active press feedback
-          'active:scale-[0.99] active:brightness-95',
+          // Active press feedback + touch-manipulation for iOS 300ms delay fix
+          'active:scale-[0.99] active:brightness-95 touch-manipulation',
           isSelected
             ? 'border-[#00FF94]/60 shadow-lg shadow-[#00FF94]/10'
             : 'border-[#00FF94]/10 hover:border-[#00FF94]/30'
