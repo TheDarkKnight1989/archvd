@@ -10,7 +10,7 @@
  * - Platform comparison (StockX vs Alias lowest asks)
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, TrendingUp, TrendingDown, Zap, Crown } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -128,6 +128,17 @@ export function MobileInventoryV4Card({
   const stockxAsk = marketData?.inputs?.stockxAsk ?? null
   const aliasAsk = marketData?.inputs?.aliasAsk ?? null
 
+  // Prefetch state - only prefetch once per card
+  const [hasPrefetched, setHasPrefetched] = useState(false)
+
+  // Prefetch on first interaction intent (hover/focus/touch)
+  const handlePrefetch = useCallback(() => {
+    if (!hasPrefetched && marketUrl !== '/portfolio/inventory') {
+      router.prefetch(marketUrl)
+      setHasPrefetched(true)
+    }
+  }, [hasPrefetched, marketUrl, router])
+
   // Handle card click (navigate to market page)
   const handleCardClick = () => {
     router.push(marketUrl)
@@ -148,9 +159,15 @@ export function MobileInventoryV4Card({
             handleCardClick()
           }
         }}
-        aria-label={`${item.style.name || item.style_id}, Size US ${item.size}, ${listingStatus}`}
+        // Prefetch on first interaction intent for instant navigation
+        onMouseEnter={handlePrefetch}
+        onFocus={handlePrefetch}
+        onTouchStart={handlePrefetch}
+        aria-label={`${item.style_id} US ${item.size}`}
         className={cn(
           'relative bg-gradient-to-br from-elev-1 to-elev-1/80 rounded-xl border-2 transition-all duration-200 overflow-hidden cursor-pointer',
+          // Active press feedback
+          'active:scale-[0.99] active:brightness-95',
           isSelected
             ? 'border-[#00FF94]/60 shadow-lg shadow-[#00FF94]/10'
             : 'border-[#00FF94]/10 hover:border-[#00FF94]/30'
