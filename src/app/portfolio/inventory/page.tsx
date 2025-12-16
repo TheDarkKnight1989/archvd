@@ -644,7 +644,7 @@ export default function InventoryPage() {
                     const item = filteredItems[virtualItem.index]
                     return (
                       <div
-                        key={item.id}
+                        key={virtualItem.key}
                         data-index={virtualItem.index}
                         ref={mobileVirtualizer.measureElement}
                         style={{
