@@ -10,7 +10,7 @@
  * - Comprehensive filtering toolbar
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useInventoryV4 } from '@/hooks/useInventoryV4'
 import { useCurrency } from '@/hooks/useCurrency'
@@ -156,8 +156,18 @@ export default function InventoryPage() {
     count: filteredItems.length,
     getScrollElement: () => mobileListRef.current,
     estimateSize: () => MOBILE_CARD_HEIGHT,
-    overscan: 5, // Render 5 extra cards above/below viewport
+    overscan: 3, // Render 3 extra cards above/below viewport (reduced for mobile perf)
   })
+
+  // Scroll to top when filters change (better UX on search/filter)
+  useEffect(() => {
+    // Scroll mobile list to top
+    if (mobileListRef.current) {
+      mobileListRef.current.scrollTop = 0
+    }
+    // Reset virtualizer scroll position
+    mobileVirtualizer.scrollToIndex(0)
+  }, [filters, mobileVirtualizer])
 
   // ==========================================================================
   // SUMMARY CALCULATIONS
@@ -611,8 +621,12 @@ export default function InventoryPage() {
             {!isLoading && filteredItems.length > 0 && (
               <div
                 ref={mobileListRef}
-                className="overflow-auto"
-                style={{ height: 'calc(100vh - 400px)', minHeight: '300px' }}
+                className="overflow-auto flex-1 min-h-0"
+                style={{
+                  height: 'calc(100dvh - 400px)', // dvh for iOS Safari address bar
+                  minHeight: '300px',
+                  WebkitOverflowScrolling: 'touch', // iOS smooth scrolling
+                }}
               >
                 <div
                   style={{

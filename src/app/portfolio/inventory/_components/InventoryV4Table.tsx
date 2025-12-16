@@ -1330,7 +1330,7 @@ export function InventoryV4Table({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => ROW_HEIGHT,
-    overscan: 10, // Render 10 extra rows above/below viewport for smooth scrolling
+    overscan: 8, // Render 8 extra rows above/below viewport (balanced for perf)
   })
 
   // Loading state - uses same CSS Grid layout
@@ -1479,10 +1479,15 @@ export function InventoryV4Table({
       {/* CSS Grid Table Container */}
       <div className="rounded-2xl border border-border bg-elev-1 overflow-hidden shadow-soft">
         {/* Scrollable container for horizontal overflow AND virtual scrolling */}
+        {/* Uses flex-1 + min-h-0 pattern for robust cross-device height */}
         <div
           ref={tableContainerRef}
-          className="overflow-auto"
-          style={{ maxHeight: 'calc(100vh - 320px)', minHeight: '400px' }}
+          className="overflow-auto flex-1 min-h-0"
+          style={{
+            maxHeight: 'calc(100dvh - 320px)', // dvh for iOS Safari address bar
+            minHeight: '400px',
+            WebkitOverflowScrolling: 'touch', // iOS smooth scrolling
+          }}
         >
           {/* Grid Table */}
           <div
