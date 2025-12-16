@@ -174,6 +174,30 @@ export default function InventoryPage() {
     mobileVirtualizer.scrollToIndex(0)
   }, [filters, mobileVirtualizer])
 
+  // Re-measure card heights on resize/orientation change (card widths change = text reflows)
+  // Uses rAF to run after browser relayout completes; does NOT reset scroll position
+  useEffect(() => {
+    let rafId: number | null = null
+
+    const handleResize = () => {
+      // Cancel pending rAF to debounce rapid resize events
+      if (rafId) cancelAnimationFrame(rafId)
+      // Schedule re-measure after browser relayout
+      rafId = requestAnimationFrame(() => {
+        mobileVirtualizer.measure()
+      })
+    }
+
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('orientationchange', handleResize)
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('orientationchange', handleResize)
+    }
+  }, [mobileVirtualizer])
+
   // ==========================================================================
   // SUMMARY CALCULATIONS
   // ==========================================================================
