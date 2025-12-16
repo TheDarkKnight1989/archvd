@@ -52,7 +52,7 @@ export function MobileInventoryV4Card({
   onMarkSold,
 }: MobileInventoryV4CardProps) {
   const router = useRouter()
-  const { convert, currency, symbol } = useCurrency()
+  const { symbol } = useCurrency()
   const [actionsSheetOpen, setActionsSheetOpen] = useState(false)
 
   // Extract StockX listing (source of truth for listing status)
@@ -95,10 +95,16 @@ export function MobileInventoryV4Card({
   const marketData = item.marketData
   const currencySymbol = symbol()
 
-  // Format money with proper sign placement
+  // Format money (absolute value with currency symbol)
   const formatMoney = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return '—'
     return `${currencySymbol}${Math.abs(value).toFixed(2)}`
+  }
+
+  // Format delta (signed value for advantages/differences)
+  const formatDelta = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return '—'
+    return `${currencySymbol}${value.toFixed(2)}`
   }
 
   // Purchase price
@@ -133,11 +139,21 @@ export function MobileInventoryV4Card({
   return (
     <>
       <div
+        role="button"
+        tabIndex={0}
+        onClick={handleCardClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleCardClick()
+          }
+        }}
+        aria-label={`${item.style.name || item.style_id}, Size US ${item.size}, ${listingStatus}`}
         className={cn(
-          'relative bg-gradient-to-br from-elev-1 to-elev-1/80 rounded-xl border-2 transition-all duration-200 overflow-hidden',
+          'relative bg-gradient-to-br from-elev-1 to-elev-1/80 rounded-xl border-2 transition-all duration-200 overflow-hidden cursor-pointer',
           isSelected
             ? 'border-[#00FF94]/60 shadow-lg shadow-[#00FF94]/10'
-            : 'border-[#00FF94]/10'
+            : 'border-[#00FF94]/10 hover:border-[#00FF94]/30'
         )}
       >
         {/* Card Content */}
@@ -145,51 +161,47 @@ export function MobileInventoryV4Card({
           {/* Top Row: Checkbox + Image + Basic Info + Menu */}
           <div className="flex items-start gap-3 mb-3">
             {/* Checkbox */}
-            <div className="flex items-center pt-1">
+            <div
+              className="flex items-center pt-1"
+              onClick={(e) => e.stopPropagation()}
+            >
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={onSelectionChange}
                 aria-label={`Select ${item.style_id}`}
-                onClick={(e) => e.stopPropagation()}
               />
             </div>
 
-            {/* Tappable Card Content */}
-            <button
-              onClick={handleCardClick}
-              className="flex-1 flex items-start gap-3 text-left min-w-0"
-            >
-              {/* Product Image */}
-              <div className="flex-shrink-0">
-                <div className="w-14 h-14 rounded-lg overflow-hidden bg-elev-2 border border-border/40">
-                  {item.style.primary_image_url ? (
-                    <img
-                      src={item.style.primary_image_url}
-                      alt={item.style.name || item.style_id}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted text-xs">
-                      No Image
-                    </div>
-                  )}
-                </div>
+            {/* Product Image */}
+            <div className="flex-shrink-0">
+              <div className="w-14 h-14 rounded-lg overflow-hidden bg-elev-2 border border-border/40">
+                {item.style.primary_image_url ? (
+                  <img
+                    src={item.style.primary_image_url}
+                    alt={item.style.name || item.style_id}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted text-xs">
+                    No Image
+                  </div>
+                )}
               </div>
+            </div>
 
-              {/* Product Info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-white line-clamp-2 mb-1 leading-tight">
-                  {item.style.name || item.style_id}
-                </h3>
-                <p className="text-[11px] text-white/55 mono mb-1 leading-tight">{item.style_id}</p>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={cn('text-xs', statusBadge.className)}>
-                    {statusBadge.label}
-                  </Badge>
-                  <span className="text-[10px] text-white/40">US {item.size}</span>
-                </div>
+            {/* Product Info */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-white line-clamp-2 mb-1 leading-tight">
+                {item.style.name || item.style_id}
+              </h3>
+              <p className="text-[11px] text-white/55 mono mb-1 leading-tight">{item.style_id}</p>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={cn('text-xs', statusBadge.className)}>
+                  {statusBadge.label}
+                </Badge>
+                <span className="text-[10px] text-white/40">US {item.size}</span>
               </div>
-            </button>
+            </div>
 
             {/* Actions Menu Button */}
             <button
@@ -205,116 +217,111 @@ export function MobileInventoryV4Card({
           </div>
 
           {/* Middle Row: Financial Data (2 columns) */}
-          <button onClick={handleCardClick} className="w-full text-left">
-            <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-border/30">
-              {/* Left Column */}
-              <div className="space-y-2.5 pr-3 border-r border-soft/20">
-                <div>
-                  <div className="text-[11px] text-muted/70 mb-0.5">Purchase</div>
-                  <div className="text-xs font-medium mono tabular-nums text-fg leading-tight">
-                    {purchasePrice !== null ? formatMoney(purchasePrice) : '—'}
-                  </div>
+          <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-border/30">
+            {/* Left Column */}
+            <div className="space-y-2.5 pr-3 border-r border-soft/20">
+              <div>
+                <div className="text-[11px] text-muted/70 mb-0.5">Purchase</div>
+                <div className="text-xs font-medium mono tabular-nums text-fg leading-tight">
+                  {purchasePrice !== null ? formatMoney(purchasePrice) : '—'}
                 </div>
-
-                <div>
-                  <div className="text-[11px] text-muted/70 mb-0.5">Market Price</div>
-                  <div className="text-xs font-medium mono tabular-nums text-fg leading-tight flex items-center gap-1">
-                    {marketPrice !== null ? formatMoney(marketPrice) : '—'}
-                    {marketData?.source && (
-                      <span className="text-[9px] text-white/40 uppercase">
-                        {marketData.source === 'stockx' ? 'SX' : 'AL'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {listedPrice !== null && (
-                  <div>
-                    <div className="text-[11px] text-muted/70 mb-0.5">Listed</div>
-                    <div className="text-xs font-medium mono tabular-nums text-emerald-500 leading-tight">
-                      {formatMoney(listedPrice)}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Right Column */}
-              <div className="space-y-2.5 pl-2">
-                {/* Platform Comparison */}
-                <div>
-                  <div className="text-[11px] text-muted/70 mb-0.5">Lowest Asks</div>
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-1 text-[10px]">
-                      <span className="text-white/50 w-6">SX:</span>
-                      <span className={cn(
-                        'mono tabular-nums',
-                        bestPlatform === 'stockx' ? 'text-emerald-400 font-medium' : 'text-white/60'
-                      )}>
-                        {stockxAsk !== null ? formatMoney(stockxAsk) : '—'}
-                      </span>
-                      {bestPlatform === 'stockx' && <Crown className="h-2.5 w-2.5 text-amber-400" />}
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px]">
-                      <span className="text-white/50 w-6">AL:</span>
-                      <span className={cn(
-                        'mono tabular-nums',
-                        bestPlatform === 'alias' ? 'text-emerald-400 font-medium' : 'text-white/60'
-                      )}>
-                        {aliasAsk !== null ? formatMoney(aliasAsk) : '—'}
-                      </span>
-                      {bestPlatform === 'alias' && <Crown className="h-2.5 w-2.5 text-amber-400" />}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Real Profit/Loss */}
-                <div>
-                  <div className="text-[11px] text-muted/70 mb-0.5">Net Profit</div>
-                  <div
-                    className={cn(
-                      'text-xs font-semibold mono tabular-nums leading-tight flex items-center gap-1',
-                      realProfit !== null && realProfit > 0
-                        ? 'text-emerald-500'
-                        : realProfit !== null && realProfit < 0
-                          ? 'text-red-500'
-                          : 'text-muted'
-                    )}
-                  >
-                    {realProfit !== null ? (
-                      <>
-                        {realProfit > 0 ? <TrendingUp className="h-3 w-3" /> : realProfit < 0 ? <TrendingDown className="h-3 w-3" /> : null}
-                        {realProfit > 0 && '+'}
-                        {formatMoney(realProfit)}
-                        {realProfitPercent !== null && (
-                          <span className="text-[10px] opacity-70">
-                            ({realProfitPercent > 0 ? '+' : ''}{realProfitPercent.toFixed(0)}%)
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      '—'
-                    )}
-                  </div>
-                </div>
-
-                {/* Best Platform Badge */}
-                {bestPlatform && platformAdvantage && platformAdvantage > 1 && (
-                  <div className="flex items-center gap-1">
-                    <Zap className="h-3 w-3 text-amber-400" />
-                    <span className="text-[10px] text-amber-400">
-                      +{formatMoney(platformAdvantage)} on {bestPlatform === 'stockx' ? 'StockX' : 'Alias'}
+              <div>
+                <div className="text-[11px] text-muted/70 mb-0.5">Market Price</div>
+                <div className="text-xs font-medium mono tabular-nums text-fg leading-tight flex items-center gap-1">
+                  {marketPrice !== null ? formatMoney(marketPrice) : '—'}
+                  {marketData?.source && (
+                    <span className="text-[9px] text-white/40 uppercase">
+                      {marketData.source === 'stockx' ? 'SX' : 'AL'}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+
+              {listedPrice !== null && (
+                <div>
+                  <div className="text-[11px] text-muted/70 mb-0.5">Listed</div>
+                  <div className="text-xs font-medium mono tabular-nums text-emerald-500 leading-tight">
+                    {formatMoney(listedPrice)}
+                  </div>
+                </div>
+              )}
             </div>
-          </button>
+
+            {/* Right Column */}
+            <div className="space-y-2.5 pl-2">
+              {/* Platform Comparison */}
+              <div>
+                <div className="text-[11px] text-muted/70 mb-0.5">Lowest Asks</div>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1 text-[10px]">
+                    <span className="text-white/50 w-7">SX:</span>
+                    <span className={cn(
+                      'mono tabular-nums',
+                      bestPlatform === 'stockx' ? 'text-emerald-400 font-medium' : 'text-white/60'
+                    )}>
+                      {stockxAsk !== null ? formatMoney(stockxAsk) : '—'}
+                    </span>
+                    {bestPlatform === 'stockx' && <Crown className="h-2.5 w-2.5 text-amber-400" />}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px]">
+                    <span className="text-white/50 w-7">AL:</span>
+                    <span className={cn(
+                      'mono tabular-nums',
+                      bestPlatform === 'alias' ? 'text-emerald-400 font-medium' : 'text-white/60'
+                    )}>
+                      {aliasAsk !== null ? formatMoney(aliasAsk) : '—'}
+                    </span>
+                    {bestPlatform === 'alias' && <Crown className="h-2.5 w-2.5 text-amber-400" />}
+                  </div>
+                </div>
+              </div>
+
+              {/* Real Profit/Loss */}
+              <div>
+                <div className="text-[11px] text-muted/70 mb-0.5">Net Profit</div>
+                <div
+                  className={cn(
+                    'text-xs font-semibold mono tabular-nums leading-tight flex items-center gap-1',
+                    realProfit !== null && realProfit > 0
+                      ? 'text-emerald-500'
+                      : realProfit !== null && realProfit < 0
+                        ? 'text-red-500'
+                        : 'text-muted'
+                  )}
+                >
+                  {realProfit !== null ? (
+                    <>
+                      {realProfit > 0 ? <TrendingUp className="h-3 w-3" /> : realProfit < 0 ? <TrendingDown className="h-3 w-3" /> : null}
+                      {realProfit > 0 && '+'}
+                      {formatMoney(realProfit)}
+                      {realProfitPercent !== null && (
+                        <span className="text-[10px] opacity-70">
+                          ({realProfitPercent > 0 ? '+' : ''}{realProfitPercent.toFixed(0)}%)
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    '—'
+                  )}
+                </div>
+              </div>
+
+              {/* Best Platform Badge */}
+              {bestPlatform && platformAdvantage != null && platformAdvantage > 0 && (
+                <div className="flex items-center gap-1">
+                  <Zap className="h-3 w-3 text-amber-400" />
+                  <span className="text-[10px] text-amber-400">
+                    +{formatDelta(platformAdvantage)} on {bestPlatform === 'stockx' ? 'StockX' : 'Alias'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Bottom Row: Meta Info */}
-          <button
-            onClick={handleCardClick}
-            className="w-full flex items-center justify-between text-[10px] text-muted/60"
-          >
+          <div className="flex items-center justify-between text-[10px] text-muted/60">
             <div>
               {item.purchase_date
                 ? `Purchased ${new Date(item.purchase_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}`
@@ -324,7 +331,7 @@ export function MobileInventoryV4Card({
               {item.style.stockx_product_id && <span className="text-blue-400">SX</span>}
               {item.style.alias_catalog_id && <span className="text-purple-400">AL</span>}
             </div>
-          </button>
+          </div>
         </div>
       </div>
 
