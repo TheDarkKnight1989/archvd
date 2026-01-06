@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Shield } from 'lucide-react'
 
@@ -19,22 +18,33 @@ export default function SignInPage() {
     setErr(null)
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setErr(error.message)
-      setLoading(false)
-      return
-    }
+    try {
+      // Use server-side login to ensure cookies are set via HTTP headers
+      // This fixes iOS PWA logout-on-close issue
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include', // Ensure cookies are sent/received
+      })
 
-    // confirm a session exists
-    const { data } = await supabase.auth.getSession()
-    if (!data.session) {
-      setErr('Signed in, but no session was created. Check Supabase URL/Anon key and that email is confirmed.')
-      setLoading(false)
-      return
-    }
+      const result = await response.json()
 
-    router.replace('/portfolio')
+      if (!response.ok || !result.ok) {
+        setErr(result.message || 'Invalid email or password')
+        setLoading(false)
+        return
+      }
+
+      // Success - cookies are set via Set-Cookie header
+      // Refresh to pick up the new session
+      router.replace('/portfolio')
+      router.refresh()
+    } catch (error: any) {
+      console.error('[SignIn] Error:', error)
+      setErr('An error occurred. Please try again.')
+      setLoading(false)
+    }
   }
 
   return (
