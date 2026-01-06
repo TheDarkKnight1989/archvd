@@ -271,6 +271,17 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* iOS PWA touch fix - removes 300ms tap delay */
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [tabindex]:not([tabindex="-1"]) {
+    touch-action: manipulation;
+  }
+
   /* Boutique heading typography - Hierarchy */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
