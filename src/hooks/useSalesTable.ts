@@ -112,9 +112,11 @@ async function fetchSales(params: SalesTableParams): Promise<{ data: SalesItem[]
   if (params.date_from) query = query.gte('sold_date', params.date_from)
   if (params.date_to) query = query.lte('sold_date', params.date_to)
 
-  const sortBy = params.sort_by || 'sold_date'
+  // Only sort by actual DB columns - margin_gbp/margin_percent are computed client-side
+  const dbSortableColumns = ['sold_date', 'sold_price', 'purchase_price']
+  const sortBy = dbSortableColumns.includes(params.sort_by || '') ? params.sort_by : 'sold_date'
   const sortOrder = params.sort_order || 'desc'
-  query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+  query = query.order(sortBy!, { ascending: sortOrder === 'asc' })
 
   if (params.limit) {
     query = query.limit(params.limit)
@@ -197,8 +199,9 @@ export function useSalesTable(params: SalesTableParams = {}) {
       setItems(result.data)
       setTotal(result.count)
     } catch (err: any) {
-      console.error('[useSalesTable] Fetch error:', err)
-      const errorMessage = err?.message || err?.toString() || 'Failed to load sales'
+      // Supabase errors have .message and .code, regular errors have .message
+      const errorMessage = err?.message || err?.code || (typeof err === 'string' ? err : 'Failed to load sales')
+      console.error('[useSalesTable] Fetch error:', errorMessage, err?.code, err?.details)
       setError(errorMessage)
     } finally {
       setLoading(false)

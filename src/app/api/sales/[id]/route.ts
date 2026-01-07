@@ -1,5 +1,7 @@
 /**
- * Sales Edit API - Updates sale details for data quality fixes
+ * Sales Edit API - V4 ONLY
+ * Updates sale details in inventory_v4_sales table.
+ * No V3 table references.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -20,53 +22,44 @@ export async function PATCH(
       )
     }
 
-    const { id: itemId } = await params
+    const { id: saleId } = await params
 
     // Parse request body
     const body = await request.json()
 
-    // Verify item exists and belongs to user
-    const { data: existingItem, error: fetchError } = await supabase
-      .from('Inventory')
-      .select('id, user_id, status')
-      .eq('id', itemId)
+    // Verify sale exists and belongs to user (V4 ONLY)
+    const { data: existingSale, error: fetchError } = await supabase
+      .from('inventory_v4_sales')
+      .select('id, user_id')
+      .eq('id', saleId)
       .single()
 
-    if (fetchError || !existingItem) {
+    if (fetchError || !existingSale) {
       return NextResponse.json(
-        { error: 'Item not found' },
+        { error: 'Sale not found' },
         { status: 404 }
       )
     }
 
-    if (existingItem.user_id !== user.id) {
+    if (existingSale.user_id !== user.id) {
       return NextResponse.json(
-        { error: 'Forbidden - You do not own this item' },
+        { error: 'Forbidden - You do not own this sale' },
         { status: 403 }
       )
     }
 
-    if (existingItem.status !== 'sold') {
-      return NextResponse.json(
-        { error: 'Item is not marked as sold' },
-        { status: 400 }
-      )
-    }
-
     // Build update payload from body
-    const updatePayload: Record<string, any> = {
+    const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString()
     }
 
     // Only update fields that are provided
     if (body.sold_price !== undefined) {
       updatePayload.sold_price = body.sold_price
-      updatePayload.sale_price = body.sold_price // Backwards compatibility
     }
 
     if (body.sold_date !== undefined) {
       updatePayload.sold_date = body.sold_date
-      updatePayload.sale_date = body.sold_date // Backwards compatibility
     }
 
     if (body.platform !== undefined) {
@@ -85,18 +78,18 @@ export async function PATCH(
       updatePayload.notes = body.notes
     }
 
-    console.log('[Edit Sale] Updating item with payload:', JSON.stringify(updatePayload, null, 2))
+    console.log('[Edit Sale V4] Updating sale with payload:', JSON.stringify(updatePayload, null, 2))
 
-    // Update item
-    const { data: updatedItem, error: updateError } = await supabase
-      .from('Inventory')
+    // Update V4 sale record
+    const { data: updatedSale, error: updateError } = await supabase
+      .from('inventory_v4_sales')
       .update(updatePayload)
-      .eq('id', itemId)
+      .eq('id', saleId)
       .select()
       .single()
 
     if (updateError) {
-      console.error('[Edit Sale] Update error:', JSON.stringify(updateError, null, 2))
+      console.error('[Edit Sale V4] Update error:', JSON.stringify(updateError, null, 2))
       return NextResponse.json(
         {
           error: 'Failed to update sale',
@@ -107,51 +100,18 @@ export async function PATCH(
       )
     }
 
-    // V4: Also update inventory_v4_sales if it exists (by original_item_id)
-    const v4UpdatePayload: Record<string, any> = {
-      updated_at: new Date().toISOString()
-    }
-
-    if (body.sold_price !== undefined) {
-      v4UpdatePayload.sold_price = body.sold_price
-    }
-    if (body.sold_date !== undefined) {
-      v4UpdatePayload.sold_date = body.sold_date
-    }
-    if (body.platform !== undefined) {
-      v4UpdatePayload.platform = body.platform
-    }
-    if (body.sales_fee !== undefined) {
-      v4UpdatePayload.sales_fee = body.sales_fee
-    }
-    if (body.purchase_price !== undefined) {
-      v4UpdatePayload.purchase_price = body.purchase_price
-    }
-    if (body.notes !== undefined) {
-      v4UpdatePayload.notes = body.notes
-    }
-
-    const { error: v4UpdateError } = await supabase
-      .from('inventory_v4_sales')
-      .update(v4UpdatePayload)
-      .eq('original_item_id', itemId)
-
-    if (v4UpdateError) {
-      console.warn('[Edit Sale] V4 update warning (may not exist yet):', v4UpdateError.message)
-      // Don't fail - V4 record might not exist for older sales
-    } else {
-      console.log('[Edit Sale] V4 sale record updated')
-    }
+    console.log('[Edit Sale V4] Sale updated successfully')
 
     return NextResponse.json({
       success: true,
-      item: updatedItem,
+      sale: updatedSale,
     })
 
-  } catch (error: any) {
-    console.error('[Edit Sale] Error:', error)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[Edit Sale V4] Error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: message },
       { status: 500 }
     )
   }

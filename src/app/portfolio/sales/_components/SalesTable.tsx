@@ -12,19 +12,23 @@ import {
 } from '@tanstack/react-table'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Skeleton } from '@/components/ui/skeleton'
-import { DollarSign, MoreHorizontal, Copy, Package, Edit, Undo2 } from 'lucide-react'
+import { MoreHorizontal, Copy, Edit, Undo2, Info } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { EditSaleModal } from '@/components/modals/EditSaleModal'
-import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
 import { ProductLineItem } from '@/components/product/ProductLineItem'
-import { TableWrapper, TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
+import { TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
 import type { SalesItem } from '@/hooks/useSalesTable'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { useRouter } from 'next/navigation'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const columnHelper = createColumnHelper<SalesItem>()
 
@@ -43,8 +47,7 @@ export function SalesTable({
   onSortingChange,
   onRefresh,
 }: SalesTableProps) {
-  const { convert, format, symbol, currency } = useCurrency()
-  const router = useRouter()
+  const { convert, format, currency } = useCurrency()
   const [copiedSku, setCopiedSku] = useState<string | null>(null)
   const [editingSale, setEditingSale] = useState<SalesItem | null>(null)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -77,7 +80,6 @@ export function SalesTable({
         throw new Error('Failed to update sale')
       }
 
-      // Refresh the sales data
       if (onRefresh) {
         onRefresh()
       }
@@ -108,7 +110,6 @@ export function SalesTable({
         return
       }
 
-      // Refresh the sales data
       if (onRefresh) {
         onRefresh()
       }
@@ -118,15 +119,49 @@ export function SalesTable({
     }
   }
 
-  // Define columns
+  // Realised Gain/Loss tooltip breakdown
+  const GainLossTooltipContent = ({ item }: { item: SalesItem }) => {
+    const salePrice = item.sold_price || 0
+    const fees = item.sales_fee || 0
+    const purchasePrice = item.purchase_price || 0
+    const realisedGain = item.margin_gbp || 0
+
+    return (
+      <div className="text-xs space-y-1.5 min-w-[160px]">
+        <div className="flex justify-between">
+          <span className="text-muted">Sale Price</span>
+          <span className="mono">{format(convert(salePrice, 'GBP'))}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted">Fees</span>
+          <span className="mono text-red-400">−{format(convert(fees, 'GBP'))}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted">Purchase Price</span>
+          <span className="mono text-red-400">−{format(convert(purchasePrice, 'GBP'))}</span>
+        </div>
+        <div className="border-t border-border pt-1.5 flex justify-between font-semibold">
+          <span>{realisedGain >= 0 ? 'Realised Gain' : 'Realised Loss'}</span>
+          <span className={cn(
+            "mono",
+            realisedGain >= 0 ? "text-accent" : "text-red-400"
+          )}>
+            {realisedGain >= 0 ? '+' : ''}{format(convert(realisedGain, 'GBP'))}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // Define columns: Item, Purchase Price, Sale Price, Realised Gain/Loss, Date Sold, Platform, Actions
   const columns = useMemo(
     () => [
+      // Item column
       columnHelper.display({
         id: 'item',
         header: 'Item',
         cell: (info) => {
           const item = info.row.original
-
           return (
             <ProductLineItem
               imageUrl={item.image_url || null}
@@ -138,127 +173,90 @@ export function SalesTable({
               href={`/product/${item.sku}`}
               sizeUk={item.size_uk}
               sizeSystem="UK"
-              category={(item.category?.toLowerCase() as any) || 'other'}
-              className="min-w-[280px]"
+              category={(item.category?.toLowerCase() as 'sneakers' | 'apparel' | 'accessories' | 'other') || 'other'}
+              className="min-w-[260px]"
             />
           )
         },
         enableSorting: false,
       }),
 
+      // Purchase Price column
       columnHelper.accessor('purchase_price', {
         id: 'purchase_price',
-        header: () => <div className="text-right">Buy {symbol()}</div>,
+        header: () => <div className="text-right">Purchase Price</div>,
         cell: (info) => {
-          const price = info.getValue()
-          const tax = info.row.original.tax || 0
-          const shipping = info.row.original.shipping || 0
-          const total = price + tax + shipping
-          const converted = convert(total, 'GBP')
-
+          const value = info.getValue()
+          if (!value) return <span className="text-muted text-right block">—</span>
+          const converted = convert(value, 'GBP')
           return (
-            <div className="text-right mono">
-              <PlainMoneyCell value={converted} currency={currency} />
+            <div className="text-right mono text-fg">
+              {format(converted)}
             </div>
           )
         },
         enableSorting: true,
       }),
 
+      // Sale Price column
       columnHelper.accessor('sold_price', {
         id: 'sold_price',
-        header: () => <div className="text-right">Sale {symbol()}</div>,
+        header: () => <div className="text-right">Sale Price</div>,
         cell: (info) => {
           const value = info.getValue()
           const converted = convert(value || 0, 'GBP')
-
           return (
-            <div className="text-right mono">
-              <PlainMoneyCell value={converted} currency={currency} />
+            <div className="text-right mono font-medium text-fg">
+              {format(converted)}
             </div>
           )
         },
         enableSorting: true,
       }),
 
-      columnHelper.accessor('commission', {
-        id: 'commission',
-        header: () => <div className="text-right">Fees {symbol()}</div>,
-        cell: (info) => {
-          const commission = info.getValue()
-          const item = info.row.original
-          const isStockX = item.platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
-
-          // Only show commission for StockX sales
-          if (!isStockX || !commission) {
-            return <div className="text-right text-dim">—</div>
-          }
-
-          const converted = convert(commission, 'GBP')
-
-          return (
-            <div className="text-right mono">
-              <PlainMoneyCell value={converted} currency={currency} />
-            </div>
-          )
-        },
-        enableSorting: false,
-      }),
-
-      columnHelper.accessor('net_payout', {
-        id: 'net_payout',
-        header: () => <div className="text-right">Net {symbol()}</div>,
-        cell: (info) => {
-          const netPayout = info.getValue()
-          const item = info.row.original
-          const isStockX = item.platform?.toLowerCase() === 'stockx' || !!item.stockx_order_id
-
-          // Only show net payout for StockX sales
-          if (!isStockX || !netPayout) {
-            return <div className="text-right text-dim">—</div>
-          }
-
-          const converted = convert(netPayout, 'GBP')
-
-          return (
-            <div className="text-right mono">
-              <PlainMoneyCell value={converted} currency={currency} />
-            </div>
-          )
-        },
-        enableSorting: false,
-      }),
-
+      // Realised Gain/Loss column with tooltip
       columnHelper.accessor('margin_gbp', {
         id: 'margin_gbp',
-        header: () => <div className="text-right">Realised Profit {symbol()}</div>,
+        header: () => (
+          <div className="text-right flex items-center justify-end gap-1">
+            Realised Gain/Loss
+            <Info className="h-3 w-3 text-muted" />
+          </div>
+        ),
         cell: (info) => {
+          const item = info.row.original
           const value = info.getValue()
           const converted = convert(value || 0, 'GBP')
+          const isPositive = (value || 0) >= 0
 
           return (
-            <div className="text-right mono">
-              <MoneyCell value={converted} showArrow currency={currency} />
-            </div>
+            <TooltipProvider>
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <div className={cn(
+                    "text-right mono text-[15px] font-bold cursor-help",
+                    isPositive ? "text-accent" : "text-red-400"
+                  )}>
+                    {isPositive ? '+' : ''}{format(converted)}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="left"
+                  className="bg-elev-1 border-border p-3"
+                >
+                  <GainLossTooltipContent item={item} />
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )
         },
         enableSorting: true,
       }),
 
-      columnHelper.accessor('margin_percent', {
-        id: 'margin_percent',
-        header: () => <div className="text-right">Margin %</div>,
-        cell: (info) => (
-          <div className="text-right mono">
-            <PercentCell value={info.getValue()} />
-          </div>
-        ),
-        enableSorting: true,
-      }),
-
+      // Date Sold column
       columnHelper.accessor('sold_date', {
         id: 'sold_date',
-        header: 'Sold Date',
+        header: 'Date Sold',
         cell: (info) => {
           const date = info.getValue()
           return date ? (
@@ -270,12 +268,13 @@ export function SalesTable({
               })}
             </div>
           ) : (
-            <span className="text-dim">—</span>
+            <span className="text-muted">—</span>
           )
         },
         enableSorting: true,
       }),
 
+      // Platform column
       columnHelper.accessor('platform', {
         id: 'platform',
         header: 'Platform',
@@ -283,76 +282,41 @@ export function SalesTable({
           const platform = info.getValue()
           const platformLower = platform?.toLowerCase()
 
-          // Platform badge styling
           const getPlatformBadge = () => {
             switch (platformLower) {
               case 'stockx':
-                return {
-                  label: 'StockX',
-                  bg: 'bg-[#00B050]/10',
-                  text: 'text-[#00B050]',
-                  border: 'border-[#00B050]/30',
-                  icon: 'Sx'
-                }
+                return { label: 'StockX', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' }
               case 'alias':
               case 'goat':
-                return {
-                  label: 'Alias',
-                  bg: 'bg-[#A855F7]/10',
-                  text: 'text-[#A855F7]',
-                  border: 'border-[#A855F7]/30',
-                  icon: 'AL'
-                }
+                return { label: 'Alias', bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/30' }
               case 'ebay':
-                return {
-                  label: 'eBay',
-                  bg: 'bg-[#E53238]/10',
-                  text: 'text-[#E53238]',
-                  border: 'border-[#E53238]/30',
-                  icon: 'eB'
-                }
+                return { label: 'eBay', bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30' }
               case 'private':
-                return {
-                  label: 'Private',
-                  bg: 'bg-[#3B82F6]/10',
-                  text: 'text-[#3B82F6]',
-                  border: 'border-[#3B82F6]/30',
-                  icon: 'Pr'
-                }
+                return { label: 'Private', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' }
               default:
-                return {
-                  label: platform || 'Other',
-                  bg: 'bg-muted/10',
-                  text: 'text-muted',
-                  border: 'border-border',
-                  icon: 'Ot'
-                }
+                return { label: platform || 'Other', bg: 'bg-muted/10', text: 'text-muted', border: 'border-border' }
             }
           }
 
           if (!platform) {
-            return <span className="text-dim">—</span>
+            return <span className="text-muted">—</span>
           }
 
           const badge = getPlatformBadge()
 
           return (
-            <div className="flex items-center gap-2">
-              <div className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium",
-                badge.bg,
-                badge.text,
-                badge.border
-              )}>
-                <span className="font-bold text-[10px]">{badge.icon}</span>
-                <span>{badge.label}</span>
-              </div>
-            </div>
+            <span className={cn(
+              "inline-flex px-2 py-0.5 rounded text-xs font-medium border",
+              badge.bg, badge.text, badge.border
+            )}>
+              {badge.label}
+            </span>
           )
         },
         enableSorting: false,
       }),
 
+      // Actions column
       columnHelper.display({
         id: 'actions',
         header: '',
@@ -370,57 +334,41 @@ export function SalesTable({
               <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                   <button
-                    className="h-8 w-8 p-0 hover:bg-elev-2 rounded-md transition-all duration-120 flex items-center justify-center"
+                    className="h-8 w-8 p-0 hover:bg-elev-2 rounded-md transition-colors flex items-center justify-center"
                     aria-label="Row actions"
                   >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="h-4 w-4 text-muted" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-[200px] bg-[#0E1A15] border-[#15251B] p-2 shadow-xl"
+                  className="w-[180px] bg-elev-1 border-border p-1.5"
                   align="end"
                 >
-                  <div className="space-y-0.5">
-                    {/* SECTION: SALE ACTIONS */}
-                    <div className="px-2 py-1.5">
-                      <span className="text-xs font-semibold text-[#7FA08F] uppercase tracking-wide">Sale</span>
-                    </div>
+                  <button
+                    onClick={() => handleAction(() => handleEditSale(item))}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-fg hover:bg-elev-2 transition-colors"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit
+                  </button>
 
-                    <button
-                      onClick={() => handleAction(() => handleEditSale(item))}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit Sale
-                    </button>
+                  <button
+                    onClick={() => handleAction(() => handleCopySku(item.sku))}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-fg hover:bg-elev-2 transition-colors"
+                  >
+                    <Copy className="h-4 w-4" />
+                    {copiedSku === item.sku ? 'Copied!' : 'Copy SKU'}
+                  </button>
 
-                    <button
-                      onClick={() => handleAction(() => router.push('/portfolio/inventory'))}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
-                    >
-                      <Package className="h-4 w-4" />
-                      View in Portfolio
-                    </button>
+                  <div className="my-1 border-t border-border" />
 
-                    <button
-                      onClick={() => handleAction(() => handleCopySku(item.sku))}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
-                    >
-                      <Copy className="h-4 w-4" />
-                      {copiedSku === item.sku ? 'Copied!' : 'Copy SKU'}
-                    </button>
-
-                    {/* Divider */}
-                    <div className="my-1 border-t border-[#15251B]" />
-
-                    <button
-                      onClick={() => handleAction(() => handleUndoSale(item.id))}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-amber-400 hover:bg-[#0B1510] transition-all duration-120"
-                    >
-                      <Undo2 className="h-4 w-4" />
-                      Undo Sale
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleAction(() => handleUndoSale(item.id))}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-amber-400 hover:bg-elev-2 transition-colors"
+                  >
+                    <Undo2 className="h-4 w-4" />
+                    Undo Sale
+                  </button>
                 </PopoverContent>
               </Popover>
             </div>
@@ -429,164 +377,115 @@ export function SalesTable({
         enableSorting: false,
       }),
     ],
-    [convert, format, symbol, currency, copiedSku, router, handleEditSale, handleUndoSale]
+    [convert, format, currency, copiedSku]
   )
 
   const table = useReactTable({
     data: items,
     columns,
-    state: {
-      sorting,
-    },
+    state: { sorting },
     onSortingChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableSortingRemoval: false,
   })
 
+  // Loading state
   if (loading) {
     return (
-      <>
-        <TableBase>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col, i) => (
-                <TableHead key={i}>
-                  <Skeleton className="h-4 w-20" />
-                </TableHead>
-              ))}
+      <TableBase>
+        <TableHeader>
+          <TableRow>
+            <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+            <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+            <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+            <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+            <TableHead><Skeleton className="h-4 w-8" /></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(5)].map((_, i) => (
+            <TableRow key={i} index={i}>
+              <TableCell><Skeleton className="h-12 w-full" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-8" /></TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[...Array(5)].map((_, i) => (
-              <TableRow key={i} index={i}>
-                {columns.map((_, j) => (
-                  <TableCell key={j}>
-                    <Skeleton className="h-4 w-full" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </TableBase>
-
-        {/* Edit Sale Modal */}
-        {editingSale && (
-          <EditSaleModal
-            sale={editingSale}
-            open={editModalOpen}
-            onClose={() => {
-              setEditModalOpen(false)
-              setEditingSale(null)
-            }}
-            onSave={handleSaveSale}
-          />
-        )}
-      </>
+          ))}
+        </TableBody>
+      </TableBase>
     )
   }
 
+  // Empty state (handled by parent)
   if (items.length === 0) {
-    return (
-      <>
-        <div className="flex items-center justify-center min-h-[500px] rounded-2xl border border-keyline bg-panel">
-          <div className="text-center px-6 py-12">
-            {/* Icon with accent glow */}
-            <div className="relative inline-block mb-6">
-              <div className="absolute inset-0 bg-accent/20 blur-xl rounded-full" />
-              <DollarSign className="h-16 w-16 mx-auto text-accent relative" strokeWidth={1.5} />
-            </div>
-
-            {/* Heading */}
-            <h3 className="text-xl font-semibold text-fg mb-2">
-              No sales yet
-            </h3>
-
-            {/* Description */}
-            <p className="text-sm text-muted mb-8 max-w-sm mx-auto leading-relaxed">
-              When you mark items as sold, they'll appear here with complete sale details and margin analysis.
-            </p>
-          </div>
-        </div>
-
-        {/* Edit Sale Modal */}
-        {editingSale && (
-          <EditSaleModal
-            sale={editingSale}
-            open={editModalOpen}
-            onClose={() => {
-              setEditModalOpen(false)
-              setEditingSale(null)
-            }}
-            onSave={handleSaveSale}
-          />
-        )}
-      </>
-    )
+    return null
   }
 
   return (
     <>
-    <TableBase>
-      <TableHeader>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <TableHead
-                key={header.id}
-                className={cn(
-                  header.column.getCanSort() && 'cursor-pointer select-none'
-                )}
-              >
-                {header.isPlaceholder ? null : (
-                  <div
-                    className={cn(
-                      'flex items-center gap-1',
-                      header.column.getCanSort() && 'hover:text-fg transition-boutique'
-                    )}
-                    onClick={header.column.getToggleSortingHandler()}
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                    {header.column.getIsSorted() && (
-                      <span className="text-accent">
-                        {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </TableHead>
-            ))}
-          </TableRow>
-        ))}
-      </TableHeader>
-      <TableBody>
-        {table.getRowModel().rows.map((row, idx) => (
-          <TableRow key={row.id} index={idx}>
-            {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id}>
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </TableBase>
+      <TableBase>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className={cn(
+                    header.column.getCanSort() && 'cursor-pointer select-none'
+                  )}
+                >
+                  {header.isPlaceholder ? null : (
+                    <div
+                      className={cn(
+                        'flex items-center gap-1',
+                        header.column.getCanSort() && 'hover:text-fg transition-colors'
+                      )}
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.column.getIsSorted() && (
+                        <span className="text-accent">
+                          {header.column.getIsSorted() === 'desc' ? '↓' : '↑'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.map((row, idx) => (
+            <TableRow key={row.id} index={idx}>
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </TableBase>
 
-    {/* Edit Sale Modal */}
-    {editingSale && (
-      <EditSaleModal
-        sale={editingSale}
-        open={editModalOpen}
-        onClose={() => {
-          setEditModalOpen(false)
-          setEditingSale(null)
-        }}
-        onSave={handleSaveSale}
-      />
-    )}
-  </>
+      {/* Edit Sale Modal */}
+      {editingSale && (
+        <EditSaleModal
+          sale={editingSale}
+          open={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false)
+            setEditingSale(null)
+          }}
+          onSave={handleSaveSale}
+        />
+      )}
+    </>
   )
 }

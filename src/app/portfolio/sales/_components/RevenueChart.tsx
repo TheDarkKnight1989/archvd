@@ -6,7 +6,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useCurrency } from '@/hooks/useCurrency'
 import { cn } from '@/lib/utils/cn'
 import type { SalesItem } from '@/hooks/useSalesTable'
@@ -80,35 +80,36 @@ export function RevenueChart({ items, className, view = 'monthly' }: RevenueChar
   }
 
   return (
-    <div className={cn('bg-elev-1 rounded-xl border border-border/40 p-4', className)}>
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-fg uppercase tracking-wide mb-1">Revenue Trends</h3>
-        <p className="text-xs text-muted">Sales revenue and profit over time</p>
+    <div className={cn('bg-elev-1 rounded-xl border border-border/30 p-4', className)}>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-xs font-medium text-muted uppercase tracking-wide">Revenue Trends</h3>
+        <div className="flex items-center gap-4 text-[10px] text-muted">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#00FF94]" />
+            Revenue
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+            Profit
+          </span>
+        </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#00FF94" stopOpacity={0.3}/>
-              <stop offset="95%" stopColor="#00FF94" stopOpacity={0}/>
-            </linearGradient>
-            <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#15251B" />
+      <ResponsiveContainer width="100%" height={160}>
+        <LineChart data={chartData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#15251B" strokeOpacity={0.5} vertical={false} />
           <XAxis
             dataKey="period"
             stroke="#7FA08F"
-            fontSize={11}
+            fontSize={10}
             tickLine={false}
+            axisLine={false}
           />
           <YAxis
             stroke="#7FA08F"
-            fontSize={11}
+            fontSize={10}
             tickLine={false}
+            axisLine={false}
             tickFormatter={(value) => `£${value}`}
           />
           <Tooltip
@@ -116,35 +117,30 @@ export function RevenueChart({ items, className, view = 'monthly' }: RevenueChar
               backgroundColor: '#0E1A15',
               border: '1px solid #15251B',
               borderRadius: '8px',
-              fontSize: '12px',
+              fontSize: '11px',
+              padding: '8px 12px',
             }}
-            labelStyle={{ color: '#E8F6EE', fontWeight: 600 }}
+            labelStyle={{ color: '#E8F6EE', fontWeight: 600, marginBottom: '4px' }}
             itemStyle={{ color: '#7FA08F' }}
             formatter={(value: number) => [`£${value}`, '']}
           />
-          <Legend
-            wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
-            iconType="circle"
-          />
-          <Area
+          <Line
             type="monotone"
             dataKey="revenue"
             stroke="#00FF94"
-            strokeWidth={2}
-            fillOpacity={1}
-            fill="url(#colorRevenue)"
+            strokeWidth={2.5}
+            dot={false}
             name="Revenue"
           />
-          <Area
+          <Line
             type="monotone"
             dataKey="profit"
             stroke="#3B82F6"
-            strokeWidth={2}
-            fillOpacity={1}
-            fill="url(#colorProfit)"
+            strokeWidth={2.5}
+            dot={false}
             name="Profit"
           />
-        </AreaChart>
+        </LineChart>
       </ResponsiveContainer>
     </div>
   )
