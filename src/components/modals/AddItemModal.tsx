@@ -722,9 +722,9 @@ export function AddItemModal({ open, onOpenChange, onSuccess, editItem }: AddIte
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-none sm:max-w-[900px] sm:w-[95vw] max-h-[calc(100vh-80px)] sm:max-h-[95vh] rounded-t-2xl sm:rounded-2xl border-0 bg-[#111111]/95 backdrop-blur-md p-0 overflow-y-auto shadow-2xl">
+        <DialogContent className="w-full max-w-none sm:max-w-[900px] sm:w-[95vw] max-h-[calc(100dvh-40px)] sm:max-h-[90dvh] rounded-t-2xl sm:rounded-2xl border-0 bg-[#111111]/95 backdrop-blur-md p-0 flex flex-col overflow-hidden shadow-2xl">
           {/* Header with product info */}
-          <div className="border-b border-[#2a2a2a] px-4 sm:px-8 py-4 sm:py-6">
+          <div className="flex-shrink-0 border-b border-[#2a2a2a] px-4 sm:px-8 py-4 sm:py-6">
             <div className="space-y-4">
               {/* Name and Style ID Row */}
               <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
@@ -919,8 +919,9 @@ export function AddItemModal({ open, onOpenChange, onSuccess, editItem }: AddIte
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 px-4 sm:px-8 py-4 sm:py-6 max-h-[calc(100vh-300px)] sm:max-h-[calc(95vh-240px)] overflow-y-auto">
+          {/* Main Content - Scrollable area */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 px-4 sm:px-8 py-4 sm:py-6">
             {/* Left Column - Purchase Info */}
             <div className="space-y-5">
               {/* Purchase Price */}
@@ -1254,10 +1255,11 @@ export function AddItemModal({ open, onOpenChange, onSuccess, editItem }: AddIte
                 />
               </div>
             </div>
+            </div>
           </div>
 
           {/* Footer */}
-          <div className="border-t border-[#2a2a2a] px-4 sm:px-8 py-4 sm:py-5 pb-6 sm:pb-5 flex justify-end gap-3 bg-[#0f0f0f]">
+          <div className="flex-shrink-0 border-t border-[#2a2a2a] px-4 sm:px-8 py-4 sm:py-5 pb-6 sm:pb-5 flex justify-end gap-3 bg-[#0f0f0f]">
             <Button
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
