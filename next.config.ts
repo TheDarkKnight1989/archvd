@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
         hostname: 'images.stockx.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'image.goat.com',
+        pathname: '/**',
+      },
     ],
   },
 };

@@ -1,60 +1,66 @@
-/**
- * Check current state of active inventory
- */
-
-import { createClient } from '@supabase/supabase-js'
-import 'dotenv/config'
+#!/usr/bin/env node
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+);
 
-const userId = 'fbcde760-820b-4eaf-949f-534a8130d44b'
+async function check() {
+  console.log('🔍 CHECKING V4 INVENTORY STATE\n');
+  console.log('='.repeat(80));
 
-console.log('📊 CHECKING CURRENT INVENTORY STATE\n')
+  // 1. Check inventory_v4_items
+  console.log('\n=== inventory_v4_items ===\n');
+  const { data: v4Items, error: v4Error, count: v4Count } = await supabase
+    .from('inventory_v4_items')
+    .select('id, style_id, size, status, purchase_price', { count: 'exact' })
+    .limit(10);
 
-// Get active inventory
-const { data: active, error } = await supabase
-  .from('Inventory')
-  .select('sku, brand, model, colorway, size_uk, image_url, purchase_price, status')
-  .eq('user_id', userId)
-  .in('status', ['active', 'listed', 'worn'])
-  .order('created_at', { ascending: false })
+  console.log('Error:', v4Error);
+  console.log('Count:', v4Count);
+  console.log('Items:', JSON.stringify(v4Items, null, 2));
 
-if (error) {
-  console.error('❌ Error:', error.message)
-  process.exit(1)
-}
+  // 2. Check style catalog for these items
+  if (v4Items && v4Items.length > 0) {
+    const styleIds = v4Items.map(i => i.style_id);
+    console.log('\n=== Style Catalog for V4 Items ===\n');
+    const { data: catalog, error: catError } = await supabase
+      .from('inventory_v4_style_catalog')
+      .select('style_id, name, brand, stockx_product_id, alias_catalog_id')
+      .in('style_id', styleIds);
 
-console.log(`Found ${active?.length || 0} active items:\n`)
+    console.log('Error:', catError);
+    console.log('Found:', catalog?.length, 'of', styleIds.length, 'SKUs');
 
-let hasImages = 0
-let noImages = 0
-let totalInvested = 0
-
-for (const item of active || []) {
-  const hasImage = item.image_url && item.image_url !== ''
-  if (hasImage) hasImages++
-  else noImages++
-
-  totalInvested += item.purchase_price || 0
-
-  console.log(`${hasImage ? '✅' : '❌'} ${item.sku}`)
-  console.log(`   ${item.brand} ${item.model}${item.colorway ? ' - ' + item.colorway : ''}`)
-  console.log(`   Size: ${item.size_uk || 'N/A'} | Price: £${item.purchase_price || 0}`)
-  console.log(`   Image: ${hasImage ? '✓ Yes' : '✗ None'}`)
-  if (hasImage) {
-    console.log(`   URL: ${item.image_url}`)
+    if (catalog) {
+      const foundIds = new Set(catalog.map(c => c.style_id));
+      const missing = styleIds.filter(id => !foundIds.has(id));
+      console.log('Missing from catalog:', missing);
+      console.log('Catalog entries:', JSON.stringify(catalog, null, 2));
+    }
   }
-  console.log()
+
+  // 3. Test the join query
+  console.log('\n=== Testing Join Query (like useInventoryV4) ===\n');
+  const { data: joinedData, error: joinError } = await supabase
+    .from('inventory_v4_items')
+    .select(`
+      *,
+      style:inventory_v4_style_catalog (*)
+    `)
+    .in('status', ['in_stock', 'listed', 'consigned', 'sold', 'active'])
+    .limit(5);
+
+  console.log('Join error:', joinError);
+  console.log('Joined items count:', joinedData?.length);
+  if (joinedData) {
+    joinedData.forEach(item => {
+      console.log('  -', item.style_id, '| style:', item.style ? 'FOUND' : 'NULL');
+    });
+  }
+
+  console.log('\n' + '='.repeat(80));
 }
 
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-console.log(`  SUMMARY`)
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-console.log(`  Active items: ${active?.length || 0}`)
-console.log(`  With images: ${hasImages}`)
-console.log(`  Without images: ${noImages}`)
-console.log(`  Total invested: £${totalInvested.toFixed(2)}`)
-console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
+check().catch(console.error);

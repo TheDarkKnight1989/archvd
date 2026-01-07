@@ -5,8 +5,16 @@
       "schedule": "0 1 * * *"
     },
     {
-      "path": "/api/workers/prices",
-      "schedule": "0 2 * * *"
+      "path": "/api/cron/stockx-v4-refresh",
+      "schedule": "15 */6 * * *"
+    },
+    {
+      "path": "/api/v4/retention/daily",
+      "schedule": "30 0 * * *"
+    },
+    {
+      "path": "/api/v4/retention/monthly",
+      "schedule": "0 1 2 * *"
     }
   ]
 }

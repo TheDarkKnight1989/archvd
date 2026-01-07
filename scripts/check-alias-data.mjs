@@ -1,60 +1,46 @@
-#!/usr/bin/env node
-
 import { createClient } from '@supabase/supabase-js'
-import dotenv from 'dotenv'
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
-dotenv.config({ path: '.env.local' })
+async function check() {
+  // Get alias_catalog_id for DZ4137-106
+  const { data: catalog } = await supabase
+    .from('inventory_v4_style_catalog')
+    .select('alias_catalog_id')
+    .eq('style_id', 'DZ4137-106')
+    .single()
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
+  console.log('Alias catalog_id for DZ4137-106:', catalog?.alias_catalog_id)
 
-async function checkAliasData() {
-  console.log('=== CHECKING ALIAS DATA ===\n')
+  if (!catalog?.alias_catalog_id) {
+    console.log('No alias mapping found')
+    return
+  }
 
-  // Check inventory_alias_links
-  const { data: aliasLinks, error: linksError } = await supabase
-    .from('inventory_alias_links')
-    .select('*')
-    .limit(10)
-
-  console.log('inventory_alias_links:', {
-    count: aliasLinks?.length || 0,
-    error: linksError,
-    data: aliasLinks
-  })
-
-  // Check alias_market_snapshots
-  const { data: snapshots, error: snapshotsError } = await supabase
+  // Query alias_market_snapshots for US region (1) and UK region (3)
+  // Size is 13.5W for women's
+  const { data, error } = await supabase
     .from('alias_market_snapshots')
     .select('*')
-    .limit(10)
+    .eq('catalog_id', catalog.alias_catalog_id)
+    .in('size', ['13.5', '13.5W', 13.5])
+    .order('region_id')
 
-  console.log('\nalias_market_snapshots:', {
-    count: snapshots?.length || 0,
-    error: snapshotsError,
-    data: snapshots
-  })
+  if (error) {
+    console.log('Error:', error.message)
+    return
+  }
 
-  // Check specific mapping for debugging
-  if (aliasLinks && aliasLinks.length > 0) {
-    const firstLink = aliasLinks[0]
-    console.log('\n=== DETAILED CHECK FOR FIRST ITEM ===')
-    console.log('Mapping:', firstLink)
+  console.log('')
+  console.log('=== alias_market_snapshots for size 13.5 ===')
+  console.log('Found', data.length, 'rows')
 
-    // Try to find snapshot
-    const { data: matchingSnapshots, error: snapshotError } = await supabase
-      .from('alias_market_snapshots')
-      .select('*')
-      .eq('catalog_id', firstLink.alias_catalog_id)
-
-    console.log('Matching snapshots:', {
-      count: matchingSnapshots?.length || 0,
-      error: snapshotError,
-      data: matchingSnapshots
-    })
+  for (const row of data) {
+    const region = row.region_id === '1' ? 'US' : row.region_id === '3' ? 'UK' : row.region_id
+    console.log('')
+    console.log('Region:', region, '(' + row.region_id + ') | Size:', row.size, '| Currency:', row.currency)
+    console.log('  lowest_ask_cents:', row.lowest_ask_cents, '=', row.lowest_ask_cents ? '$' + (row.lowest_ask_cents/100).toFixed(2) : 'null')
+    console.log('  highest_bid_cents:', row.highest_bid_cents, '=', row.highest_bid_cents ? '$' + (row.highest_bid_cents/100).toFixed(2) : 'null')
+    console.log('  snapshot_at:', row.snapshot_at)
   }
 }
-
-checkAliasData()
+check()
