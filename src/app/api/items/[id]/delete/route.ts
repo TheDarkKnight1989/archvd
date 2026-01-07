@@ -44,31 +44,43 @@ export async function DELETE(
     }
 
     // Delete related records first (cascade delete)
-    // 1. Delete inventory_market_links
+    // 1. Delete inventory_market_links (V3)
     await supabase
       .from('inventory_market_links')
       .delete()
       .eq('item_id', id)
 
-    // 2. Delete StockX listings (if any)
+    // 2. Delete StockX listings (V3 - if any)
     await supabase
       .from('stockx_listings')
       .delete()
       .eq('item_id', id)
 
-    // 3. Delete expenses
+    // 3. Delete V4 listings (source of truth for V4)
+    await supabase
+      .from('inventory_v4_listings')
+      .delete()
+      .eq('item_id', id)
+
+    // 4. Delete V4 item (if exists)
+    await supabase
+      .from('inventory_v4_items')
+      .delete()
+      .eq('id', id)
+
+    // 5. Delete expenses
     await supabase
       .from('expenses')
       .delete()
       .eq('item_id', id)
 
-    // 4. Delete watchlist items
+    // 6. Delete watchlist items
     await supabase
       .from('watchlist_items')
       .delete()
       .eq('item_id', id)
 
-    // 5. Finally, delete the item itself
+    // 7. Finally, delete the V3 item itself
     const { error: deleteError } = await supabase
       .from('Inventory')
       .delete()

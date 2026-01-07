@@ -80,6 +80,27 @@ export async function POST(request: NextRequest) {
       console.warn('[Activate Listing] Failed to update stockx_listings:', listingUpdateError)
     }
 
+    // V4: Update inventory_v4_listings (source of truth for V4 inventory)
+    const { data: v4UpdateData, error: v4UpdateError } = await supabase
+      .from('inventory_v4_listings')
+      .update({
+        status: 'active', // V4 uses lowercase
+        updated_at: new Date().toISOString(),
+      })
+      .eq('external_listing_id', listingId)
+      .eq('platform', 'stockx')
+      .eq('user_id', user.id)
+      .select()
+
+    if (v4UpdateError) {
+      console.warn('[Activate Listing] Failed to update inventory_v4_listings:', v4UpdateError)
+    } else {
+      console.log('[Activate Listing] ✅ V4 listing status updated to active:', {
+        listingId,
+        rowsUpdated: v4UpdateData?.length ?? 0,
+      })
+    }
+
     const duration = Date.now() - startTime
 
     console.log('[Activate Listing] Success:', {

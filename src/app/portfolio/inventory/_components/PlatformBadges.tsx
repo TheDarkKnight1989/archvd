@@ -80,12 +80,17 @@ export function ListingBadge({ listing, size = 'sm' }: ListingBadgeProps) {
     ? listing.platform_name.slice(0, 2).toUpperCase()
     : config.label
 
+  // Override colors for paused listings - use amber/yellow to indicate paused state
+  const isPaused = listing.status === 'paused'
+  const bgColor = isPaused ? 'bg-amber-500/15' : config.bgColor
+  const textColor = isPaused ? 'text-amber-500' : config.textColor
+
   const badge = (
     <span
       className={cn(
         'inline-flex items-center justify-center font-semibold rounded cursor-pointer transition-opacity hover:opacity-80',
-        config.bgColor,
-        config.textColor,
+        bgColor,
+        textColor,
         size === 'sm' && 'h-5 min-w-[20px] px-1 text-[10px]',
         size === 'md' && 'h-6 min-w-[24px] px-1.5 text-xs'
       )}

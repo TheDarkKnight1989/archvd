@@ -12,7 +12,7 @@ import {
 } from '@tanstack/react-table'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Skeleton } from '@/components/ui/skeleton'
-import { DollarSign, MoreHorizontal, Copy, Package, Edit } from 'lucide-react'
+import { DollarSign, MoreHorizontal, Copy, Package, Edit, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { EditSaleModal } from '@/components/modals/EditSaleModal'
 import { PlainMoneyCell, MoneyCell, PercentCell } from '@/lib/format/money'
@@ -87,6 +87,34 @@ export function SalesTable({
     } catch (error) {
       console.error('[SalesTable] Error updating sale:', error)
       throw error
+    }
+  }
+
+  // Undo sale - restore item to inventory
+  const handleUndoSale = async (saleId: string) => {
+    if (!confirm('Move this item back to inventory? The sale record will be deleted.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/sales/${saleId}/undo`, {
+        method: 'POST',
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        alert(result.error || 'Failed to undo sale')
+        return
+      }
+
+      // Refresh the sales data
+      if (onRefresh) {
+        onRefresh()
+      }
+    } catch (error) {
+      console.error('[SalesTable] Error undoing sale:', error)
+      alert('Failed to undo sale')
     }
   }
 
@@ -381,6 +409,17 @@ export function SalesTable({
                       <Copy className="h-4 w-4" />
                       {copiedSku === item.sku ? 'Copied!' : 'Copy SKU'}
                     </button>
+
+                    {/* Divider */}
+                    <div className="my-1 border-t border-[#15251B]" />
+
+                    <button
+                      onClick={() => handleAction(() => handleUndoSale(item.id))}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-amber-400 hover:bg-[#0B1510] transition-all duration-120"
+                    >
+                      <Undo2 className="h-4 w-4" />
+                      Undo Sale
+                    </button>
                   </div>
                 </PopoverContent>
               </Popover>
@@ -390,7 +429,7 @@ export function SalesTable({
         enableSorting: false,
       }),
     ],
-    [convert, format, symbol, currency, copiedSku, router, handleEditSale]
+    [convert, format, symbol, currency, copiedSku, router, handleEditSale, handleUndoSale]
   )
 
   const table = useReactTable({

@@ -1,3 +1,9 @@
+/**
+ * @deprecated This hook reads from V3 `stockx_listings` table.
+ *             V4 inventory uses `inventory_v4_listings` as source of truth.
+ *             Only used by listings management page (backwards compat).
+ *             Do NOT add new features - migrate to V4 instead.
+ */
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'

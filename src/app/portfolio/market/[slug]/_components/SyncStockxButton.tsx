@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * PHASE 3: Manual StockX Sync Button
+ * V4 StockX Sync Button
  *
- * Safe, manual sync trigger for Market Page
- * - NO auto-refresh
+ * Manual sync trigger for Market Page
+ * - Syncs to V4 tables (inventory_v4_stockx_*)
  * - User-initiated only
  * - Shows loading state and success message
  */
@@ -16,10 +16,11 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 interface SyncStockxButtonProps {
-  stockxProductId: string
+  sku: string
+  stockxProductId?: string // Legacy, no longer used
 }
 
-export function SyncStockxButton({ stockxProductId }: SyncStockxButtonProps) {
+export function SyncStockxButton({ sku }: SyncStockxButtonProps) {
   const [isSyncing, setIsSyncing] = useState(false)
   const router = useRouter()
 
@@ -29,10 +30,10 @@ export function SyncStockxButton({ stockxProductId }: SyncStockxButtonProps) {
     setIsSyncing(true)
 
     try {
-      console.log('[Sync Button] Starting manual sync for:', stockxProductId)
+      console.log('[Sync Button V4] Starting sync for SKU:', sku)
 
       const response = await fetch(
-        `/api/stockx/sync-product?productId=${stockxProductId}`,
+        `/api/stockx/sync-product-v4?sku=${encodeURIComponent(sku)}`,
         {
           method: 'POST',
         }
@@ -45,29 +46,28 @@ export function SyncStockxButton({ stockxProductId }: SyncStockxButtonProps) {
         throw new Error(data.error || 'Failed to sync product data')
       }
 
-      console.log('[Sync Button] ✅ Sync complete:', data)
+      console.log('[Sync Button V4] Sync complete:', data)
 
       // Show appropriate toast based on whether there's a warning
       if (data.warning) {
-        // Yellow/warning toast for partial success
         toast.warning('StockX sync complete with warning', {
           description: data.warning,
           duration: 8000,
         })
       } else {
-        // Green success toast for full success
-        toast.success('StockX data synced', {
-          description: `Updated ${data.variantsCached} variants and ${data.snapshotsCreated} market snapshots`,
+        toast.success('StockX data synced (V4)', {
+          description: `Synced ${data.variantsSynced} variants, ${data.marketDataRefreshed} market data rows`,
         })
       }
 
       // Reload page to show fresh data
       router.refresh()
-    } catch (error: any) {
-      console.error('[Sync Button] Sync failed:', error)
+    } catch (error: unknown) {
+      console.error('[Sync Button V4] Sync failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sync StockX data'
 
       toast.error('Sync failed', {
-        description: error.message || 'Failed to sync StockX data',
+        description: errorMessage,
       })
     } finally {
       setIsSyncing(false)

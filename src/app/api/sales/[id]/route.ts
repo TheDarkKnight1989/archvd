@@ -107,6 +107,42 @@ export async function PATCH(
       )
     }
 
+    // V4: Also update inventory_v4_sales if it exists (by original_item_id)
+    const v4UpdatePayload: Record<string, any> = {
+      updated_at: new Date().toISOString()
+    }
+
+    if (body.sold_price !== undefined) {
+      v4UpdatePayload.sold_price = body.sold_price
+    }
+    if (body.sold_date !== undefined) {
+      v4UpdatePayload.sold_date = body.sold_date
+    }
+    if (body.platform !== undefined) {
+      v4UpdatePayload.platform = body.platform
+    }
+    if (body.sales_fee !== undefined) {
+      v4UpdatePayload.sales_fee = body.sales_fee
+    }
+    if (body.purchase_price !== undefined) {
+      v4UpdatePayload.purchase_price = body.purchase_price
+    }
+    if (body.notes !== undefined) {
+      v4UpdatePayload.notes = body.notes
+    }
+
+    const { error: v4UpdateError } = await supabase
+      .from('inventory_v4_sales')
+      .update(v4UpdatePayload)
+      .eq('original_item_id', itemId)
+
+    if (v4UpdateError) {
+      console.warn('[Edit Sale] V4 update warning (may not exist yet):', v4UpdateError.message)
+      // Don't fail - V4 record might not exist for older sales
+    } else {
+      console.log('[Edit Sale] V4 sale record updated')
+    }
+
     return NextResponse.json({
       success: true,
       item: updatedItem,

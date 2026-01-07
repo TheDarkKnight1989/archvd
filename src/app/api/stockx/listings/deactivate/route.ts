@@ -80,6 +80,27 @@ export async function POST(request: NextRequest) {
       console.warn('[Deactivate Listing] Failed to update stockx_listings:', listingUpdateError)
     }
 
+    // V4: Update inventory_v4_listings (source of truth for V4 inventory)
+    const { data: v4UpdateData, error: v4UpdateError } = await supabase
+      .from('inventory_v4_listings')
+      .update({
+        status: 'paused', // V4 uses lowercase 'paused' for deactivated
+        updated_at: new Date().toISOString(),
+      })
+      .eq('external_listing_id', listingId)
+      .eq('platform', 'stockx')
+      .eq('user_id', user.id)
+      .select()
+
+    if (v4UpdateError) {
+      console.warn('[Deactivate Listing] Failed to update inventory_v4_listings:', v4UpdateError)
+    } else {
+      console.log('[Deactivate Listing] ✅ V4 listing status updated to paused:', {
+        listingId,
+        rowsUpdated: v4UpdateData?.length ?? 0,
+      })
+    }
+
     const duration = Date.now() - startTime
 
     console.log('[Deactivate Listing] Success:', {

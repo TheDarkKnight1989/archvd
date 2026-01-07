@@ -10,13 +10,14 @@ import {
   AliasListingError,
   AliasPricingError,
 } from './errors';
+import { withAliasSnapshot } from '../raw-snapshots/alias-logger';
 import type {
   SearchCatalogResponse,
   GetCatalogItemResponse,
   ListPricingInsightsResponse,
   GetPricingInsightsResponse,
   OfferHistogramResponse,
-  ListingHistogramResponse,
+  RecentSalesResponse,
   CreateListingParams,
   CreateListingResponse,
   GetListingResponse,
@@ -59,18 +60,28 @@ export class AliasClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
+    // Only set Content-Type for requests with bodies (POST, PATCH, PUT)
+    const hasBody = options?.method && ['POST', 'PATCH', 'PUT'].includes(options.method);
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${this.pat}`,
+      ...(options?.headers as Record<string, string>),
+    };
+
+    // Only add Content-Type if we have a body and it's not already set
+    if (hasBody && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Authorization': `Bearer ${this.pat}`,
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
+
+    const responseText = await response.text();
+    console.log('ALIAS RAW RESPONSE:', response.status, responseText);
 
     if (!response.ok) {
       // Log raw response for debugging
-      const responseText = await response.text();
       console.error('[Alias Client] Error response:', {
         endpoint,
         url,
@@ -104,7 +115,7 @@ export class AliasClient {
       return {} as T;
     }
 
-    return response.json() as Promise<T>;
+    return JSON.parse(responseText) as T;
   }
 
   // ============================================================================
@@ -147,7 +158,11 @@ export class AliasClient {
       params.append('pagination_token', pagination.pagination_token);
     }
 
-    return this.request<SearchCatalogResponse>(`/catalog?${params}`);
+    return withAliasSnapshot(
+      'catalog_search',
+      () => this.request<SearchCatalogResponse>(`/catalog?${params}`),
+      {}
+    );
   }
 
   /**
@@ -156,7 +171,11 @@ export class AliasClient {
    */
   async getCatalogItem(catalogId: string): Promise<GetCatalogItemResponse> {
     try {
-      return await this.request<GetCatalogItemResponse>(`/catalog/${catalogId}`);
+      return await withAliasSnapshot(
+        'catalog_item',
+        () => this.request<GetCatalogItemResponse>(`/catalog/${catalogId}`),
+        { catalogId }
+      );
     } catch (error) {
       if (error instanceof AliasAPIError && error.isNotFoundError()) {
         throw new AliasCatalogNotFoundError(catalogId);
@@ -188,7 +207,11 @@ export class AliasClient {
     const endpoint = `/pricing_insights/availabilities/${catalogId}${query ? `?${query}` : ''}`;
 
     try {
-      return await this.request<ListPricingInsightsResponse>(endpoint);
+      return await withAliasSnapshot(
+        'pricing_availabilities',
+        () => this.request<ListPricingInsightsResponse>(endpoint),
+        { catalogId, regionId }
+      );
     } catch (error) {
       if (error instanceof AliasAPIError) {
         throw new AliasPricingError(error.message, error.statusCode, error.apiError);
@@ -224,8 +247,18 @@ export class AliasClient {
     }
 
     try {
-      return await this.request<GetPricingInsightsResponse>(
-        `/pricing_insights/availability?${searchParams}`
+      return await withAliasSnapshot(
+        'pricing_availability',
+        () => this.request<GetPricingInsightsResponse>(
+          `/pricing_insights/availability?${searchParams}`
+        ),
+        {
+          catalogId: params.catalog_id,
+          sizeValue: params.size,
+          regionId: params.region_id,
+          productCondition: params.product_condition,
+          packagingCondition: params.packaging_condition,
+        }
       );
     } catch (error) {
       if (error instanceof AliasAPIError) {
@@ -260,29 +293,61 @@ export class AliasClient {
       searchParams.append('region_id', params.region_id);
     }
 
-    return this.request<OfferHistogramResponse>(
-      `/pricing_insights/offer_histogram?${searchParams}`
-    );
+    try {
+      return await withAliasSnapshot(
+        'offer_histogram',
+        () => this.request<OfferHistogramResponse>(
+          `/pricing_insights/offer_histogram?${searchParams}`
+        ),
+        {
+          catalogId: params.catalog_id,
+          sizeValue: params.size,
+          regionId: params.region_id,
+          productCondition: params.product_condition,
+          packagingCondition: params.packaging_condition,
+          consigned: params.consigned,
+        }
+      );
+    } catch (error) {
+      if (error instanceof AliasAPIError) {
+        throw new AliasPricingError(error.message, error.statusCode, error.apiError);
+      }
+      throw error;
+    }
   }
 
+  // Note: listing_histogram does NOT exist in Alias API
+  // Only offer_histogram is available
+
   /**
-   * Get listing price distribution (histogram)
+   * Get recent sales history
+   * CRITICAL FOR VOLUME DATA - This is the ONLY source of sales volume for Alias
    */
-  async getListingHistogram(params: {
+  async getRecentSales(params: {
     catalog_id: string;
-    size: number;
-    product_condition: ProductCondition;
-    packaging_condition: PackagingCondition;
+    size?: number;
+    limit?: number;
+    product_condition?: ProductCondition;
+    packaging_condition?: PackagingCondition;
     consigned?: boolean;
     region_id?: string;
-  }): Promise<ListingHistogramResponse> {
+  }): Promise<RecentSalesResponse> {
     const searchParams = new URLSearchParams({
       catalog_id: params.catalog_id,
-      size: params.size.toString(),
-      product_condition: params.product_condition,
-      packaging_condition: params.packaging_condition,
     });
 
+    if (params.size !== undefined) {
+      searchParams.append('size', params.size.toString());
+    }
+    if (params.limit !== undefined) {
+      searchParams.append('limit', params.limit.toString());
+    }
+    if (params.product_condition) {
+      searchParams.append('product_condition', params.product_condition);
+    }
+    if (params.packaging_condition) {
+      searchParams.append('packaging_condition', params.packaging_condition);
+    }
     if (params.consigned !== undefined) {
       searchParams.append('consigned', params.consigned.toString());
     }
@@ -290,9 +355,27 @@ export class AliasClient {
       searchParams.append('region_id', params.region_id);
     }
 
-    return this.request<ListingHistogramResponse>(
-      `/pricing_insights/listing_histogram?${searchParams}`
-    );
+    try {
+      return await withAliasSnapshot(
+        'recent_sales',
+        () => this.request<RecentSalesResponse>(
+          `/pricing_insights/recent_sales?${searchParams}`
+        ),
+        {
+          catalogId: params.catalog_id,
+          sizeValue: params.size,
+          regionId: params.region_id,
+          productCondition: params.product_condition,
+          packagingCondition: params.packaging_condition,
+          consigned: params.consigned,
+        }
+      );
+    } catch (error) {
+      if (error instanceof AliasAPIError) {
+        throw new AliasPricingError(error.message, error.statusCode, error.apiError);
+      }
+      throw error;
+    }
   }
 
   // ============================================================================

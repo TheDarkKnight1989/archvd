@@ -7,13 +7,27 @@ import { AliasClient } from './client';
 import type { Region } from './types';
 
 /**
- * Fetch all available regions from Alias API
- * @param client - AliasClient instance
- * @returns Array of regions with id and name
+ * HARDCODED ALIAS REGIONS (workaround for broken /regions endpoint)
+ * The /regions endpoint returns 415 error, so we use known region IDs instead
+ * These region IDs are stable and documented in Alias sync code
  */
-export async function getAliasRegions(client: AliasClient): Promise<Region[]> {
-  const response = await client.listRegions();
-  return response.regions;
+const ALIAS_REGIONS: Region[] = [
+  { id: '1', name: 'United States' },
+  { id: '2', name: 'Europe' },
+  { id: '3', name: 'United Kingdom' },
+];
+
+/**
+ * Get all available Alias regions
+ * @param client - AliasClient instance (unused, kept for backwards compatibility)
+ * @returns Array of regions with id and name
+ *
+ * NOTE: This now returns hardcoded regions instead of calling the API
+ * because the /regions endpoint is broken (returns 415 error)
+ */
+export async function getAliasRegions(client?: AliasClient): Promise<Region[]> {
+  // Return hardcoded regions instead of calling broken API endpoint
+  return ALIAS_REGIONS;
 }
 
 /**

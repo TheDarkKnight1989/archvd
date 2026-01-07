@@ -21,6 +21,9 @@ import { AddItemV4Modal } from './_components/AddItemV4Modal'
 import { MobileInventoryV4Card } from './_components/mobile/MobileInventoryV4Card'
 import { ListOnStockXModal } from '@/components/stockx/ListOnStockXModal'
 import { RepriceListingModal } from '@/components/stockx/RepriceListingModal'
+import { MarkAsSoldModal } from '@/components/modals/MarkAsSoldModal'
+import { BulkCommandBar } from './_components/BulkCommandBar'
+import { BulkRepriceModal } from './_components/BulkRepriceModal'
 import { RefreshCw, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -36,11 +39,16 @@ export default function InventoryPage() {
   const [selectedItem, setSelectedItem] = useState<InventoryV4ItemFull | null>(null)
   const [listModalOpen, setListModalOpen] = useState(false)
   const [repriceModalOpen, setRepriceModalOpen] = useState(false)
+  const [soldModalOpen, setSoldModalOpen] = useState(false)
+  const [soldModalItem, setSoldModalItem] = useState<InventoryV4ItemFull | null>(null)
   /** Item for edit/duplicate mode in AddItemV4Modal. If id present = edit, if no id = duplicate */
   const [editItem, setEditItem] = useState<InventoryV4ItemFull | null>(null)
 
   // Selection state for bulk actions
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
+
+  // Bulk action modal states
+  const [bulkRepriceModalOpen, setBulkRepriceModalOpen] = useState(false)
 
   // Map region filter to alias region ID
   const aliasRegion: AliasRegionId = filters.region === 'UK' ? '1' : filters.region === 'EU' ? '2' : '3'
@@ -419,23 +427,29 @@ export default function InventoryPage() {
   }, [refetch])
 
   const handleMarkSold = useCallback(async (item: InventoryV4ItemFull) => {
-    const newStatus = item.status === 'sold' ? 'in_stock' : 'sold'
-    try {
-      const res = await fetch(`/api/items/${item.id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      })
+    if (item.status === 'sold') {
+      // Already sold → revert to in_stock via status endpoint
+      try {
+        const res = await fetch(`/api/items/${item.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'in_stock' }),
+        })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to update status')
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Failed to update status')
+        }
+
+        toast.success('Marked as in stock')
+        refetch()
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to update status')
       }
-
-      toast.success(newStatus === 'sold' ? 'Marked as sold' : 'Marked as in stock')
-      refetch()
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update status')
+    } else {
+      // Not sold → open Mark as Sold modal for proper sale recording
+      setSoldModalItem(item)
+      setSoldModalOpen(true)
     }
   }, [refetch])
 
@@ -462,6 +476,385 @@ export default function InventoryPage() {
   const handleTogglePersonals = useCallback((_item: InventoryV4ItemFull) => {
     toast.info('Toggle personals coming soon')
   }, [])
+
+  // ==========================================================================
+  // BULK ACTION HANDLERS
+  // ==========================================================================
+
+  // Get selected items from filteredItems
+  const selectedItemsList = useMemo(() => {
+    return filteredItems.filter(item => selectedItems.has(item.id))
+  }, [filteredItems, selectedItems])
+
+  // Get selected items that have StockX listings
+  const selectedWithStockxListings = useMemo(() => {
+    return selectedItemsList.filter(item =>
+      item.listings.some(l => l.platform === 'stockx' && (l.status === 'active' || l.status === 'paused'))
+    )
+  }, [selectedItemsList])
+
+  const handleBulkPauseListings = useCallback(async () => {
+    const itemsToProcess = selectedWithStockxListings.filter(item =>
+      item.listings.some(l => l.platform === 'stockx' && l.status === 'active')
+    )
+
+    if (itemsToProcess.length === 0) {
+      toast.error('No active StockX listings selected')
+      return
+    }
+
+    let successCount = 0
+    let errorCount = 0
+
+    for (const item of itemsToProcess) {
+      const stockxListing = item.listings.find(l => l.platform === 'stockx')
+      if (!stockxListing?.external_listing_id) continue
+
+      try {
+        const res = await fetch('/api/stockx/listings/deactivate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
+        })
+
+        if (res.ok) {
+          successCount++
+        } else {
+          errorCount++
+        }
+      } catch {
+        errorCount++
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Paused ${successCount} listing${successCount === 1 ? '' : 's'}`)
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to pause ${errorCount} listing${errorCount === 1 ? '' : 's'}`)
+    }
+
+    setSelectedItems(new Set())
+    refetch()
+  }, [selectedWithStockxListings, refetch])
+
+  const handleBulkActivateListings = useCallback(async () => {
+    const itemsToProcess = selectedWithStockxListings.filter(item =>
+      item.listings.some(l => l.platform === 'stockx' && l.status === 'paused')
+    )
+
+    if (itemsToProcess.length === 0) {
+      toast.error('No paused StockX listings selected')
+      return
+    }
+
+    let successCount = 0
+    let errorCount = 0
+
+    for (const item of itemsToProcess) {
+      const stockxListing = item.listings.find(l => l.platform === 'stockx')
+      if (!stockxListing?.external_listing_id) continue
+
+      try {
+        const res = await fetch('/api/stockx/listings/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
+        })
+
+        if (res.ok) {
+          successCount++
+        } else {
+          errorCount++
+        }
+      } catch {
+        errorCount++
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Activated ${successCount} listing${successCount === 1 ? '' : 's'}`)
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to activate ${errorCount} listing${errorCount === 1 ? '' : 's'}`)
+    }
+
+    setSelectedItems(new Set())
+    refetch()
+  }, [selectedWithStockxListings, refetch])
+
+  const handleBulkRepriceListings = useCallback(() => {
+    if (selectedWithStockxListings.length === 0) {
+      toast.error('No items with StockX listings selected')
+      return
+    }
+    setBulkRepriceModalOpen(true)
+  }, [selectedWithStockxListings])
+
+  const handleBulkRepriceConfirm = useCallback(async (askPrice: number) => {
+    let successCount = 0
+    let errorCount = 0
+
+    for (const item of selectedWithStockxListings) {
+      const stockxListing = item.listings.find(l => l.platform === 'stockx')
+      if (!stockxListing?.external_listing_id) continue
+
+      try {
+        const res = await fetch('/api/stockx/listings/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            listingId: stockxListing.external_listing_id,
+            askPrice,
+            currencyCode: 'GBP',
+          }),
+        })
+
+        if (res.ok) {
+          successCount++
+        } else {
+          errorCount++
+        }
+      } catch {
+        errorCount++
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Repriced ${successCount} listing${successCount === 1 ? '' : 's'} to £${askPrice.toFixed(2)}`)
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to reprice ${errorCount} listing${errorCount === 1 ? '' : 's'}`)
+    }
+
+    setBulkRepriceModalOpen(false)
+    setSelectedItems(new Set())
+    refetch()
+  }, [selectedWithStockxListings, refetch])
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedItemsList.length === 0) return
+
+    if (!confirm(`Delete ${selectedItemsList.length} item${selectedItemsList.length === 1 ? '' : 's'}? This cannot be undone.`)) {
+      return
+    }
+
+    let successCount = 0
+    let errorCount = 0
+
+    for (const item of selectedItemsList) {
+      try {
+        const res = await fetch(`/api/items/${item.id}/delete`, {
+          method: 'DELETE',
+        })
+
+        if (res.ok) {
+          successCount++
+        } else {
+          errorCount++
+        }
+      } catch {
+        errorCount++
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Deleted ${successCount} item${successCount === 1 ? '' : 's'}`)
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to delete ${errorCount} item${errorCount === 1 ? '' : 's'}`)
+    }
+
+    setSelectedItems(new Set())
+    refetch()
+  }, [selectedItemsList, refetch])
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedItems(new Set())
+  }, [])
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedItems(new Set(filteredItems.map(item => item.id)))
+  }, [filteredItems])
+
+  const handleBulkMarkSold = useCallback(async () => {
+    if (selectedItemsList.length === 0) return
+
+    let successCount = 0
+    let errorCount = 0
+
+    for (const item of selectedItemsList) {
+      try {
+        const res = await fetch(`/api/items/${item.id}/mark-sold`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ soldPrice: item.purchase_price }),
+        })
+
+        if (res.ok) {
+          successCount++
+        } else {
+          errorCount++
+        }
+      } catch {
+        errorCount++
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Marked ${successCount} item${successCount === 1 ? '' : 's'} as sold`)
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to mark ${errorCount} item${errorCount === 1 ? '' : 's'}`)
+    }
+
+    setSelectedItems(new Set())
+    refetch()
+  }, [selectedItemsList, refetch])
+
+  const handleBulkMarkUnlisted = useCallback(async () => {
+    if (selectedItemsList.length === 0) return
+
+    let successCount = 0
+    let errorCount = 0
+
+    for (const item of selectedItemsList) {
+      try {
+        const res = await fetch(`/api/items/${item.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'in_stock' }),
+        })
+
+        if (res.ok) {
+          successCount++
+        } else {
+          errorCount++
+        }
+      } catch {
+        errorCount++
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Marked ${successCount} item${successCount === 1 ? '' : 's'} as unlisted`)
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to update ${errorCount} item${errorCount === 1 ? '' : 's'}`)
+    }
+
+    setSelectedItems(new Set())
+    refetch()
+  }, [selectedItemsList, refetch])
+
+  const handleBulkDuplicate = useCallback(() => {
+    if (selectedItemsList.length === 0) return
+
+    // For now, duplicate first selected item
+    const first = selectedItemsList[0]
+    if (first) {
+      // Create a copy without the id to trigger duplicate mode
+      const duplicateItem = { ...first, id: undefined } as unknown as InventoryV4ItemFull
+      setEditItem(duplicateItem)
+      setAddModalOpen(true)
+    }
+
+    toast.info(`Duplicating from "${selectedItemsList[0].style.name}"`)
+    setSelectedItems(new Set())
+  }, [selectedItemsList])
+
+  // Bulk List on StockX - opens list modal for items that can be listed
+  const handleBulkListOnStockX = useCallback(() => {
+    const itemsCanList = selectedItemsList.filter(item =>
+      item.style.stockx_product_id && !item.listings.some(l => l.platform === 'stockx')
+    )
+
+    if (itemsCanList.length === 0) {
+      toast.error('No items can be listed on StockX')
+      return
+    }
+
+    // For now, open single list modal for first item
+    // TODO: Implement true bulk listing
+    if (itemsCanList.length === 1) {
+      setSelectedItem(itemsCanList[0])
+      setListModalOpen(true)
+    } else {
+      toast.info(`Bulk listing ${itemsCanList.length} items coming soon. Opening first item...`)
+      setSelectedItem(itemsCanList[0])
+      setListModalOpen(true)
+    }
+    setSelectedItems(new Set())
+  }, [selectedItemsList])
+
+  // Bulk Delete StockX Listings
+  const handleBulkDeleteListings = useCallback(async () => {
+    if (selectedWithStockxListings.length === 0) {
+      toast.error('No items with StockX listings selected')
+      return
+    }
+
+    if (!confirm(`Delete ${selectedWithStockxListings.length} StockX listing${selectedWithStockxListings.length === 1 ? '' : 's'}? This cannot be undone.`)) {
+      return
+    }
+
+    let successCount = 0
+    let errorCount = 0
+
+    for (const item of selectedWithStockxListings) {
+      const stockxListing = item.listings.find(l => l.platform === 'stockx')
+      if (!stockxListing?.external_listing_id) continue
+
+      try {
+        const res = await fetch('/api/stockx/listings/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
+        })
+
+        if (res.ok) {
+          successCount++
+        } else {
+          errorCount++
+        }
+      } catch {
+        errorCount++
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Deleted ${successCount} listing${successCount === 1 ? '' : 's'}`)
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to delete ${errorCount} listing${errorCount === 1 ? '' : 's'}`)
+    }
+
+    setSelectedItems(new Set())
+    refetch()
+  }, [selectedWithStockxListings, refetch])
+
+  // Bulk Print StockX Labels
+  const handleBulkPrintLabels = useCallback(() => {
+    const itemsWithListings = selectedWithStockxListings.filter(item =>
+      item.listings.some(l => l.platform === 'stockx' && l.external_listing_id)
+    )
+
+    if (itemsWithListings.length === 0) {
+      toast.error('No items with StockX listings to print labels for')
+      return
+    }
+
+    // Open label page for each listing in new tabs
+    for (const item of itemsWithListings) {
+      const stockxListing = item.listings.find(l => l.platform === 'stockx')
+      if (stockxListing?.external_listing_id) {
+        window.open(`https://stockx.com/selling/listings/${stockxListing.external_listing_id}/label`, '_blank')
+      }
+    }
+
+    toast.success(`Opened ${itemsWithListings.length} label${itemsWithListings.length === 1 ? '' : 's'} in new tabs`)
+    setSelectedItems(new Set())
+  }, [selectedWithStockxListings])
 
   // Helper to convert V4 item to modal-compatible format (LegacyItemShape)
   const selectedItemForModal = useMemo(() => {
@@ -803,6 +1196,56 @@ export default function InventoryPage() {
           invested={selectedItem.purchase_price ?? 0}
         />
       )}
+
+      {/* Mark as Sold Modal */}
+      <MarkAsSoldModal
+        open={soldModalOpen}
+        onOpenChange={(open) => {
+          setSoldModalOpen(open)
+          if (!open) setSoldModalItem(null)
+        }}
+        item={soldModalItem ? {
+          id: soldModalItem.id,
+          sku: soldModalItem.style_id,
+          brand: soldModalItem.style.brand,
+          model: soldModalItem.style.name,
+          purchase_price: soldModalItem.purchase_price ?? 0,
+        } : null}
+        onSuccess={() => {
+          setSoldModalOpen(false)
+          setSoldModalItem(null)
+          refetch()
+        }}
+      />
+
+      {/* Bulk Command Bar - shows when items are selected */}
+      <BulkCommandBar
+        selectedItems={selectedItemsList}
+        filteredItemsCount={filteredItems.length}
+        onSelectAll={handleSelectAll}
+        onClearSelection={handleClearSelection}
+        // StockX actions
+        onListOnStockX={handleBulkListOnStockX}
+        onPauseListings={handleBulkPauseListings}
+        onActivateListings={handleBulkActivateListings}
+        onRepriceListings={handleBulkRepriceListings}
+        onDeleteListings={handleBulkDeleteListings}
+        onPrintLabels={handleBulkPrintLabels}
+        // Status actions
+        onMarkSold={handleBulkMarkSold}
+        onMarkUnlisted={handleBulkMarkUnlisted}
+        // Inventory actions
+        onDelete={handleBulkDelete}
+        onDuplicate={handleBulkDuplicate}
+      />
+
+      {/* Bulk Reprice Modal */}
+      <BulkRepriceModal
+        open={bulkRepriceModalOpen}
+        onClose={() => setBulkRepriceModalOpen(false)}
+        onConfirm={handleBulkRepriceConfirm}
+        listingCount={selectedWithStockxListings.length}
+      />
     </div>
   )
 }

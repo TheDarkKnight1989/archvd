@@ -118,6 +118,26 @@ export async function POST(request: NextRequest) {
           console.log('[Update Listing] ✅ Local cache updated with new price:', askPrice)
         }
       }
+
+      // V4: Update inventory_v4_listings (source of truth for V4 inventory)
+      // Normalize price to avoid floating point issues (e.g., 9999.99 instead of 10000)
+      const normalizedPrice = parseFloat(askPrice.toFixed(2))
+      const { error: v4UpdateError } = await supabase
+        .from('inventory_v4_listings')
+        .update({
+          listed_price: normalizedPrice,
+          listed_currency: currencyCode || 'GBP',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('external_listing_id', listingId)
+        .eq('platform', 'stockx')
+        .eq('user_id', user.id)
+
+      if (v4UpdateError) {
+        console.warn('[Update Listing] Failed to update inventory_v4_listings:', v4UpdateError)
+      } else {
+        console.log('[Update Listing] ✅ V4 listings updated with price:', normalizedPrice)
+      }
     }
 
     const duration = Date.now() - startTime

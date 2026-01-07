@@ -608,23 +608,36 @@ function ListedCell({ item }: { item: InventoryV4ItemFull }) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      {activeListings.slice(0, 2).map((listing) => (
-        <div key={listing.id} className="flex items-center gap-1.5">
-          <span
-            className={cn(
-              'inline-flex items-center justify-center font-semibold rounded h-5 min-w-[20px] px-1 text-[10px]',
-              listing.platform === 'stockx' && 'bg-emerald-500/20 text-emerald-500',
-              listing.platform === 'alias' && 'bg-violet-500/20 text-violet-500',
-              listing.platform !== 'stockx' && listing.platform !== 'alias' && 'bg-zinc-500/20 text-zinc-400'
-            )}
-          >
-            {listing.platform === 'stockx' ? 'SX' : listing.platform === 'alias' ? 'AL' : listing.platform.slice(0, 2).toUpperCase()}
-          </span>
-          <span className="tabular-nums text-[12px] text-white/80">
-            {formatMoney(listing.listed_price, listing.listed_currency)}
-          </span>
-        </div>
-      ))}
+      {activeListings.slice(0, 2).map((listing) => {
+        // Use amber/yellow for paused listings
+        const isPaused = listing.status === 'paused'
+
+        // Determine badge colors based on platform and paused state
+        let badgeColors = 'bg-zinc-500/20 text-zinc-400'
+        if (isPaused) {
+          badgeColors = 'bg-amber-500/20 text-amber-500'
+        } else if (listing.platform === 'stockx') {
+          badgeColors = 'bg-emerald-500/20 text-emerald-500'
+        } else if (listing.platform === 'alias') {
+          badgeColors = 'bg-violet-500/20 text-violet-500'
+        }
+
+        return (
+          <div key={listing.id} className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                'inline-flex items-center justify-center font-semibold rounded h-5 min-w-[20px] px-1 text-[10px]',
+                badgeColors
+              )}
+            >
+              {listing.platform === 'stockx' ? 'SX' : listing.platform === 'alias' ? 'AL' : listing.platform.slice(0, 2).toUpperCase()}
+            </span>
+            <span className="tabular-nums text-[12px] text-white/80">
+              {formatMoney(listing.listed_price, listing.listed_currency)}
+            </span>
+          </div>
+        )
+      })}
       {activeListings.length > 2 && (
         <span className="text-[10px] text-white/40">+{activeListings.length - 2} more</span>
       )}

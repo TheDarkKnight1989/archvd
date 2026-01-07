@@ -52,9 +52,11 @@ export function ActionsCell({
 
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className="min-w-[180px] bg-surface border border-border rounded-xl shadow-dropdown p-1 z-50"
-            sideOffset={5}
+            className="min-w-[180px] max-h-[80vh] overflow-y-auto bg-surface border border-border rounded-xl shadow-dropdown p-1 z-50"
+            sideOffset={8}
             align="end"
+            collisionPadding={16}
+            avoidCollisions
           >
             {onEdit && (
               <DropdownMenu.Item

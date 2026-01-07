@@ -2,6 +2,11 @@
  * StockX Listings Sync Engine
  * Syncs user's StockX listings to local database
  *
+ * @deprecated INTENTIONALLY V3 - This syncs to V3 `stockx_listings` table.
+ *             V4 listing state is managed by `inventory_v4_listings` table.
+ *             Kept for backwards compatibility with listings management page.
+ *             New listing operations should update V4 tables.
+ *
  * This function is pure and reusable - can be called from:
  * - Manual sync API route (user-triggered)
  * - Railway worker (automated, future)

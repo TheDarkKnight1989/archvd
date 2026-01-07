@@ -1,3 +1,9 @@
+/**
+ * INTENTIONALLY V3
+ * This admin page shows V3 `Inventory` items with missing data.
+ * Used for data cleanup and quality assurance.
+ * May be updated to V4 later but not critical for listing state.
+ */
 'use client'
 
 import { useState, useEffect } from 'react'

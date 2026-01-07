@@ -1,26 +1,36 @@
 /**
- * Product Image Resolver
+ * Product Image Resolver - ALIAS-FIRST PRIORITY
  * WHY: Ensure product rows ALWAYS show an image, never blank
+ *
  * Resolution hierarchy (first hit wins):
- * 1. market_products.image_url (cached by worker)
- * 2. inventory.image_url (if present)
+ * 1. Alias catalog image (from alias_catalog_items) - PRIMARY SOURCE
+ * 2. Product catalog image (from product_catalog if provider is Alias)
  * 3. Provider fallback: /images/providers/{provider}.png
  * 4. Brand fallback: /images/brands/{brandKey}.png
  * 5. Neutral fallback: /images/placeholders/product.png
+ *
+ * NOTE: StockX images are NOT used (unreliable - return 404)
  */
 
 export type ProductImageResult = {
   src: string
   alt: string
-  provenance: 'market' | 'inventory' | 'provider' | 'brand' | 'neutral'
+  provenance: 'alias' | 'catalog' | 'provider' | 'brand' | 'neutral'
 }
 
 export type ProductImageInput = {
-  // From database
-  marketImageUrl?: string | null
+  // Alias catalog (PRIMARY SOURCE)
+  aliasCatalogImageUrl?: string | null
+  aliasCatalogThumbnailUrl?: string | null
+
+  // Product catalog (SECONDARY SOURCE - only if from Alias)
+  catalogImageUrl?: string | null
+  catalogProvider?: 'alias' | 'stockx' | 'ebay' | 'seed' | null
+
+  // Legacy/fallback fields (for backwards compatibility)
   inventoryImageUrl?: string | null
   provider?: 'stockx' | 'alias' | 'ebay' | 'seed' | null
-  
+
   // Product metadata for alt text
   brand?: string | null
   model?: string | null
@@ -29,34 +39,63 @@ export type ProductImageInput = {
 }
 
 /**
- * Get product image with fallback hierarchy
+ * Get product image with Alias-first fallback hierarchy
  * @returns Always returns a valid image URL and alt text
  */
 export function getProductImage(input: ProductImageInput): ProductImageResult {
-  const { marketImageUrl, inventoryImageUrl, provider, brand, model, colorway, sku } = input
+  const {
+    aliasCatalogImageUrl,
+    aliasCatalogThumbnailUrl,
+    catalogImageUrl,
+    catalogProvider,
+    inventoryImageUrl,
+    provider,
+    brand,
+    model,
+    colorway,
+    sku,
+  } = input
 
   // Build alt text
   const alt = buildAltText(brand, model, colorway, sku)
 
-  // 1. Try market image (cached by worker)
-  if (marketImageUrl && isValidUrl(marketImageUrl)) {
+  // 1. Try Alias catalog image (PRIMARY SOURCE)
+  if (aliasCatalogImageUrl && isValidUrl(aliasCatalogImageUrl)) {
     return {
-      src: marketImageUrl,
+      src: aliasCatalogImageUrl,
       alt,
-      provenance: 'market',
+      provenance: 'alias',
     }
   }
 
-  // 2. Try inventory image
+  // 2. Try Alias catalog thumbnail (fallback if main image missing)
+  if (aliasCatalogThumbnailUrl && isValidUrl(aliasCatalogThumbnailUrl)) {
+    return {
+      src: aliasCatalogThumbnailUrl,
+      alt,
+      provenance: 'alias',
+    }
+  }
+
+  // 3. Try product catalog image (ONLY if provider is Alias)
+  if (catalogImageUrl && isValidUrl(catalogImageUrl) && catalogProvider === 'alias') {
+    return {
+      src: catalogImageUrl,
+      alt,
+      provenance: 'catalog',
+    }
+  }
+
+  // 4. Try inventory image (legacy/manual uploads)
   if (inventoryImageUrl && isValidUrl(inventoryImageUrl)) {
     return {
       src: inventoryImageUrl,
       alt,
-      provenance: 'inventory',
+      provenance: 'catalog',
     }
   }
 
-  // 3. Provider fallback
+  // 5. Provider fallback (logo)
   if (provider) {
     return {
       src: getProviderFallback(provider),
@@ -65,7 +104,7 @@ export function getProductImage(input: ProductImageInput): ProductImageResult {
     }
   }
 
-  // 4. Brand fallback
+  // 6. Brand fallback (logo)
   if (brand) {
     return {
       src: getBrandFallback(brand),
@@ -74,8 +113,7 @@ export function getProductImage(input: ProductImageInput): ProductImageResult {
     }
   }
 
-  // 5. Neutral fallback
-  // TODO(adapted): Using .svg for now; replace with .png when available
+  // 7. Neutral fallback (generic product icon)
   return {
     src: '/images/placeholders/product.svg',
     alt,

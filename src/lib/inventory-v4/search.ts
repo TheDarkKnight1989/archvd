@@ -277,23 +277,45 @@ async function resolveAliasCatalogId(catalogId: string): Promise<SearchResultV4 
 
 /**
  * Source priority for merge/dedupe (higher = better)
+ * NOTE: Priority is for metadata (name, brand). Images always prefer Alias (GOAT CDN).
  */
 const SOURCE_PRIORITY: Record<SearchResultV4['source'], number> = {
   local: 3,   // Highest - our database
-  stockx: 2,  // Second - better images/naming than Alias
-  alias: 1,   // Third - fallback
+  alias: 2,   // Second - better images from GOAT CDN
+  stockx: 1,  // Third - fallback
+}
+
+/**
+ * Normalize SKU for comparison/deduplication
+ * Handles variations: "DM7866 104" vs "DM7866-104" vs "dm7866104"
+ */
+function normalizeSku(sku: string): string {
+  return sku
+    .toUpperCase()
+    .replace(/[\s-]/g, '-') // Normalize spaces to hyphens
+    .replace(/--+/g, '-')   // Remove double hyphens
+    .trim()
+}
+
+/**
+ * Check if an image URL is from Alias/GOAT (preferred source)
+ */
+function isAliasImage(url: string | null): boolean {
+  if (!url) return false
+  return url.includes('image.goat.com') || url.includes('goat.com')
 }
 
 /**
  * Merge and deduplicate search results by SKU
- * Priority: local > stockx > alias (explicit, deterministic)
+ * Priority: local > alias > stockx (explicit, deterministic)
  * External IDs are always merged across sources
+ * Images: Always prefer Alias/GOAT images when available
  */
 function mergeAndDedupeResults(results: SearchResultV4[]): SearchResultV4[] {
   const byStyleId = new Map<string, SearchResultV4>()
 
   for (const result of results) {
-    const normalizedSku = result.styleId.toUpperCase()
+    const normalizedSku = normalizeSku(result.styleId)
     const existing = byStyleId.get(normalizedSku)
 
     if (!existing) {
@@ -312,18 +334,24 @@ function mergeAndDedupeResults(results: SearchResultV4[]): SearchResultV4[] {
       aliasCatalogId: existing.externalIds.aliasCatalogId ?? result.externalIds.aliasCatalogId,
     }
 
+    // Always prefer Alias/GOAT images regardless of source priority
+    const bestImageUrl = isAliasImage(result.imageUrl) ? result.imageUrl
+      : isAliasImage(existing.imageUrl) ? existing.imageUrl
+      : existing.imageUrl ?? result.imageUrl
+
     if (resultPriority > existingPriority) {
       // New result has higher priority - use its data but merge external IDs
       byStyleId.set(normalizedSku, {
         ...result,
         styleId: normalizedSku,
+        imageUrl: bestImageUrl,
         externalIds: mergedExternalIds,
       })
     } else {
       // Keep existing data but merge external IDs and fill missing fields
       byStyleId.set(normalizedSku, {
         ...existing,
-        imageUrl: existing.imageUrl ?? result.imageUrl,
+        imageUrl: bestImageUrl,
         colorway: existing.colorway ?? result.colorway,
         externalIds: mergedExternalIds,
       })

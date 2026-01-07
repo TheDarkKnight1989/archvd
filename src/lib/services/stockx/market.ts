@@ -11,6 +11,7 @@
 import { getStockxClient } from './client'
 import { isStockxMockMode } from '@/lib/config/stockx'
 import { withStockxRetry } from './retry'
+import { withStockXSnapshot } from '../raw-snapshots/stockx-logger'
 
 // ============================================================================
 // DIRECTIVE SECTION 3: DATA SHAPE REQUIREMENTS
@@ -135,9 +136,13 @@ export class StockxMarketService {
 
     try {
       const client = getStockxClient(userId)
-      const response = await withStockxRetry(
-        () => client.request<StockxV2MarketDataResponse>(url),
-        { label: `Get market data: ${productId} (${currencyCode})` }
+      const response = await withStockXSnapshot(
+        'market_data',
+        () => withStockxRetry(
+          () => client.request<StockxV2MarketDataResponse>(url),
+          { label: `Get market data: ${productId} (${currencyCode})` }
+        ),
+        { productId, currencyCode }
       )
 
       logDevResponse(url, response)

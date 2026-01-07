@@ -25,7 +25,6 @@ interface RepriceListingModalProps {
     product_name?: string
     sku?: string
     alias_image_url?: string
-    stockx_image_url?: string
     image_url?: string
     image?: { url: string; alt: string }
   }
@@ -71,10 +70,10 @@ export function RepriceListingModal({ open, onClose, onSuccess, listing, investe
 
         <div className="space-y-4">
           <div className="border-b pb-3 flex gap-3">
-            {/* Product Image - Alias → StockX → Inventory priority */}
-            {(listing.alias_image_url || listing.image?.url || listing.stockx_image_url || listing.image_url) && (
+            {/* Product Image - Alias-first priority (StockX images removed) */}
+            {(listing.alias_image_url || listing.image?.url || listing.image_url) && (
               <img
-                src={listing.alias_image_url || listing.image?.url || listing.stockx_image_url || listing.image_url}
+                src={listing.alias_image_url || listing.image?.url || listing.image_url}
                 alt={listing.product_name || listing.sku}
                 className="w-16 h-16 rounded-lg object-cover bg-elev-2 flex-shrink-0"
               />

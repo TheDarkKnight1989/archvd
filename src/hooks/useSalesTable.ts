@@ -1,5 +1,11 @@
 'use client'
 
+/**
+ * Sales Table Hook - V4 ONLY
+ * Reads exclusively from inventory_v4_sales table.
+ * V3 tables are frozen and no longer read.
+ */
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 
@@ -17,20 +23,13 @@ export interface SalesItem {
   purchase_price: number
   purchase_total?: number | null
   purchase_date?: string | null
-  tax?: number | null
-  shipping?: number | null
-  place_of_purchase?: string | null
-  order_number?: string | null
   sold_price?: number | null
   sold_date?: string | null
-  sale_date?: string | null
-  sale_price?: number | null
   platform?: string | null
   sales_fee?: number | null
   location?: string | null
   image_url?: string | null
   tags?: string[] | null
-  custom_market_value?: number | null
   notes?: string | null
   status: 'sold'
   created_at: string
@@ -40,7 +39,8 @@ export interface SalesItem {
   // StockX fields
   commission?: number | null
   net_payout?: number | null
-  stockx_order_id?: string | null
+  // V4 fields
+  original_item_id?: string | null
 }
 
 export interface SalesTableParams {
@@ -57,106 +57,148 @@ export interface SalesTableParams {
   offset?: number
 }
 
+// Fetch from V4 sales table ONLY
+async function fetchSales(params: SalesTableParams): Promise<{ data: SalesItem[], count: number }> {
+  let query = supabase
+    .from('inventory_v4_sales')
+    .select(`
+      id,
+      user_id,
+      style_id,
+      sku,
+      brand,
+      model,
+      colorway,
+      size,
+      size_unit,
+      category,
+      condition,
+      image_url,
+      purchase_price,
+      purchase_total,
+      purchase_date,
+      purchase_currency,
+      sold_price,
+      sold_date,
+      sale_currency,
+      platform,
+      sales_fee,
+      shipping_cost,
+      notes,
+      location,
+      tags,
+      original_item_id,
+      base_currency,
+      fx_rate_to_base,
+      sold_price_base,
+      created_at,
+      updated_at
+    `, { count: 'exact' })
+
+  if (params.search) {
+    query = query.or(`sku.ilike.%${params.search}%,brand.ilike.%${params.search}%,model.ilike.%${params.search}%,style_id.ilike.%${params.search}%`)
+  }
+
+  if (params.brand) query = query.eq('brand', params.brand)
+  if (params.size_uk) query = query.eq('size', params.size_uk)
+  if (params.category) query = query.eq('category', params.category)
+  if (params.platform) {
+    if (params.platform.toLowerCase() === 'alias') {
+      query = query.or('platform.ilike.alias,platform.ilike.goat')
+    } else {
+      query = query.ilike('platform', params.platform)
+    }
+  }
+  if (params.date_from) query = query.gte('sold_date', params.date_from)
+  if (params.date_to) query = query.lte('sold_date', params.date_to)
+
+  const sortBy = params.sort_by || 'sold_date'
+  const sortOrder = params.sort_order || 'desc'
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+
+  if (params.limit) {
+    query = query.limit(params.limit)
+  }
+  if (params.offset) {
+    query = query.range(params.offset, params.offset + (params.limit || 50) - 1)
+  }
+
+  const { data, error, count } = await query
+
+  if (error) {
+    // If table doesn't exist yet, return empty
+    if (error.code === '42P01') {
+      console.warn('[useSalesTable] V4 sales table not found')
+      return { data: [], count: 0 }
+    }
+    throw error
+  }
+
+  // Transform V4 data to SalesItem format
+  const transformedData = (data || []).map((item: any) => {
+    const costBasis = item.purchase_total || (item.purchase_price || 0)
+    const salePrice = item.sold_price || 0
+    const fees = item.sales_fee || 0
+    const margin_gbp = salePrice - costBasis - fees
+    const margin_percent = costBasis > 0 ? (margin_gbp / costBasis) * 100 : null
+
+    const isStockX = item.platform?.toLowerCase() === 'stockx'
+
+    return {
+      id: item.id,
+      user_id: item.user_id,
+      sku: item.sku || item.style_id,
+      brand: item.brand,
+      model: item.model,
+      colorway: item.colorway,
+      size_uk: item.size,
+      size: item.size,
+      category: item.category,
+      condition: item.condition,
+      image_url: item.image_url,
+      purchase_price: item.purchase_price || 0,
+      purchase_total: item.purchase_total,
+      purchase_date: item.purchase_date,
+      sold_price: item.sold_price,
+      sold_date: item.sold_date,
+      platform: item.platform,
+      sales_fee: item.sales_fee,
+      notes: item.notes,
+      location: item.location,
+      tags: item.tags,
+      status: 'sold' as const,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      margin_gbp,
+      margin_percent,
+      commission: isStockX ? fees : null,
+      net_payout: isStockX ? (salePrice - fees) : null,
+      original_item_id: item.original_item_id,
+    } as SalesItem
+  })
+
+  return { data: transformedData, count: count || 0 }
+}
+
 export function useSalesTable(params: SalesTableParams = {}) {
   const [items, setItems] = useState<SalesItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
 
-  const fetchSales = async () => {
+  const loadSales = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      let query = supabase
-        .from('Inventory')
-        .select(`
-          id,
-          user_id,
-          sku,
-          brand,
-          model,
-          colorway,
-          size_uk,
-          category,
-          condition,
-          image_url,
-          purchase_price,
-          tax,
-          shipping,
-          purchase_total,
-          purchase_date,
-          place_of_purchase,
-          order_number,
-          sold_price,
-          sold_date,
-          platform,
-          sales_fee,
-          notes,
-          location,
-          tags,
-          custom_market_value,
-          status,
-          created_at,
-          updated_at
-        `, { count: 'exact' })
-        .eq('status', 'sold')
+      // V4 ONLY - no V3 fallback
+      const result = await fetchSales(params)
 
-      if (params.search) {
-        query = query.or(`sku.ilike.%${params.search}%,brand.ilike.%${params.search}%,model.ilike.%${params.search}%`)
-      }
-
-      if (params.brand) query = query.eq('brand', params.brand)
-      if (params.size_uk) query = query.eq('size_uk', params.size_uk)
-      if (params.category) query = query.eq('category', params.category)
-      if (params.platform) {
-        // Handle 'alias' filter to also match 'goat' (database value for Alias)
-        if (params.platform.toLowerCase() === 'alias') {
-          query = query.or('platform.ilike.alias,platform.ilike.goat')
-        } else {
-          query = query.ilike('platform', params.platform)
-        }
-      }
-      if (params.date_from) query = query.gte('sold_date', params.date_from)
-      if (params.date_to) query = query.lte('sold_date', params.date_to)
-
-      const sortBy = params.sort_by || 'sold_date'
-      const sortOrder = params.sort_order || 'desc'
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' })
-
-      if (params.limit) {
-        query = query.range(params.offset || 0, (params.offset || 0) + params.limit - 1)
-      }
-
-      const { data, error: fetchError, count } = await query
-
-      if (fetchError) throw fetchError
-
-      const enrichedData = (data || []).map((item: any) => {
-        const costBasis = item.purchase_total || (item.purchase_price + (item.tax || 0) + (item.shipping || 0))
-        const salePrice = item.sold_price || item.sale_price || 0
-        const fees = item.sales_fee || 0
-        const margin_gbp = salePrice - costBasis - fees
-        const margin_percent = costBasis > 0 ? (margin_gbp / costBasis) * 100 : null
-
-        const isStockX = item.platform?.toLowerCase() === 'stockx'
-
-        return {
-          ...item,
-          size: item.size_uk,
-          margin_gbp,
-          margin_percent,
-          commission: isStockX ? fees : null,
-          net_payout: isStockX ? (salePrice - fees) : null,
-        } as SalesItem
-      })
-
-      setItems(enrichedData)
-      setTotal(count || 0)
+      setItems(result.data)
+      setTotal(result.count)
     } catch (err: any) {
-      console.error('Sales fetch error:', err)
+      console.error('[useSalesTable] Fetch error:', err)
       const errorMessage = err?.message || err?.toString() || 'Failed to load sales'
-      console.error('Error details:', { message: errorMessage, code: err?.code, details: err?.details })
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -164,7 +206,7 @@ export function useSalesTable(params: SalesTableParams = {}) {
   }
 
   useEffect(() => {
-    fetchSales()
+    loadSales()
   }, [
     params.search,
     params.brand,
@@ -184,8 +226,14 @@ export function useSalesTable(params: SalesTableParams = {}) {
     loading,
     error,
     total,
-    refetch: fetchSales,
+    refetch: loadSales,
   }
+}
+
+// Format date to YYYY-MM-DD (date only, no time/timezone)
+function formatDateForCSV(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  return dateStr.split('T')[0]
 }
 
 // Export CSV helper
@@ -218,9 +266,9 @@ export function exportSalesToCSV(items: SalesItem[], filename = 'sales-export.cs
     item.size_uk || '',
     item.condition || '',
     item.purchase_price?.toFixed(2) || '0.00',
-    item.purchase_date || '',
+    formatDateForCSV(item.purchase_date),
     item.sold_price?.toFixed(2) || '0.00',
-    item.sold_date || '',
+    formatDateForCSV(item.sold_date),
     item.platform || '',
     item.sales_fee?.toFixed(2) || '0.00',
     item.margin_gbp?.toFixed(2) || '0.00',

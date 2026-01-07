@@ -75,15 +75,16 @@ export interface AliasCatalogItem {
   sku: string;
   brand: string;
   gender?: Gender;
-  release_date?: string; // YYYY-MM-DD
+  release_date?: string; // ISO 8601 timestamp
+  product_category?: string; // e.g., "PRODUCT_CATEGORY_SHOES"
   product_category_v2?: ProductCategory;
   product_type?: string; // e.g., "sneakers"
   size_unit: SizeUnit;
   allowed_sizes: AliasSize[];
-  minimum_listing_price_cents: number;
-  maximum_listing_price_cents: number;
+  minimum_listing_price_cents: string; // ⚠️ STRING not number (cents as string)
+  maximum_listing_price_cents: string; // ⚠️ STRING not number (cents as string)
   main_picture_url?: string;
-  retail_price_cents?: number;
+  retail_price_cents?: string; // ⚠️ STRING not number (cents as string)
   colorway?: string;
   nickname?: string;
   requires_listing_pictures: boolean;
@@ -110,14 +111,17 @@ export interface AliasAvailability {
   highest_offer_price_cents?: string;
   last_sold_listing_price_cents?: string;
   global_indicator_price_cents?: string;
+  number_of_listings?: number;
+  number_of_offers?: number;
 }
 
 export interface AliasPricingVariant {
   size: number;
+  size_unit?: string;  // 'US', 'UK', 'EU', etc. (optional for backwards compatibility)
   product_condition: ProductCondition;
   packaging_condition: PackagingCondition;
   consigned?: boolean;
-  availability: AliasAvailability;
+  availability: AliasAvailability | null;
 }
 
 export interface ListPricingInsightsResponse {
@@ -129,21 +133,31 @@ export interface GetPricingInsightsResponse {
 }
 
 export interface OfferHistogramBin {
-  price_cents: string;
-  count: number;
+  offer_price_cents: string; // Price in cents (as string)
+  count: string; // Count of offers at this price (as string)
 }
 
-export interface OfferHistogramResponse {
+export interface OfferHistogram {
   bins: OfferHistogramBin[];
 }
 
-export interface ListingHistogramBin {
-  price_cents: string;
-  count: number;
+export interface OfferHistogramResponse {
+  offer_histogram: OfferHistogram;
 }
 
-export interface ListingHistogramResponse {
-  bins: ListingHistogramBin[];
+// Note: listing_histogram does NOT exist in Alias API
+// Only offer_histogram is available
+
+export interface RecentSale {
+  purchased_at: string;       // ISO 8601 timestamp
+  price_cents: string;        // Sale price in CENTS as STRING
+  size: number;               // Numeric size
+  consigned: boolean;         // Consignment flag
+  catalog_id: string;         // Catalog ID
+}
+
+export interface RecentSalesResponse {
+  recent_sales: RecentSale[];
 }
 
 // ============================================================================

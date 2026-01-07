@@ -92,8 +92,14 @@ export class StockxListingsService {
   ): Promise<ListingOperation> {
     const client = getStockxClient(userId)
 
+    // StockX API requires amount as integer string (whole units, no decimals)
+    // Pattern required: /^\d+$/ - digits only
+    const amountInt = typeof request.amount === 'number'
+      ? Math.round(request.amount)
+      : Math.round(Number(request.amount))
+
     const payload = {
-      amount: String(request.amount),  // Must be string per StockX API docs
+      amount: String(amountInt),  // Must be integer string per StockX API
       variantId: String(request.variantId),
       currencyCode: request.currencyCode || 'GBP',
       expiresAt: request.expiresAt,
@@ -198,7 +204,11 @@ export class StockxListingsService {
 
     const payload: any = {}
     if (updates.amount !== undefined) {
-      payload.amount = String(updates.amount)
+      // StockX API requires amount as integer string (whole units, no decimals)
+      const amountInt = typeof updates.amount === 'number'
+        ? Math.round(updates.amount)
+        : Math.round(Number(updates.amount))
+      payload.amount = String(amountInt)
       payload.currencyCode = updates.currencyCode || 'GBP'
     }
     if (updates.expiresAt) {

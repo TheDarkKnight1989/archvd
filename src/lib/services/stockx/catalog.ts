@@ -11,6 +11,7 @@
 
 import { StockxClient, getStockxClient } from './client'
 import { withStockxRetry } from './retry'
+import { withStockXSnapshot } from '../raw-snapshots/stockx-logger'
 
 // ============================================================================
 // DIRECTIVE SECTION 3: DATA SHAPE REQUIREMENTS
@@ -246,9 +247,13 @@ export class StockxCatalogService {
     logDevRequest(url, { query, pageSize: limit, pageNumber, currencyCode })
 
     try {
-      const response = await withStockxRetry(
-        () => this.client.request<StockxSearchResponse>(url),
-        { label: `Search products: ${query}` }
+      const response = await withStockXSnapshot(
+        'catalog_search',
+        () => withStockxRetry(
+          () => this.client.request<StockxSearchResponse>(url),
+          { label: `Search products: ${query}` }
+        ),
+        { styleId: query, currencyCode }
       )
 
       logDevResponse(url, response)
@@ -265,10 +270,18 @@ export class StockxCatalogService {
         return []
       }
 
-      const products = response.products.map((product) => {
-        validateProduct(product, 'search')
-        return this.normalizeProduct(product)
-      })
+      // Filter out invalid products and log warnings instead of throwing
+      const products = response.products
+        .filter((product) => {
+          try {
+            validateProduct(product, 'search')
+            return true
+          } catch (error) {
+            console.warn('[StockX Catalog] Skipping invalid product:', error instanceof Error ? error.message : error)
+            return false
+          }
+        })
+        .map((product) => this.normalizeProduct(product))
 
       console.log('[StockX Catalog] Found products:', products.length)
       return products
@@ -291,9 +304,13 @@ export class StockxCatalogService {
     logDevRequest(url, { productId })
 
     try {
-      const response = await withStockxRetry(
-        () => this.client.request<StockxProductResponse>(url),
-        { label: `Get product: ${productId}` }
+      const response = await withStockXSnapshot(
+        'product',
+        () => withStockxRetry(
+          () => this.client.request<StockxProductResponse>(url),
+          { label: `Get product: ${productId}` }
+        ),
+        { productId }
       )
 
       logDevResponse(url, response)
@@ -342,9 +359,13 @@ export class StockxCatalogService {
     logDevRequest(url, { gtin, currencyCode })
 
     try {
-      const response = await withStockxRetry(
-        () => this.client.request<StockxGTINResponse>(url),
-        { label: `Lookup GTIN: ${gtin}` }
+      const response = await withStockXSnapshot(
+        'variant_gtin',
+        () => withStockxRetry(
+          () => this.client.request<StockxGTINResponse>(url),
+          { label: `Lookup GTIN: ${gtin}` }
+        ),
+        { currencyCode }
       )
 
       logDevResponse(url, response)
@@ -408,9 +429,13 @@ export class StockxCatalogService {
     logDevRequest(url, { productId })
 
     try {
-      const response = await withStockxRetry(
-        () => this.client.request<StockxVariantsResponse>(url),
-        { label: `Get variants: ${productId}` }
+      const response = await withStockXSnapshot(
+        'variants',
+        () => withStockxRetry(
+          () => this.client.request<StockxVariantsResponse>(url),
+          { label: `Get variants: ${productId}` }
+        ),
+        { productId }
       )
 
       logDevResponse(url, response)
@@ -451,13 +476,25 @@ export class StockxCatalogService {
    * DIRECTIVE SECTION 3: Returns { productId, styleId, productName, brand, image }
    */
   private normalizeProduct(raw: any): StockxProduct {
+    // Construct image URL from urlKey if media not present (V2 search API)
+    let image = raw.media?.imageUrl || raw.media?.thumbUrl || null
+    if (!image && raw.urlKey) {
+      // Convert urlKey to title case for image path
+      // e.g., "air-jordan-1-retro-low-og-chicago-2025" → "Air-Jordan-1-Retro-Low-OG-Chicago-2025"
+      const imageKey = raw.urlKey
+        .split('-')
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('-')
+      image = `https://images.stockx.com/images/${imageKey}-Product.jpg`
+    }
+
     return {
       // DIRECTIVE REQUIRED FIELDS
       productId: raw.productId || raw.id,
       styleId: raw.styleId || '',
       productName: raw.title || '', // title → productName
       brand: raw.brand || '',
-      image: raw.media?.imageUrl || raw.media?.thumbUrl || null, // V1 compat: imageUrl/thumbUrl → image
+      image,
 
       // EXTENDED FIELDS (V2 API: extracted from productAttributes)
       colorway: raw.productAttributes?.colorway || raw.colorway,

@@ -25,7 +25,7 @@ export type ProductLineItemProps = {
   marketImageUrl?: string | null
   inventoryImageUrl?: string | null
   provider?: 'stockx' | 'alias' | 'ebay' | 'seed' | null
-  imageSource?: 'local' | 'stockx' | null
+  imageSource?: 'local' | null // StockX images removed (unreliable)
 
   // Text
   brand: string
@@ -130,15 +130,20 @@ export function ProductLineItem({
   className,
 }: ProductLineItemProps) {
   // Convert size to user's preferred system
+  // MANUAL ITEM FIX: For "other" category with OS size, skip conversion
   const convertedSize = React.useMemo(() => {
     if (!sizeUk || category === 'pokemon') return null
+    // Manual items with category="other" and size="OS" should display "OS" as-is
+    if (category === 'other' && sizeUk === 'OS') return 'OS'
     return convertSize(sizeUk, sizeSystem, sizeGender)
   }, [sizeUk, sizeSystem, sizeGender, category])
 
   const sizeLabel = React.useMemo(() => {
     if (!convertedSize) return null
+    // MANUAL ITEM FIX: For "other" category with OS size, return "OS" without system prefix
+    if (category === 'other' && convertedSize === 'OS') return 'OS'
     return formatSizeLabel(convertedSize, sizeSystem, sizeGender)
-  }, [convertedSize, sizeSystem, sizeGender])
+  }, [convertedSize, sizeSystem, sizeGender, category])
 
   // Resolve product image with fallback chain
   const resolvedImage = React.useMemo(() => {
@@ -222,12 +227,6 @@ export function ProductLineItem({
           />
         )}
 
-        {/* StockX badge overlay */}
-        {imageSource === 'stockx' && !hasError && (
-          <div className="absolute bottom-0.5 right-0.5 bg-emerald-600 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none shadow-sm">
-            S
-          </div>
-        )}
       </div>
 
       {/* Text content */}

@@ -6,9 +6,30 @@
 
 export type Currency = 'GBP' | 'EUR' | 'USD' | 'CAD' | 'AUD' | 'JPY'
 
+/**
+ * Full FX rates interface matching the database fx_rates table
+ */
 export interface FxRates {
   gbp_per_eur: number
   eur_per_gbp: number
+  gbp_per_usd: number
+  usd_per_gbp: number
+  // Derived rates (calculated)
+  eur_per_usd?: number
+  usd_per_eur?: number
+}
+
+/**
+ * Default FX rates (fallback when database unavailable)
+ * These should be updated periodically or fetched from API
+ */
+export const DEFAULT_FX_RATES: FxRates = {
+  gbp_per_eur: 0.836,
+  eur_per_gbp: 1.196,
+  gbp_per_usd: 0.796,
+  usd_per_gbp: 1.256,
+  eur_per_usd: 0.95,  // ~0.836 / 0.796 * 0.9
+  usd_per_eur: 1.05,
 }
 
 /**
@@ -21,6 +42,7 @@ export function formatGBP(value: number | null | undefined) {
 
 /**
  * Convert amount from one currency to another
+ * Supports GBP, EUR, USD conversions
  */
 export function convertCurrency(
   amount: number,
@@ -32,15 +54,54 @@ export function convertCurrency(
     return amount
   }
 
+  // Direct conversions
   if (fromCurrency === 'GBP' && toCurrency === 'EUR') {
     return amount * fxRates.eur_per_gbp
   }
-
   if (fromCurrency === 'EUR' && toCurrency === 'GBP') {
     return amount * fxRates.gbp_per_eur
   }
+  if (fromCurrency === 'GBP' && toCurrency === 'USD') {
+    return amount * fxRates.usd_per_gbp
+  }
+  if (fromCurrency === 'USD' && toCurrency === 'GBP') {
+    return amount * fxRates.gbp_per_usd
+  }
 
+  // EUR <-> USD (via GBP or direct if available)
+  if (fromCurrency === 'EUR' && toCurrency === 'USD') {
+    if (fxRates.usd_per_eur) {
+      return amount * fxRates.usd_per_eur
+    }
+    // Convert EUR -> GBP -> USD
+    const gbp = amount * fxRates.gbp_per_eur
+    return gbp * fxRates.usd_per_gbp
+  }
+  if (fromCurrency === 'USD' && toCurrency === 'EUR') {
+    if (fxRates.eur_per_usd) {
+      return amount * fxRates.eur_per_usd
+    }
+    // Convert USD -> GBP -> EUR
+    const gbp = amount * fxRates.gbp_per_usd
+    return gbp * fxRates.eur_per_gbp
+  }
+
+  // Unsupported currency pair - return original
   return amount
+}
+
+/**
+ * Convert amount to a target currency from a source currency
+ * Convenience wrapper with null handling
+ */
+export function convertToTargetCurrency(
+  amount: number | null | undefined,
+  fromCurrency: Currency,
+  toCurrency: Currency,
+  fxRates: FxRates
+): number | null {
+  if (amount == null) return null
+  return convertCurrency(amount, fromCurrency, toCurrency, fxRates)
 }
 
 /**

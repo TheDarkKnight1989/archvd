@@ -98,7 +98,7 @@ export async function getCatalogItem(
       thumbnail_url: item.main_picture_url || null, // Use same for now, can add thumbnail later
       category: item.product_category_v2 || null,
       colorway: item.colorway || null,
-      retail_price_cents: item.retail_price_cents || null,
+      retail_price_cents: item.retail_price_cents ? parseInt(item.retail_price_cents, 10) : null, // Parse string to number
       release_date: item.release_date || null,
       last_fetched_at: new Date().toISOString(),
     }

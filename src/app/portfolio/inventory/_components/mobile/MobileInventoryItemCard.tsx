@@ -11,6 +11,7 @@ import { PlainMoneyCell } from '@/lib/format/money'
 import { generateProductSlug } from '@/lib/utils/slug'
 import { MobileItemActionsSheet } from './MobileItemActionsSheet'
 import type { EnrichedLineItem } from '@/lib/portfolio/types'
+import type { InventoryV4Listing } from '@/lib/inventory-v4/types'
 
 interface MobileInventoryItemCardProps {
   item: EnrichedLineItem
@@ -37,13 +38,16 @@ export function MobileInventoryItemCard({
   const { convert, currency, symbol } = useCurrency()
   const [actionsSheetOpen, setActionsSheetOpen] = useState(false)
 
-  // Derive status from StockX listing
+  // V4: Extract StockX listing from adapter (source of truth)
+  const v4StockxListing = (item as { _v4StockxListing?: InventoryV4Listing | null })._v4StockxListing ?? null
+
+  // Derive status from V4 listing (source of truth)
   const status = useMemo(() => {
-    const stockxStatus = item.stockx?.listingStatus
-    if (stockxStatus === 'ACTIVE' || stockxStatus === 'PENDING') return 'Listed'
-    if (stockxStatus === 'INACTIVE') return 'Paused'
+    if (!v4StockxListing) return 'Unlisted'
+    if (v4StockxListing.status === 'active') return 'Listed'
+    if (v4StockxListing.status === 'paused') return 'Paused'
     return 'Unlisted'
-  }, [item.stockx?.listingStatus])
+  }, [v4StockxListing])
 
   // Status badge styling
   const statusBadge = useMemo(() => {
@@ -82,8 +86,8 @@ export function MobileInventoryItemCard({
     router.push(marketUrl)
   }
 
-  // Can list on StockX if mapped and not already listed
-  const canListOnStockX = !!item.stockx?.mapped && !item.stockx?.listingId
+  // Can list on StockX if mapped and not already listed (V4 source of truth)
+  const canListOnStockX = !!item.stockx?.mapped && !v4StockxListing
 
   // Last synced info
   const lastSyncText = useMemo(() => {
@@ -155,7 +159,22 @@ export function MobileInventoryItemCard({
               {/* Product Info */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-medium text-white line-clamp-2 mb-1 leading-tight">
-                  {item.brand} {item.model}
+                  {(() => {
+                    // MANUAL ITEM FIX: Detect manual items - show title only, no brand concatenation
+                    const isManual = !item.stockx_product_id && !item.alias_catalog_id
+                    const displayTitle = item.model?.trim() || item.sku?.trim() || 'Untitled'
+
+                    if (isManual) {
+                      // Manual items: just show the title
+                      return displayTitle
+                    } else {
+                      // Regular items: show brand + model, avoiding duplication
+                      const brand = item.brand?.trim() || ''
+                      return displayTitle.toLowerCase().startsWith(brand.toLowerCase())
+                        ? displayTitle
+                        : brand ? `${brand} ${displayTitle}`.trim() : displayTitle
+                    }
+                  })()}
                 </h3>
                 <p className="text-[11px] text-white/55 mono mb-1 leading-tight">{item.sku}</p>
                 <Badge variant="outline" className={cn('text-xs', statusBadge.className)}>
@@ -186,7 +205,13 @@ export function MobileInventoryItemCard({
               {/* Left Column */}
               <div className="space-y-2.5 pr-3 border-r border-soft/20">
                 <div>
-                  <div className="text-[11px] text-muted/70 mb-0.5">Size UK</div>
+                  {/* MANUAL ITEM FIX: For manual items with size="OS", show "Size" instead of "Size UK" */}
+                  <div className="text-[11px] text-muted/70 mb-0.5">
+                    {(() => {
+                      const isManual = !item.stockx_product_id && !item.alias_catalog_id
+                      return isManual && item.size_uk === 'OS' ? 'Size' : 'Size UK'
+                    })()}
+                  </div>
                   <div className="text-xs font-medium mono tabular-nums text-fg leading-tight">
                     {item.size_uk || '—'}
                   </div>

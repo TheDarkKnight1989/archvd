@@ -20,6 +20,16 @@ import { Check, X, Loader2, AlertCircle, TrendingUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils/cn'
 import type { EnrichedLineItem } from '@/lib/portfolio/types'
+import type { InventoryV4Listing } from '@/lib/inventory-v4/types'
+
+/**
+ * V4: Check if item has an active or paused StockX listing
+ * Source of truth is _v4StockxListing from the adapter
+ */
+function hasActiveStockxListing(item: EnrichedLineItem): boolean {
+  const v4Listing = (item as { _v4StockxListing?: InventoryV4Listing | null })._v4StockxListing
+  return !!v4Listing && (v4Listing.status === 'active' || v4Listing.status === 'paused')
+}
 
 // Use the actual type from inventory
 export type BulkListItem = EnrichedLineItem
@@ -54,7 +64,7 @@ export function BulkListOnStockXModal({
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<ListingResult[]>([])
 
-  // Filter to only listable items
+  // Filter to only listable items (V4: use _v4StockxListing as source of truth)
   const listableItems = useMemo(() => {
     return items.filter(item => {
       // Must have StockX mapping
@@ -62,24 +72,17 @@ export function BulkListOnStockXModal({
 
       if (!hasMapping) return false
 
-      // Must not already be listed (or listing must be inactive)
-      const isListed = !!item.stockx?.listingId &&
-        (item.stockx?.listingStatus === 'ACTIVE' || item.stockx?.listingStatus === 'PENDING')
-
-      return !isListed
+      // Must not already be listed (V4: check _v4StockxListing)
+      return !hasActiveStockxListing(item)
     })
   }, [items])
 
   const unmappedCount = items.length - listableItems.length - items.filter(item => {
-    const isAlreadyListed = !!item.stockx?.listingId &&
-      (item.stockx?.listingStatus === 'ACTIVE' || item.stockx?.listingStatus === 'PENDING')
-    return isAlreadyListed
+    return hasActiveStockxListing(item)
   }).length
 
   const alreadyListedCount = items.filter(item => {
-    const isAlreadyListed = !!item.stockx?.listingId &&
-      (item.stockx?.listingStatus === 'ACTIVE' || item.stockx?.listingStatus === 'PENDING')
-    return isAlreadyListed
+    return hasActiveStockxListing(item)
   }).length
 
   const setItemPrice = (itemId: string, price: string) => {
@@ -311,11 +314,11 @@ export function BulkListOnStockXModal({
                   >
                     {/* Product Header with Image */}
                     <div className="flex items-start gap-4">
-                      {/* Product Image - Alias → StockX → Inventory priority */}
-                      {(item.alias_image_url || item.image?.url || item.stockx_image_url || item.image?.src || item.image_url) && (
+                      {/* Product Image - Alias-first priority (StockX images removed) */}
+                      {(item.alias_image_url || item.image?.url || item.image?.src || item.image_url) && (
                         <div className="flex-shrink-0">
                           <img
-                            src={item.alias_image_url || item.image?.url || item.stockx_image_url || item.image?.src || item.image_url}
+                            src={item.alias_image_url || item.image?.url || item.image?.src || item.image_url}
                             alt={item.image?.alt || (item.model?.trim().toLowerCase().startsWith(item.brand?.toLowerCase()) ? item.model.trim() : `${item.brand} ${item.model}`.trim())}
                             className="w-20 h-20 object-cover rounded-lg border-2 border-border shadow-md"
                           />

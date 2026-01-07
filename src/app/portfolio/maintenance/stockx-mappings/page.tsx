@@ -1,3 +1,9 @@
+/**
+ * INTENTIONALLY V3
+ * This admin page manages V3 `inventory_market_links` mappings.
+ * V4 uses `inventory_v4_style_catalog` for product linking.
+ * Kept for backwards compatibility and debugging V3 data.
+ */
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { createClient as createServiceClient } from '@/lib/supabase/service'

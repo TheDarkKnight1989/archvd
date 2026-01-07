@@ -53,6 +53,10 @@ export type MonthlyPnL = {
 /**
  * EnrichedLineItem - V3 data type for InventoryTableV3
  * WHY: Unified interface for inventory display with all computed values
+ *
+ * @deprecated This type is being replaced by InventoryV4ItemFull.
+ *             Use the V4 type directly in new code.
+ *             See: src/lib/inventory-v4/types.ts
  */
 export type EnrichedLineItem = {
   id: string;
@@ -62,12 +66,25 @@ export type EnrichedLineItem = {
   sku: string;
   size_uk?: number | string | null;
 
-  // Image resolved through fallback chain
+  // ==========================================================================
+  // V4 TRANSITION FIELDS
+  // These are populated by the V4→V3 adapter for backwards compatibility.
+  // Access the V4 types directly in new code.
+  // ==========================================================================
+  /** @deprecated Use InventoryV4ItemFull.style.stockx_product_id */
+  stockx_product_id?: string | null;
+  /** @deprecated Use InventoryV4ItemFull.style.alias_catalog_id */
+  alias_catalog_id?: string | null;
+  /** @internal V4 StockX listing - DO NOT use in new code, use InventoryV4Listing */
+  _v4StockxListing?: unknown;
+  /** @internal V4 Alias listing - DO NOT use in new code, use InventoryV4Listing */
+  _v4AliasListing?: unknown;
+
+  // Image resolved through fallback chain (Alias-first priority)
   image: { url: string; alt: string };
-  imageSource?: 'alias' | 'stockx' | null;
+  imageSource?: 'alias' | 'catalog' | 'provider' | 'brand' | 'neutral' | null;
   // Legacy image fields (for backwards compatibility)
   alias_image_url?: string | null;
-  stockx_image_url?: string | null;
   image_url?: string | null;
 
   // Purchase info

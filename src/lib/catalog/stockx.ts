@@ -9,7 +9,7 @@
 
 import { createClient as createServiceClient } from '@/lib/supabase/service'
 import { StockxCatalogService } from '@/lib/services/stockx/catalog'
-import { normalizeSku } from '@/lib/utils/sku-normalize'
+import { normalizeSkuForMatching } from '@/lib/sku/normalizeSkuForMatching'
 
 // ============================================================================
 // Types
@@ -69,40 +69,122 @@ export async function createOrUpdateProductFromStockx({
   console.log('[Catalog] Creating product from StockX:', { sku, userId: userId ? 'yes' : 'no' })
 
   try {
-    const normalizedSku = normalizeSku(sku)
+    // PHASE 3: GENERIC SKU MATCHING
+    // Use canonical normalization for consistent matching across all SKUs
+    const canonicalInputSku = normalizeSkuForMatching(sku)
+
+    if (canonicalInputSku === null) {
+      console.error('[Catalog] ❌ Invalid SKU format:', sku)
+      return {
+        success: false,
+        error: `Invalid SKU format: ${sku}`,
+      }
+    }
+
     const supabase = createServiceClient()
 
     // ========================================================================
     // Step 1: Search StockX for product (GBP currency)
     // ========================================================================
 
-    console.log('[Catalog] Searching StockX...')
+    console.log('[Catalog] Searching StockX with canonical SKU...')
     const catalogService = new StockxCatalogService(userId)
 
-    // Search with specified currency (determines region)
-    const searchResults = await catalogService.searchProducts(normalizedSku, {
-      limit: 5,
+    console.log('[Catalog] 🔍 SEARCH DEBUG:', {
+      originalSku: sku,
+      canonicalSku: canonicalInputSku,
+      currency: currency
+    })
+
+    // Search with the original SKU (let StockX do its own fuzzy matching)
+    const searchResults = await catalogService.searchProducts(sku, {
+      limit: 10, // Fetch more to account for variations
       currencyCode: currency
     })
 
     if (!searchResults || searchResults.length === 0) {
-      console.error('[Catalog] ❌ No StockX results found for:', normalizedSku)
+      console.error('[Catalog] ❌ No StockX results found for SKU:', sku)
+      console.error('[Catalog] StockX returned 0 results - product does not exist on StockX')
       return {
         success: false,
-        error: `Product not found on StockX for SKU: ${normalizedSku}`,
+        error: `Product not found on StockX for SKU: ${sku}`,
       }
     }
 
-    // Find exact SKU match
-    const exactMatch = searchResults.find(
-      p => normalizeSku(p.styleId) === normalizedSku
-    )
+    // Log all results with their canonical SKUs for debugging
+    console.log('[Catalog] 📦 StockX returned', searchResults.length, 'results')
+    console.log('[Catalog] First 3 results:', searchResults.slice(0, 3).map(p => ({
+      productId: p.productId,
+      styleId: p.styleId,
+      canonicalStyleId: normalizeSkuForMatching(p.styleId),
+      productName: p.productName,
+      brand: p.brand
+    })))
+
+    // PHASE 3: GENERIC MATCHING RULE
+    // Find exact match using canonical SKU comparison
+    let exactMatch = null
+    let skippedInvalidCount = 0
+
+    for (const product of searchResults) {
+      const canonicalProductSku = normalizeSkuForMatching(product.styleId)
+
+      // Skip products with invalid SKUs but count them
+      if (canonicalProductSku === null) {
+        console.warn('[Catalog] ⚠️ Skipping result with invalid SKU:', product.styleId)
+        skippedInvalidCount++
+        continue
+      }
+
+      // Match using canonical comparison
+      if (canonicalProductSku === canonicalInputSku) {
+        exactMatch = product
+        console.log('[Catalog] ✅ Found canonical match:', {
+          input: canonicalInputSku,
+          matched: canonicalProductSku,
+          productId: product.productId
+        })
+        break
+      }
+    }
+
+    // FALLBACK: If canonical matching failed, try case-insensitive direct string match
+    // This handles cases where normalization is too strict
+    if (!exactMatch && skippedInvalidCount === 0) {
+      console.log('[Catalog] 🔄 No canonical match, trying fallback matching (case-insensitive)...')
+      const normalizedInput = sku.trim().toUpperCase().replace(/\s+/g, '-')
+
+      for (const product of searchResults) {
+        const normalizedProductSku = product.styleId.trim().toUpperCase().replace(/\s+/g, '-')
+
+        if (normalizedProductSku === normalizedInput) {
+          exactMatch = product
+          console.log('[Catalog] ✅ Found fallback match:', {
+            input: normalizedInput,
+            matched: normalizedProductSku,
+            productId: product.productId
+          })
+          break
+        }
+      }
+    }
 
     if (!exactMatch) {
-      console.error('[Catalog] ❌ No exact SKU match found in StockX results')
+      console.error('[Catalog] ❌ No canonical SKU match found in StockX results')
+      console.error('[Catalog] Input SKU:', sku)
+      console.error('[Catalog] Canonical Input SKU:', canonicalInputSku)
+      console.error('[Catalog] StockX results comparison:')
+      searchResults.slice(0, 5).forEach((p, i) => {
+        const canonical = normalizeSkuForMatching(p.styleId)
+        console.error(`[Catalog]   [${i + 1}] ${p.styleId} → ${canonical} ${canonical === canonicalInputSku ? '✓ MATCH' : '✗ no match'}`)
+      })
+      console.error('[Catalog] Why this might happen:')
+      console.error('[Catalog]   1. SKU normalization is too strict (filtering out valid matches)')
+      console.error('[Catalog]   2. StockX uses a different SKU format than expected')
+      console.error('[Catalog]   3. Product exists on StockX but with a different styleId')
       return {
         success: false,
-        error: `No exact SKU match found on StockX for: ${normalizedSku}`,
+        error: `No exact SKU match found on StockX for: ${sku}`,
       }
     }
 
@@ -118,7 +200,7 @@ export async function createOrUpdateProductFromStockx({
     // ========================================================================
 
     console.log('[Catalog] Upserting stockx_products...')
-    const { error: productError } = await supabase
+    const { data: stockxProductData, error: productError } = await supabase
       .from('stockx_products')
       .upsert({
         stockx_product_id: product.productId,
@@ -137,63 +219,59 @@ export async function createOrUpdateProductFromStockx({
         onConflict: 'stockx_product_id',
         ignoreDuplicates: false, // Always update with latest data
       })
+      .select('id')
+      .single()
 
-    if (productError) {
+    if (productError || !stockxProductData) {
       console.error('[Catalog] Failed to upsert stockx_products:', productError)
       return {
         success: false,
-        error: `Failed to save product: ${productError.message}`,
+        error: `Failed to save product: ${productError?.message || 'No data returned'}`,
       }
     }
 
-    console.log('[Catalog] ✅ stockx_products upserted')
+    console.log('[Catalog] ✅ stockx_products upserted, id:', stockxProductData.id)
 
     // ========================================================================
-    // Step 3: Fetch and upsert ALL variants
+    // Step 3: Create/update product_catalog with REAL data (MUST BE FIRST)
     // ========================================================================
 
-    console.log('[Catalog] Fetching variants from StockX...')
-    const variants = await catalogService.getProductVariants(product.productId)
-
-    if (!variants || variants.length === 0) {
-      console.warn('[Catalog] ⚠️ No variants found for product')
-      // Continue anyway - some products might not have size variants
-    } else {
-      console.log('[Catalog] Found', variants.length, 'variants')
-
-      // Upsert all variants
-      for (const variant of variants) {
-        const { error: variantError } = await supabase
-          .from('stockx_variants')
-          .upsert({
-            stockx_variant_id: variant.variantId,
-            stockx_product_id: product.productId,
-            size_display: variant.variantName,
-            variant_value: variant.variantValue, // StockX size value (usually US)
-            size_chart: variant.sizeChart || null, // Store size chart data for accurate size matching
-          }, {
-            onConflict: 'stockx_variant_id',
-            ignoreDuplicates: false,
-          })
-
-        if (variantError) {
-          console.error('[Catalog] Failed to upsert variant:', variant.variantId, variantError)
-          // Continue with other variants
-        }
+    // BUG FIX #6: Validate SKU before upsert
+    if (!product.styleId || product.styleId.trim() === '') {
+      console.error('[Catalog] Invalid product styleId:', product)
+      return {
+        success: false,
+        error: 'Product has no valid SKU (styleId is empty)',
       }
-
-      console.log('[Catalog] ✅ All variants upserted')
     }
 
-    // ========================================================================
-    // Step 4: Create/update product_catalog with REAL data
-    // ========================================================================
+    const productSku = product.styleId.trim()
+
+    // Check for existing entry with different brand (data quality warning)
+    const { data: existing } = await supabase
+      .from('product_catalog')
+      .select('brand, model, stockx_product_id')
+      .eq('sku', productSku)
+      .single()
+
+    if (existing && existing.brand !== (product.brand || 'Unknown')) {
+      console.warn('[Catalog] ⚠️ SKU collision detected:', {
+        sku: productSku,
+        existingBrand: existing.brand,
+        existingModel: existing.model,
+        newBrand: product.brand,
+        newModel: product.productName,
+        existingStockxId: existing.stockx_product_id,
+        newStockxId: product.productId,
+      })
+      // Continue with update - StockX is source of truth
+    }
 
     console.log('[Catalog] Upserting product_catalog...')
     const { data: catalogData, error: catalogError } = await supabase
       .from('product_catalog')
       .upsert({
-        sku: normalizedSku,
+        sku: productSku, // Use validated/trimmed SKU
         brand: product.brand || 'Unknown',
         model: product.productName, // Use full product name from StockX
         colorway: product.colorway || null,
@@ -225,6 +303,44 @@ export async function createOrUpdateProductFromStockx({
       brand: catalogData.brand,
       model: catalogData.model,
     })
+
+    // ========================================================================
+    // Step 4: Fetch and upsert ALL variants (using product_id from stockx_products)
+    // ========================================================================
+
+    console.log('[Catalog] Fetching variants from StockX...')
+    const variants = await catalogService.getProductVariants(product.productId)
+
+    if (!variants || variants.length === 0) {
+      console.warn('[Catalog] ⚠️ No variants found for product')
+      // Continue anyway - some products might not have size variants
+    } else {
+      console.log('[Catalog] Found', variants.length, 'variants')
+
+      // Upsert all variants with product_id from stockx_products (correct FK reference)
+      for (const variant of variants) {
+        const { error: variantError } = await supabase
+          .from('stockx_variants')
+          .upsert({
+            product_id: stockxProductData.id, // ✅ FIXED: Use stockx_products.id (correct FK)
+            stockx_variant_id: variant.variantId,
+            stockx_product_id: product.productId,
+            size_display: variant.variantName,
+            variant_value: variant.variantValue, // StockX size value (usually US)
+            size_chart: variant.sizeChart || null, // Store size chart data for accurate size matching
+          }, {
+            onConflict: 'stockx_variant_id',
+            ignoreDuplicates: false,
+          })
+
+        if (variantError) {
+          console.error('[Catalog] Failed to upsert variant:', variant.variantId, variantError)
+          // Continue with other variants
+        }
+      }
+
+      console.log('[Catalog] ✅ All variants upserted')
+    }
 
     // ========================================================================
     // Success

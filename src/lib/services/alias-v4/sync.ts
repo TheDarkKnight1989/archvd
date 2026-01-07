@@ -1092,12 +1092,18 @@ export async function fullSyncAliasProductByCatalogId(
     // ========================================================================
     // 7. Success Criteria
     // ========================================================================
-    // Must sync at least 50% of market data
-    // Exception: If <4 variants, must sync all
-    const totalVariants = insertedVariants.length;
-    const minRequired = totalVariants < 4 ? totalVariants : Math.ceil(totalVariants * 0.5);
-
-    result.success = result.counts.marketDataRefreshed >= minRequired;
+    // For full sync: Must sync at least 1 market data row (API may return sparse data)
+    // If no market data at all, record an error
+    if (result.counts.marketDataRefreshed === 0) {
+      result.errors.push({
+        stage: 'market_data',
+        error: `No market data available from API (${insertedVariants.length} variants created but 0 with actionable prices)`,
+      });
+      result.success = false;
+    } else {
+      // Success - we got at least some market data
+      result.success = true;
+    }
   } catch (err) {
     result.errors.push({
       stage: currentStage,
@@ -1303,8 +1309,18 @@ export async function refreshAliasProductByCatalogId(
     // ========================================================================
     // 5. Success Criteria
     // ========================================================================
-    const minRequired = variants.length < 4 ? variants.length : Math.ceil(variants.length * 0.5);
-    result.success = result.counts.marketDataRefreshed >= minRequired;
+    // For refresh: Must sync at least 1 market data row
+    // Many variants may not have active listings/market data - that's normal
+    if (result.counts.marketDataRefreshed === 0) {
+      result.errors.push({
+        stage: 'market_data',
+        error: `No market data available from API (${variants.length} variants in DB but 0 with actionable prices from API)`,
+      });
+      result.success = false;
+    } else {
+      // Success - we refreshed at least some market data
+      result.success = true;
+    }
   } catch (err) {
     result.errors.push({
       stage: 'variants',

@@ -8,23 +8,32 @@
  * - Automation rules (match lowest, auto-lower, auto-match)
  * - Guards and limits (min profit margin, price floor)
  * - Fee calculation and net payout preview
+ *
+ * Supports both CREATE and REPRICE modes.
  */
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { TrendingDown, Target, Shield, Eye, Sparkles, Info } from 'lucide-react'
+import { Target, Shield, Eye, Sparkles, Info, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { calculateListingFees } from '@/hooks/useStockxListings'
 import { useUserSettings } from '@/hooks/useUserSettings'
+import type { StockXListingModalItem } from '@/lib/inventory-v4/stockx-listing-adapter'
+
+// =============================================================================
+// TYPES
+// =============================================================================
 
 interface CreateListingTabProps {
-  item: any
+  item: StockXListingModalItem
   currency: string
   onSubmit: (data: ListingFormData) => Promise<void>
   loading: boolean
+  /** If true, modal is in reprice mode (updating existing listing) */
+  isReprice?: boolean
 }
 
 export interface ListingFormData {
@@ -37,17 +46,31 @@ export interface ListingFormData {
   minPriceFloor: number | null
 }
 
-export function CreateListingTab({ item, currency, onSubmit, loading }: CreateListingTabProps) {
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
+export function CreateListingTab({
+  item,
+  currency,
+  onSubmit,
+  loading,
+  isReprice = false,
+}: CreateListingTabProps) {
   // Fetch user settings for seller level
   const { settings } = useUserSettings()
 
-  // Extract market data
-  const lowestAsk = item.market?.price || item.stockx?.lowestAsk || null
-  const highestBid = item.market?.highestBid || item.stockx?.highestBid || null
-  const invested = item.invested || item.avgCost || 0
+  // Extract market data from typed item
+  const lowestAsk = item.lowestAsk
+  const highestBid = item.highestBid
+  const invested = item.purchasePrice ?? 0
 
-  // Form state
-  const [askPrice, setAskPrice] = useState('')
+  // Form state - pre-fill with existing price if repricing
+  const [askPrice, setAskPrice] = useState(
+    isReprice && item.existingListing
+      ? item.existingListing.listed_price.toFixed(0)
+      : ''
+  )
   const [matchLowestAsk, setMatchLowestAsk] = useState(false)
   const [instantSell, setInstantSell] = useState(false)
   const [autoLowerWeekly, setAutoLowerWeekly] = useState(false)
@@ -66,7 +89,8 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
   // Format currency
   const formatPrice = (amount: number | null): string => {
     if (amount === null) return 'N/A'
-    const symbol = currency === 'GBP' ? '£' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : ''
+    const symbol =
+      currency === 'GBP' ? '£' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : ''
     return `${symbol}${amount.toFixed(0)}`
   }
 
@@ -94,12 +118,21 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
     })
   }
 
+  // CTA button text
+  const ctaText = loading
+    ? isReprice
+      ? 'Updating Price...'
+      : 'Creating Listing...'
+    : isReprice
+      ? 'Update Price'
+      : 'List on StockX'
+
   return (
     <div className="space-y-6">
       {/* Ask Price Input */}
       <div className="space-y-2">
         <Label htmlFor="askPrice" className="text-sm font-semibold text-fg">
-          Ask Price ({currency})
+          {isReprice ? 'New Ask Price' : 'Ask Price'} ({currency})
         </Label>
         <Input
           id="askPrice"
@@ -129,7 +162,7 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
                 onClick={() => applySuggestion(lowestAsk)}
                 className="px-3 py-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 border-2 border-blue-500/50 hover:bg-blue-500/30 hover:border-blue-500 transition-all duration-120 text-left shadow-lg shadow-blue-500/10"
               >
-                <div className="text-xs text-muted mb-1 font-medium">⚡ Match Lowest Ask</div>
+                <div className="text-xs text-muted mb-1 font-medium">Match Lowest Ask</div>
                 <div className="text-sm font-bold text-blue-400 mono">{formatPrice(lowestAsk)}</div>
               </button>
             )}
@@ -140,8 +173,10 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
                 onClick={() => applySuggestion(lowestAsk * 0.95, true)}
                 className="px-3 py-2.5 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10 border-2 border-accent/50 hover:bg-accent/30 hover:border-accent transition-all duration-120 text-left shadow-lg shadow-accent/10"
               >
-                <div className="text-xs text-muted mb-1 font-medium">🔥 Beat by 5%</div>
-                <div className="text-sm font-bold text-accent mono">{formatPrice(Math.floor(lowestAsk * 0.95))}</div>
+                <div className="text-xs text-muted mb-1 font-medium">Beat by 5%</div>
+                <div className="text-sm font-bold text-accent mono">
+                  {formatPrice(Math.floor(lowestAsk * 0.95))}
+                </div>
               </button>
             )}
 
@@ -151,8 +186,10 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
                 onClick={() => applySuggestion(highestBid)}
                 className="px-3 py-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 border-2 border-emerald-500/50 hover:bg-emerald-500/30 hover:border-emerald-500 transition-all duration-120 text-left shadow-lg shadow-emerald-500/10"
               >
-                <div className="text-xs text-muted mb-1 font-medium">💰 Instant Sell</div>
-                <div className="text-sm font-bold text-emerald-400 mono">{formatPrice(highestBid)}</div>
+                <div className="text-xs text-muted mb-1 font-medium">Instant Sell</div>
+                <div className="text-sm font-bold text-emerald-400 mono">
+                  {formatPrice(highestBid)}
+                </div>
               </button>
             )}
           </div>
@@ -179,7 +216,7 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
                 Match lowest ask automatically
               </div>
               <div className="text-xs text-muted mt-0.5">
-                Keep your listing competitive by matching the market's lowest ask price
+                Keep your listing competitive by matching the market&apos;s lowest ask price
               </div>
             </div>
           </label>
@@ -227,11 +264,9 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
                 className="mt-0.5"
               />
               <div className="flex-1">
-                <div className="text-sm font-medium text-fg">
-                  Auto-match lowest ask ± %
-                </div>
+                <div className="text-sm font-medium text-fg">Auto-match lowest ask ± %</div>
                 <div className="text-xs text-muted mt-0.5 mb-2">
-                  Stay within a percentage range of the market's lowest ask
+                  Stay within a percentage range of the market&apos;s lowest ask
                 </div>
                 {autoMatchPercent && (
                   <Input
@@ -313,28 +348,41 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-muted">Transaction Fee ({(fees.transactionFeeRate * 100).toFixed(1)}%):</span>
-              <span className="font-medium mono text-red-400">-{formatPrice(fees.transactionFee)}</span>
+              <span className="text-muted">
+                Transaction Fee ({(fees.transactionFeeRate * 100).toFixed(1)}%):
+              </span>
+              <span className="font-medium mono text-red-400">
+                -{formatPrice(fees.transactionFee)}
+              </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-muted">Processing Fee ({(fees.processingFeeRate * 100).toFixed(1)}%):</span>
-              <span className="font-medium mono text-red-400">-{formatPrice(fees.processingFee)}</span>
+              <span className="text-muted">
+                Processing Fee ({(fees.processingFeeRate * 100).toFixed(1)}%):
+              </span>
+              <span className="font-medium mono text-red-400">
+                -{formatPrice(fees.processingFee)}
+              </span>
             </div>
 
             <div className="border-t border-border pt-2 flex items-center justify-between">
               <span className="font-semibold text-fg">Net Payout:</span>
-              <span className="font-bold text-lg mono text-[#00FF94]">{formatPrice(netPayout)}</span>
+              <span className="font-bold text-lg mono text-[#00FF94]">
+                {formatPrice(netPayout)}
+              </span>
             </div>
 
             {invested > 0 && (
               <div className="flex items-center justify-between">
                 <span className="text-muted">Profit:</span>
-                <span className={cn(
-                  'font-semibold mono',
-                  profit >= 0 ? 'text-[#00FF94]' : 'text-red-400'
-                )}>
-                  {profit >= 0 ? '+' : ''}{formatPrice(profit)} ({profitMargin.toFixed(1)}%)
+                <span
+                  className={cn(
+                    'font-semibold mono',
+                    profit >= 0 ? 'text-[#00FF94]' : 'text-red-400'
+                  )}
+                >
+                  {profit >= 0 ? '+' : ''}
+                  {formatPrice(profit)} ({profitMargin.toFixed(1)}%)
                 </span>
               </div>
             )}
@@ -349,7 +397,8 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
           disabled={loading || !askPrice || askPriceNum <= 0}
           className="flex-1 h-12 bg-[#00FF94] hover:bg-[#00E085] text-black font-bold text-base shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-120"
         >
-          {loading ? 'Creating Listing...' : 'List on StockX'}
+          {isReprice && <RefreshCw className="h-4 w-4 mr-2" />}
+          {ctaText}
         </Button>
 
         <Button
@@ -365,8 +414,9 @@ export function CreateListingTab({ item, currency, onSubmit, loading }: CreateLi
       {/* Educational Note */}
       <div className="rounded-xl bg-gradient-to-br from-accent/20 to-accent/10 border-2 border-accent/40 shadow-lg shadow-accent/10 p-4">
         <p className="text-xs text-fg leading-relaxed">
-          <span className="font-bold text-accent">Note:</span> Automation rules are saved but not yet active.
-          Full automation features coming soon. For now, your listing will be created at the specified ask price.
+          <span className="font-bold text-accent">Note:</span> Automation rules are saved but not
+          yet active. Full automation features coming soon. For now, your listing will be{' '}
+          {isReprice ? 'updated' : 'created'} at the specified ask price.
         </p>
       </div>
     </div>

@@ -13,20 +13,29 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, Activity, DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
+import type { StockXListingModalItem } from '@/lib/inventory-v4/stockx-listing-adapter'
+
+// =============================================================================
+// TYPES
+// =============================================================================
 
 interface MarketDataTabProps {
-  item: any // Same item prop from parent modal
+  item: StockXListingModalItem
   currency: string
 }
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 export function MarketDataTab({ item, currency }: MarketDataTabProps) {
   const [timeframe, setTimeframe] = useState<'7d' | '30d'>('7d')
 
-  // Extract market data
-  const lowestAsk = item.market?.price || item.stockx?.lowestAsk || null
-  const highestBid = item.market?.highestBid || item.stockx?.highestBid || null
-  const lastSale = item.stockx?.lastSale || null
-  const salesLast72h = item.stockx?.salesLast72h || 0
+  // Extract market data from typed item
+  const lowestAsk = item.lowestAsk
+  const highestBid = item.highestBid
+  const lastSale = item.lastSale
+  const salesLast72h = item.salesLast72h ?? 0
 
   // Calculate spread
   const spread = lowestAsk && highestBid ? lowestAsk - highestBid : null
@@ -35,7 +44,8 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
   // Format currency
   const formatPrice = (amount: number | null): string => {
     if (amount === null) return 'N/A'
-    const symbol = currency === 'GBP' ? '£' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : ''
+    const symbol =
+      currency === 'GBP' ? '£' : currency === 'USD' ? '$' : currency === 'EUR' ? '€' : ''
     return `${symbol}${amount.toFixed(0)}`
   }
 
@@ -55,9 +65,7 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
               onClick={() => setTimeframe('7d')}
               className={cn(
                 'px-3 py-1 text-xs font-medium rounded transition-all duration-120',
-                timeframe === '7d'
-                  ? 'bg-[#00FF94] text-black'
-                  : 'text-muted hover:text-fg'
+                timeframe === '7d' ? 'bg-[#00FF94] text-black' : 'text-muted hover:text-fg'
               )}
             >
               7 Days
@@ -66,9 +74,7 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
               onClick={() => setTimeframe('30d')}
               className={cn(
                 'px-3 py-1 text-xs font-medium rounded transition-all duration-120',
-                timeframe === '30d'
-                  ? 'bg-[#00FF94] text-black'
-                  : 'text-muted hover:text-fg'
+                timeframe === '30d' ? 'bg-[#00FF94] text-black' : 'text-muted hover:text-fg'
               )}
             >
               30 Days
@@ -80,12 +86,8 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
         <div className="h-[180px] rounded-lg border border-border bg-soft/30 flex items-center justify-center">
           <div className="text-center">
             <Activity className="h-8 w-8 text-muted mx-auto mb-2" />
-            <p className="text-sm text-muted">
-              Price chart coming soon
-            </p>
-            <p className="text-xs text-muted mt-1">
-              Historical data for {timeframe} timeframe
-            </p>
+            <p className="text-sm text-muted">Price chart coming soon</p>
+            <p className="text-xs text-muted mt-1">Historical data for {timeframe} timeframe</p>
           </div>
         </div>
       </div>
@@ -98,16 +100,13 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
             <span className="text-xs font-bold text-muted uppercase tracking-wide">
               Lowest Ask
             </span>
-            {trend === 'up' && (
-              <TrendingUp className="h-4 w-4 text-accent" />
-            )}
+            {trend === 'up' && <TrendingUp className="h-4 w-4 text-accent" />}
           </div>
-          <div className="text-2xl font-bold text-red-400 mono">
-            {formatPrice(lowestAsk)}
-          </div>
+          <div className="text-2xl font-bold text-red-400 mono">{formatPrice(lowestAsk)}</div>
           {lastSale && lowestAsk && (
             <div className="text-xs text-muted mt-1 font-medium">
-              {lowestAsk > lastSale ? '+' : ''}{((lowestAsk - lastSale) / lastSale * 100).toFixed(1)}% vs last sale
+              {lowestAsk > lastSale ? '+' : ''}
+              {(((lowestAsk - lastSale) / lastSale) * 100).toFixed(1)}% vs last sale
             </div>
           )}
         </div>
@@ -118,16 +117,15 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
             <span className="text-xs font-bold text-muted uppercase tracking-wide">
               Highest Bid
             </span>
-            {trend === 'down' && (
-              <TrendingDown className="h-4 w-4 text-red-400" />
-            )}
+            {trend === 'down' && <TrendingDown className="h-4 w-4 text-red-400" />}
           </div>
           <div className="text-2xl font-bold text-emerald-400 mono">
             {formatPrice(highestBid)}
           </div>
           {lastSale && highestBid && (
             <div className="text-xs text-muted mt-1 font-medium">
-              {highestBid > lastSale ? '+' : ''}{((highestBid - lastSale) / lastSale * 100).toFixed(1)}% vs last sale
+              {highestBid > lastSale ? '+' : ''}
+              {(((highestBid - lastSale) / lastSale) * 100).toFixed(1)}% vs last sale
             </div>
           )}
         </div>
@@ -135,9 +133,7 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
         {/* Spread */}
         <div className="rounded-xl bg-gradient-to-br from-accent/20 to-accent/10 border-2 border-accent/40 shadow-lg shadow-accent/10 p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-muted uppercase tracking-wide">
-              Spread
-            </span>
+            <span className="text-xs font-bold text-muted uppercase tracking-wide">Spread</span>
             <DollarSign className="h-4 w-4 text-accent" />
           </div>
           <div className="text-2xl font-bold text-accent mono">
@@ -158,13 +154,9 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
             </span>
             <Activity className="h-4 w-4 text-blue-400" />
           </div>
-          <div className="text-2xl font-bold text-blue-400 mono">
-            {salesLast72h}
-          </div>
+          <div className="text-2xl font-bold text-blue-400 mono">{salesLast72h}</div>
           {salesLast72h > 0 && lastSale && (
-            <div className="text-xs text-muted mt-1 font-medium">
-              Avg: {formatPrice(lastSale)}
-            </div>
+            <div className="text-xs text-muted mt-1 font-medium">Avg: {formatPrice(lastSale)}</div>
           )}
         </div>
       </div>
@@ -176,10 +168,16 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
           {/* Liquidity Indicator */}
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted font-medium">Market Liquidity:</span>
-            <span className={cn(
-              'font-bold',
-              salesLast72h > 10 ? 'text-accent' : salesLast72h > 5 ? 'text-amber-400' : 'text-red-400'
-            )}>
+            <span
+              className={cn(
+                'font-bold',
+                salesLast72h > 10
+                  ? 'text-accent'
+                  : salesLast72h > 5
+                    ? 'text-amber-400'
+                    : 'text-red-400'
+              )}
+            >
               {salesLast72h > 10 ? 'High' : salesLast72h > 5 ? 'Medium' : 'Low'}
             </span>
           </div>
@@ -188,10 +186,16 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
           {spreadPercentage !== null && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted font-medium">Price Gap:</span>
-              <span className={cn(
-                'font-bold',
-                spreadPercentage < 5 ? 'text-accent' : spreadPercentage < 10 ? 'text-amber-400' : 'text-red-400'
-              )}>
+              <span
+                className={cn(
+                  'font-bold',
+                  spreadPercentage < 5
+                    ? 'text-accent'
+                    : spreadPercentage < 10
+                      ? 'text-amber-400'
+                      : 'text-red-400'
+                )}
+              >
                 {spreadPercentage < 5 ? 'Tight' : spreadPercentage < 10 ? 'Moderate' : 'Wide'}
               </span>
             </div>
@@ -201,9 +205,7 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
           {lastSale && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted font-medium">Last Sale:</span>
-              <span className="font-bold mono text-fg">
-                {formatPrice(lastSale)}
-              </span>
+              <span className="font-bold mono text-fg">{formatPrice(lastSale)}</span>
             </div>
           )}
         </div>
@@ -212,8 +214,8 @@ export function MarketDataTab({ item, currency }: MarketDataTabProps) {
       {/* Educational Note */}
       <div className="rounded-xl bg-gradient-to-br from-accent/20 to-accent/10 border-2 border-accent/40 shadow-lg shadow-accent/10 p-4">
         <p className="text-xs text-fg leading-relaxed">
-          <span className="font-bold text-accent">Tip:</span> List below the Lowest Ask to increase visibility,
-          or match the Highest Bid for instant sale (minus StockX fees).
+          <span className="font-bold text-accent">Tip:</span> List below the Lowest Ask to increase
+          visibility, or match the Highest Bid for instant sale (minus StockX fees).
         </p>
       </div>
     </div>

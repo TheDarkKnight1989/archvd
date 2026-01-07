@@ -1,6 +1,16 @@
 /**
  * useInventoryV3 - Fetch and enrich inventory data for InventoryTableV3
  *
+ * @deprecated This hook is being replaced by useInventoryV4.
+ *             The main inventory page now uses useInventoryV4 with an adapter.
+ *             Do NOT add new features to this hook.
+ *             See: src/hooks/useInventoryV4.ts
+ *
+ * MIGRATION STATUS:
+ * - Main inventory page: MIGRATED to useInventoryV4 (uses adapter for V3 types)
+ * - inventory-tracker: Still uses this hook (migration pending)
+ * - Other consumers: Check V4_MIGRATION_AUDIT.md for status
+ *
  * DATA FLOW:
  * 1. Fetch Inventory items (filtered by user via RLS)
  * 2. Fetch inventory_market_links (maps items → StockX/Alias products)
@@ -29,6 +39,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { getProductImage } from '@/lib/product/getProductImage'
 import type { EnrichedLineItem } from '@/lib/portfolio/types'
+import { convertToUsSize } from '@/lib/utils/size-conversion'
 
 // ============================================================================
 // CONSTANTS
@@ -91,6 +102,13 @@ export function useInventoryV3() {
 
       if (inventoryError) throw inventoryError
 
+      // DEBUG: Log inventory query results
+      console.log('[ManualDebug] Inventory query returned:', {
+        totalRows: inventoryData?.length || 0,
+        ids: inventoryData?.map(i => i.id) || [],
+        categories: inventoryData?.map(i => ({ id: i.id, category: i.category, sku: i.sku })) || []
+      })
+
       // ========================================================================
       // 3A. FETCH STOCKX MAPPINGS (using existing StockX-specific schema)
       // NOTE: inventory_market_links uses item_id and stockx_* columns
@@ -123,19 +141,8 @@ export function useInventoryV3() {
       })
 
       // ========================================================================
-      // 4A. FETCH STOCKX PRODUCT CATALOG (for images)
-      // ========================================================================
-
-      const { data: stockxProducts, error: stockxProductsError } = await supabase
-        .from('stockx_products')
-        .select('stockx_product_id, image_url, thumb_url')
-
-      if (stockxProductsError) {
-        console.warn('[useInventoryV3] Failed to fetch StockX products:', stockxProductsError)
-      }
-
-      // ========================================================================
-      // 4B. FETCH ALIAS CATALOG ITEMS (for images and slugs)
+      // 4. FETCH ALIAS CATALOG ITEMS (for images and slugs)
+      // PRIMARY IMAGE SOURCE - StockX images removed (unreliable)
       // ========================================================================
 
       const { data: aliasCatalogItems, error: aliasCatalogError } = await supabase
@@ -175,13 +182,15 @@ export function useInventoryV3() {
       }
 
       // ========================================================================
-      // 6. FETCH STOCKX MARKET PRICES (latest snapshot per currency)
-      // NOTE: Prices stored in major units (e.g., 150.00 = £150.00)
+      // 6. FETCH STOCKX MARKET PRICES (from master_market_latest)
+      // BUG FIX: Use master_market_latest instead of stockx_market_latest
+      // master_market_latest stores prices in MAJOR UNITS (e.g., 150.00 = £150.00)
       // ========================================================================
 
       const { data: stockxPrices, error: stockxPricesError } = await supabase
-        .from('stockx_market_latest')
-        .select('stockx_product_id, stockx_variant_id, currency_code, lowest_ask, highest_bid, snapshot_at')
+        .from('master_market_latest')
+        .select('provider_product_id, provider_variant_id, currency_code, lowest_ask, highest_bid, snapshot_at')
+        .eq('provider', 'stockx')
 
       console.log('[useInventoryV3] StockX prices fetched:', {
         count: stockxPrices?.length || 0,
@@ -275,17 +284,7 @@ export function useInventoryV3() {
         }
       }
 
-      const stockxProductsMap = new Map<string, { imageUrl?: string | null; thumbUrl?: string | null }>()
-      if (stockxProducts) {
-        for (const product of stockxProducts) {
-          stockxProductsMap.set(product.stockx_product_id, {
-            imageUrl: product.image_url,
-            thumbUrl: product.thumb_url,
-          })
-        }
-      }
-
-      // Alias catalog items map (for images)
+      // Alias catalog items map (for images - PRIMARY SOURCE)
       const aliasCatalogMap = new Map<string, { imageUrl?: string | null; thumbUrl?: string | null; slug?: string | null }>()
       if (aliasCatalogItems) {
         for (const item of aliasCatalogItems) {
@@ -297,11 +296,11 @@ export function useInventoryV3() {
         }
       }
 
-      // Map by compound key: "${stockx_product_id}:${stockx_variant_id}:${currency_code}"
+      // Map by compound key: "${provider_product_id}:${provider_variant_id}:${currency_code}"
       const stockxPriceMap = new Map<string, any>()
       if (stockxPrices) {
         for (const price of stockxPrices) {
-          const key = `${price.stockx_product_id}:${price.stockx_variant_id}:${price.currency_code}`
+          const key = `${price.provider_product_id}:${price.provider_variant_id}:${price.currency_code}`
           stockxPriceMap.set(key, price)
         }
       }
@@ -371,17 +370,30 @@ export function useInventoryV3() {
       const enrichedItems: EnrichedLineItem[] = (inventoryData || []).map((item: any) => {
         // ======================================================================
         // PRODUCT METADATA (from Inventory table)
+        // Pass through raw values - display components handle manual item logic
         // ======================================================================
 
-        const brand = item.brand || 'Unknown'
-        const model = item.model || item.sku
+        const brand = item.brand || null
+        const model = item.model || null
         const colorway = item.colorway || null
 
         // ======================================================================
         // STOCKX MAPPING & MARKET DATA
+        // MANUAL ITEM HANDLING: If no stockxMapping exists, this is a manual item
+        // (added via manual mode without StockX catalog data). These items will
+        // have null market prices and should render without errors.
         // ======================================================================
 
         const stockxMapping = stockxMappingMap.get(item.id)
+
+        // Debug: Log manual vs StockX-mapped items
+        if (!stockxMapping) {
+          console.log('[useInventoryV3] Manual item detected (no StockX mapping):', {
+            id: item.id,
+            sku: item.sku,
+            category: item.category
+          })
+        }
 
         let stockxPrice = null
         let marketCurrency: 'GBP' | 'EUR' | 'USD' | null = null
@@ -417,11 +429,13 @@ export function useInventoryV3() {
 
         // ======================================================================
         // EXTRACT & CONVERT MARKET DATA
-        // NOTE: All prices in stockx_market_latest are stored in major units
+        // BUG FIX: stockx_market_latest prices are in PENNIES/CENTS (not major units)
+        // The view pulls from stockx_market_snapshots which stores integer pennies
+        // Must divide by 100 to convert to pounds/dollars for display
         // ======================================================================
 
-        const rawLowestAsk = stockxPrice?.lowest_ask || null
-        const rawHighestBid = stockxPrice?.highest_bid || null
+        const rawLowestAsk = stockxPrice?.lowest_ask ? stockxPrice.lowest_ask / 100 : null
+        const rawHighestBid = stockxPrice?.highest_bid ? stockxPrice.highest_bid / 100 : null
 
         // PHASE 3.8: Market price = lowest_ask ?? highest_bid ?? null
         // WHY: lowest_ask represents current market value (what buyers pay)
@@ -458,8 +472,79 @@ export function useInventoryV3() {
           })
         }
 
-        const marketProvider = stockxPrice ? 'stockx' : (item.market_source || null)
-        const marketUpdatedAt = stockxPrice?.snapshot_at || item.market_price_updated_at || null
+        // ======================================================================
+        // MAPPINGS LOOKUP (needed for multi-provider comparison)
+        // ======================================================================
+
+        const aliasMapping = aliasMappingMap.get(item.id)
+
+        // ======================================================================
+        // MULTI-PROVIDER PRICE COMPARISON (StockX vs Alias)
+        // WHY: Select best market price across all providers
+        // NOTE: StockX prices already converted to user currency at this point
+        // NOTE: Alias prices are in USD cents, need conversion
+        // ======================================================================
+
+        let bestLowestAsk = lowestAsk  // Start with StockX lowest ask
+        let bestHighestBid = highestBid  // Start with StockX highest bid
+        let marketProvider: 'stockx' | 'alias' | 'ebay' | 'seed' | null = stockxPrice ? 'stockx' : (item.market_source || null)
+        let marketUpdatedAt = stockxPrice?.snapshot_at || item.market_price_updated_at || null
+
+        // Try to get Alias price for comparison
+        if (aliasMapping?.alias_catalog_id && item.size_uk) {
+          // Lookup Alias market prices (always USD)
+          // IMPORTANT: alias_market_snapshots uses US sizes, so convert UK → US
+          // Use proper convertToUsSize which handles Women's/Men's size differences
+          const usSize = convertToUsSize(item.size_uk, 'UK', null, item.brand || null, item.model || null)
+          const priceKey = usSize ? `${aliasMapping.alias_catalog_id}:${usSize}:USD` : null
+          const aliasPrice = priceKey ? aliasPriceMap.get(priceKey) : null
+
+          if (aliasPrice) {
+            // Convert Alias prices from USD cents to user currency major units
+            // Step 1: Cents → Dollars (divide by 100)
+            // Step 2: USD → User currency (apply FX rate)
+            const aliasLowestAskUSD = aliasPrice.lowest_ask_cents ? aliasPrice.lowest_ask_cents / 100 : null
+            const aliasHighestBidUSD = aliasPrice.highest_bid_cents ? aliasPrice.highest_bid_cents / 100 : null
+
+            // Apply currency conversion if needed
+            const aliasLowestAsk = aliasLowestAskUSD && userCurrency !== 'USD'
+              ? aliasLowestAskUSD * (FX_RATES['USD']?.[userCurrency] || 1.0)
+              : aliasLowestAskUSD
+
+            const aliasHighestBid = aliasHighestBidUSD && userCurrency !== 'USD'
+              ? aliasHighestBidUSD * (FX_RATES['USD']?.[userCurrency] || 1.0)
+              : aliasHighestBidUSD
+
+            console.log(`[useInventoryV3] Multi-provider price comparison for ${item.sku}:`, {
+              stockx: { lowestAsk, highestBid, currency: userCurrency },
+              alias: { lowestAsk: aliasLowestAsk, highestBid: aliasHighestBid, currency: userCurrency },
+              userCurrency
+            })
+
+            // Compare and select best prices
+            // Lowest Ask: Lower is better for buyers (market value)
+            if (aliasLowestAsk && (!bestLowestAsk || aliasLowestAsk < bestLowestAsk)) {
+              bestLowestAsk = aliasLowestAsk
+              marketProvider = 'alias'
+              marketUpdatedAt = aliasPrice.snapshot_at || marketUpdatedAt
+            }
+
+            // Highest Bid: Higher is better for sellers (instant sell)
+            if (aliasHighestBid && (!bestHighestBid || aliasHighestBid > bestHighestBid)) {
+              bestHighestBid = aliasHighestBid
+              // Only change provider if Alias also has best ask, otherwise keep hybrid
+              if (marketProvider !== 'alias') {
+                // Mixed providers - StockX has best ask, Alias has best bid (or vice versa)
+                // Keep the provider with best ask as primary
+              }
+            }
+          }
+        }
+
+        // Update market price to use best price across providers
+        marketPrice = bestLowestAsk ?? bestHighestBid ?? null
+        lowestAsk = bestLowestAsk
+        highestBid = bestHighestBid
 
         // ======================================================================
         // SPARKLINE DATA
@@ -470,46 +555,30 @@ export function useInventoryV3() {
         const spark30d = sparklineMap.get(sparklineKey) || []
 
         // ======================================================================
-        // MAPPINGS LOOKUP (needed for image and data resolution)
+        // IMAGE RESOLUTION - ALIAS-FIRST PRIORITY
+        // All image resolution now routes through centralized helper
         // ======================================================================
 
-        const aliasMapping = aliasMappingMap.get(item.id)
-
-        // ======================================================================
-        // IMAGE RESOLUTION (Priority order)
-        // 1. Alias catalog image (from alias_catalog_items) - PRIMARY SOURCE
-        // 2. StockX product image (from catalog)
-        // 3. getProductImage fallback (placeholder)
-        // ======================================================================
-
-        const stockxProduct = stockxMapping ? stockxProductsMap.get(stockxMapping.stockx_product_id) : null
         const aliasCatalog = aliasMapping ? aliasCatalogMap.get(aliasMapping.alias_catalog_id) : null
 
-        let imageUrl: string | null = null
-        let imageSource: 'alias' | 'stockx' | null = null
+        const imageResolved = getProductImage({
+          // Primary: Alias catalog images
+          aliasCatalogImageUrl: aliasCatalog?.imageUrl || null,
+          aliasCatalogThumbnailUrl: aliasCatalog?.thumbUrl || null,
 
-        if (aliasCatalog?.imageUrl || aliasCatalog?.thumbUrl) {
-          // Priority 1: Alias catalog image (primary source)
-          imageUrl = aliasCatalog.imageUrl || aliasCatalog.thumbUrl || null
-          imageSource = 'alias'
-        } else if (stockxProduct?.imageUrl || stockxProduct?.thumbUrl) {
-          // Priority 2: StockX catalog image
-          imageUrl = stockxProduct.imageUrl || stockxProduct.thumbUrl || null
-          imageSource = 'stockx'
-        }
+          // Legacy: Inventory image (if manually uploaded)
+          inventoryImageUrl: null,
 
-        // Priority 3: Fallback placeholder
-        const imageResolved = imageUrl
-          ? { src: imageUrl, alt: `${brand} ${model}` }
-          : getProductImage({
-              marketImageUrl: null,
-              inventoryImageUrl: null,
-              provider: marketProvider as any,
-              brand,
-              model,
-              colorway,
-              sku: item.sku,
-            })
+          // Fallback: Provider/brand logos
+          provider: marketProvider as any,
+          brand,
+          model,
+          colorway,
+          sku: item.sku,
+        })
+
+        // Track image source from resolved provenance
+        const imageSource = imageResolved.provenance
 
         // ======================================================================
         // FINANCIAL CALCULATIONS
@@ -549,9 +618,11 @@ export function useInventoryV3() {
 
         // ======================================================================
         // STOCKX LISTING DATA
+        // MANUAL ITEM GUARD: Return early with { mapped: false } for manual items
         // ======================================================================
 
         const stockxData: EnrichedLineItem['stockx'] = (() => {
+          // GUARD: Manual items (no StockX mapping) skip all StockX lookups
           if (!stockxMapping) {
             return { mapped: false }
           }
@@ -586,9 +657,11 @@ export function useInventoryV3() {
 
         // ======================================================================
         // ALIAS LISTING & MARKET DATA
+        // MANUAL ITEM GUARD: Return early with { mapped: false } for manual items
         // ======================================================================
 
         const aliasData: EnrichedLineItem['alias'] = (() => {
+          // GUARD: Manual items (no Alias mapping) skip all Alias lookups
           if (!aliasMapping) {
             return { mapped: false }
           }
@@ -599,9 +672,10 @@ export function useInventoryV3() {
 
           // Lookup Alias market prices (always USD)
           // IMPORTANT: alias_market_snapshots uses US sizes, so convert UK → US
-          const usSize = parseFloat(item.size_uk) + 1
-          const priceKey = `${aliasMapping.alias_catalog_id}:${usSize}:USD`
-          const aliasPrice = aliasPriceMap.get(priceKey)
+          // Use proper convertToUsSize which handles Women's/Men's size differences
+          const usSize = item.size_uk ? convertToUsSize(item.size_uk, 'UK', null, item.brand || null, item.model || null) : null
+          const priceKey = usSize ? `${aliasMapping.alias_catalog_id}:${usSize}:USD` : null
+          const aliasPrice = priceKey ? aliasPriceMap.get(priceKey) : null
 
           // Convert prices from cents to dollars (no currency conversion - always USD)
           const lowestAsk = aliasPrice?.lowest_ask_cents ? aliasPrice.lowest_ask_cents / 100 : null
@@ -689,16 +763,25 @@ export function useInventoryV3() {
           sku: item.sku,
           aliasCatalogId: aliasMapping?.alias_catalog_id,
           aliasImageUrl: aliasCatalog?.imageUrl,
-          stockxProductId: stockxMapping?.stockx_product_id,
-          stockxImageUrl: stockxProduct?.imageUrl,
+          aliasThumbnailUrl: aliasCatalog?.thumbUrl,
           finalImageUrl: enrichedItem.image.url,
           imageSource: enrichedItem.imageSource,
+          provenance: imageResolved.provenance,
         })
 
         return enrichedItem
       })
 
       console.log('[DEBUG INVENTORY]', enrichedItems.length, enrichedItems[0])
+
+      // DEBUG: Check for manual items in enriched results
+      const manualItems = enrichedItems.filter(item => !item.stockx.mapped && !item.alias.mapped)
+      console.log('[ManualDebug] Enriched items:', {
+        total: enrichedItems.length,
+        manualCount: manualItems.length,
+        manualIds: manualItems.map(i => ({ id: i.id, sku: i.sku, category: i.category }))
+      })
+
       setItems(enrichedItems)
       setError(null)
     } catch (err: any) {

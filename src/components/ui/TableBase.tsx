@@ -50,6 +50,7 @@ interface TableHeadProps {
   align?: 'left' | 'right' | 'center'
   colSpan?: number
   onClick?: () => void
+  style?: React.CSSProperties
 }
 
 interface TableCellProps {
@@ -58,6 +59,7 @@ interface TableCellProps {
   align?: 'left' | 'right' | 'center'
   colSpan?: number
   mono?: boolean
+  style?: React.CSSProperties
 }
 
 interface TableWrapperProps {
@@ -217,7 +219,7 @@ export function TableRow({ children, index, className, onClick }: TableRowProps)
 /**
  * TableHead - Header cell with .label-up styling
  */
-export function TableHead({ children, className, align = 'left', colSpan, onClick }: TableHeadProps) {
+export function TableHead({ children, className, align = 'left', colSpan, onClick, style }: TableHeadProps) {
   const alignClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
 
   return (
@@ -225,6 +227,7 @@ export function TableHead({ children, className, align = 'left', colSpan, onClic
       className={cn('px-4 py-2.5 label-up', alignClass, className)}
       colSpan={colSpan}
       onClick={onClick}
+      style={style}
     >
       {children}
     </th>
@@ -234,7 +237,7 @@ export function TableHead({ children, className, align = 'left', colSpan, onClic
 /**
  * TableCell - Body cell with consistent padding and typography
  */
-export function TableCell({ children, className, align = 'left', colSpan, mono = false }: TableCellProps) {
+export function TableCell({ children, className, align = 'left', colSpan, mono = false, style }: TableCellProps) {
   const alignClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : ''
   const monoClass = mono ? 'mono' : ''
 
@@ -242,6 +245,7 @@ export function TableCell({ children, className, align = 'left', colSpan, mono =
     <td
       className={cn('px-4 py-3', alignClass, monoClass, className)}
       colSpan={colSpan}
+      style={style}
     >
       {children}
     </td>

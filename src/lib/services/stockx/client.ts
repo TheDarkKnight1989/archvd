@@ -408,6 +408,9 @@ export class StockxClient {
 
         clearTimeout(timeoutId)
 
+        const responseText = await response.text()
+        console.log('STOCKX RAW RESPONSE:', response.status, responseText)
+
         // Handle rate limiting (429)
         if (response.status === 429) {
           const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10)
@@ -425,18 +428,17 @@ export class StockxClient {
 
         // Handle other errors
         if (!response.ok) {
-          const errorText = await response.text()
           console.error('[StockX] API Error', {
             status: response.status,
             statusText: response.statusText,
-            error: errorText,
+            error: responseText,
           })
 
           // Try to parse error details from response
-          let errorDetails = errorText
+          let errorDetails = responseText
           try {
-            const errorJson = JSON.parse(errorText)
-            errorDetails = errorJson.message || errorJson.error || errorJson.detail || errorText
+            const errorJson = JSON.parse(responseText)
+            errorDetails = errorJson.message || errorJson.error || errorJson.detail || responseText
           } catch {
             // If not JSON, use raw text
           }
@@ -445,7 +447,7 @@ export class StockxClient {
         }
 
         // Success
-        const data = await response.json()
+        const data = JSON.parse(responseText)
         console.log('[StockX] API Success', {
           endpoint,
           status: response.status,
