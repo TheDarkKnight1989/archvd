@@ -272,6 +272,61 @@ async function resolveAliasCatalogId(catalogId: string): Promise<SearchResultV4 
 }
 
 // =============================================================================
+// IMAGE ENRICHMENT
+// =============================================================================
+
+/**
+ * Enrich local results that have aliasCatalogId but no image.
+ * Fetches image URLs from Alias API in parallel (max 5 concurrent).
+ * This ensures local results always have images when possible.
+ */
+async function enrichResultsWithImages(results: SearchResultV4[]): Promise<SearchResultV4[]> {
+  // Find results that need image enrichment
+  const needsEnrichment = results.filter(
+    r => !r.imageUrl && r.externalIds.aliasCatalogId
+  )
+
+  if (needsEnrichment.length === 0) {
+    return results
+  }
+
+  // Fetch images in parallel (limit concurrency to avoid rate limits)
+  const BATCH_SIZE = 5
+  const imageMap = new Map<string, string>()
+
+  try {
+    const aliasClient = createAliasClient()
+
+    for (let i = 0; i < needsEnrichment.length; i += BATCH_SIZE) {
+      const batch = needsEnrichment.slice(i, i + BATCH_SIZE)
+      const promises = batch.map(async (result) => {
+        const catalogId = result.externalIds.aliasCatalogId!
+        try {
+          const response = await aliasClient.getCatalogItem(catalogId)
+          if (response.catalog_item?.main_picture_url) {
+            imageMap.set(result.styleId, response.catalog_item.main_picture_url)
+          }
+        } catch {
+          // Silent fail - image enrichment is best-effort
+        }
+      })
+      await Promise.all(promises)
+    }
+  } catch {
+    // If Alias client fails to initialize, return results as-is
+    return results
+  }
+
+  // Apply enriched images
+  return results.map(result => {
+    if (!result.imageUrl && imageMap.has(result.styleId)) {
+      return { ...result, imageUrl: imageMap.get(result.styleId)! }
+    }
+    return result
+  })
+}
+
+// =============================================================================
 // MERGE AND DEDUPE
 // =============================================================================
 
@@ -508,7 +563,13 @@ export async function unifiedSearchV4(
   })
 
   // Limit final results
-  const finalResults = mergedResults.slice(0, limit)
+  const limitedResults = mergedResults.slice(0, limit)
+
+  // Enrich local results with images from Alias (for results missing images)
+  // This is the "best-in-class" step - local wins for metadata, Alias wins for images
+  const enrichStart = Date.now()
+  const finalResults = await enrichResultsWithImages(limitedResults)
+  timing.enrich = Date.now() - enrichStart
 
   timing.total = Date.now() - startTime
 
