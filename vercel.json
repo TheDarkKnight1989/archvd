@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/stockx-v4-refresh",
-      "schedule": "15 */6 * * *"
+      "schedule": "15 6 * * *"
     },
     {
       "path": "/api/v4/retention/daily",
