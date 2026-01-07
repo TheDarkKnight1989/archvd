@@ -113,16 +113,28 @@ export function RevenueChart({ items, className, view = 'monthly' }: RevenueChar
             tickFormatter={(value) => `£${value}`}
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: '#0E1A15',
-              border: '1px solid #15251B',
-              borderRadius: '8px',
-              fontSize: '11px',
-              padding: '8px 12px',
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null
+              const revenue = payload.find(p => p.dataKey === 'revenue')?.value as number
+              const profit = payload.find(p => p.dataKey === 'profit')?.value as number
+              return (
+                <div className="bg-[#0E1A15] border border-[#15251B] rounded-lg text-[11px] p-3">
+                  <div className="text-fg font-semibold mb-2">{label}</div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted">Revenue</span>
+                      <span className="mono text-fg">£{revenue}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted">Profit</span>
+                      <span className={`mono font-semibold ${profit >= 0 ? 'text-accent' : 'text-red-400'}`}>
+                        {profit >= 0 ? '+' : ''}£{profit}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
             }}
-            labelStyle={{ color: '#E8F6EE', fontWeight: 600, marginBottom: '4px' }}
-            itemStyle={{ color: '#7FA08F' }}
-            formatter={(value: number) => [`£${value}`, '']}
           />
           <Line
             type="monotone"

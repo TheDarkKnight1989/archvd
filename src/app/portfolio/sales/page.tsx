@@ -280,7 +280,7 @@ export default function SalesPage() {
             <div className="text-xs text-muted/70 uppercase tracking-wider mb-1">Avg Margin</div>
             <div className={cn(
               "text-xl font-semibold mono",
-              kpis.avgMargin >= 0 ? "text-accent/80" : "text-red-400/80"
+              kpis.avgMargin >= 0 ? "text-accent" : "text-red-400"
             )}>
               {kpis.avgMargin >= 0 ? '+' : ''}{kpis.avgMargin.toFixed(1)}%
             </div>
