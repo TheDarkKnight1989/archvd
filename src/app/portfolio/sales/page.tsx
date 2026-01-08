@@ -18,7 +18,6 @@ import {
 import { cn } from '@/lib/utils/cn'
 import { useCurrency } from '@/hooks/useCurrency'
 import { SalesTable } from './_components/SalesTable'
-import { RevenueChart } from './_components/RevenueChart'
 import type { SortingState } from '@tanstack/react-table'
 
 // Available years for filtering
@@ -238,64 +237,7 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* KPI Cards - Profit is hero */}
-      {filteredItems.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Profit - Hero KPI */}
-          <div className={cn(
-            "bg-elev-1 rounded-xl p-4 border-l-4",
-            kpis.totalMargin >= 0 ? "border-l-accent border-accent/20" : "border-l-red-500 border-red-500/20",
-            "border border-l-4"
-          )}>
-            <div className="text-xs text-muted uppercase tracking-wider">Profit</div>
-            <div className="text-[10px] text-muted/50 mb-1">Net gain after costs</div>
-            <div className={cn(
-              "text-3xl font-bold mono",
-              kpis.totalMargin >= 0 ? "text-accent" : "text-red-400"
-            )}>
-              {kpis.totalMargin >= 0 ? '+' : ''}{format(convert(kpis.totalMargin, 'GBP'))}
-            </div>
-            <div className="text-xs text-muted mt-1">{kpis.count} sales</div>
-          </div>
-
-          {/* Total Sales - Secondary */}
-          <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
-            <div className="text-xs text-muted/70 uppercase tracking-wider">Total Sales</div>
-            <div className="text-[10px] text-muted/50 mb-1">Gross revenue</div>
-            <div className="text-xl font-semibold text-fg mono">
-              {format(convert(kpis.totalSales, 'GBP'))}
-            </div>
-          </div>
-
-          {/* Cost Basis - Secondary */}
-          <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
-            <div className="text-xs text-muted/70 uppercase tracking-wider">Cost Basis</div>
-            <div className="text-[10px] text-muted/50 mb-1">What you paid for sold items</div>
-            <div className="text-xl font-semibold text-fg mono">
-              {format(convert(kpis.totalCOGS, 'GBP'))}
-            </div>
-          </div>
-
-          {/* Avg Profit - Secondary */}
-          <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
-            <div className="text-xs text-muted/70 uppercase tracking-wider">Avg Profit</div>
-            <div className="text-[10px] text-muted/50 mb-1">Per transaction</div>
-            <div className={cn(
-              "text-xl font-semibold mono",
-              kpis.avgMargin >= 0 ? "text-accent" : "text-red-400"
-            )}>
-              {kpis.avgMargin >= 0 ? '+' : ''}{format(convert(kpis.totalMargin / kpis.count, 'GBP'))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Revenue Chart - only show with meaningful data */}
-      {filteredItems.length >= 5 && (
-        <RevenueChart items={filteredItems} />
-      )}
-
-      {/* Filter Bar */}
+      {/* Filter Bar - FIRST, before KPIs */}
       <div className="space-y-2">
         {/* Search + Year + Platform Row */}
         <div className="flex flex-wrap items-center gap-3">
@@ -438,6 +380,56 @@ export default function SalesPage() {
           )}
         </div>
       </div>
+
+      {/* KPI Cards - Clean, minimal */}
+      {filteredItems.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Profit - Hero */}
+          <div
+            className="bg-elev-1 rounded-xl p-4 border-l-4"
+            style={{
+              borderLeftColor: kpis.totalMargin >= 0 ? '#00FF94' : '#F87171',
+              borderColor: kpis.totalMargin >= 0 ? 'rgba(0,255,148,0.2)' : 'rgba(248,113,113,0.2)'
+            }}
+          >
+            <div className="text-xs text-muted uppercase tracking-wider mb-2">Profit</div>
+            <div
+              className="text-2xl font-bold mono"
+              style={{ color: kpis.totalMargin >= 0 ? '#00FF94' : '#F87171' }}
+            >
+              {kpis.totalMargin >= 0 ? '+' : ''}{format(convert(kpis.totalMargin, 'GBP'))}
+            </div>
+            <div className="text-xs text-muted mt-1">{kpis.count} sales</div>
+          </div>
+
+          {/* Total Sales */}
+          <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
+            <div className="text-xs text-muted uppercase tracking-wider mb-2">Total Sales</div>
+            <div className="text-xl font-semibold text-fg mono">
+              {format(convert(kpis.totalSales, 'GBP'))}
+            </div>
+          </div>
+
+          {/* Cost Basis */}
+          <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
+            <div className="text-xs text-muted uppercase tracking-wider mb-2">Cost Basis</div>
+            <div className="text-xl font-semibold text-fg mono">
+              {format(convert(kpis.totalCOGS, 'GBP'))}
+            </div>
+          </div>
+
+          {/* Avg Profit */}
+          <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
+            <div className="text-xs text-muted uppercase tracking-wider mb-2">Avg Profit</div>
+            <div
+              className="text-xl font-semibold mono"
+              style={{ color: kpis.totalMargin >= 0 ? '#00FF94' : '#F87171' }}
+            >
+              {kpis.totalMargin >= 0 ? '+' : ''}{format(convert(kpis.totalMargin / kpis.count, 'GBP'))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fetch Error */}
       {fetchError && (
