@@ -1,0 +1,1135 @@
+{
+  "request": {
+    "endpoint": "/v2/catalog/products/5e6a1e57-1c7d-435a-82bd-5666a13560fe/variants",
+    "params": {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe"
+    },
+    "timestamp": "2025-12-09T14:33:31.376Z"
+  },
+  "response": [
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "55da4110-5983-439f-9ae4-d7d054f67723",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:0",
+      "variantValue": "3.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "3.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 3.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 3",
+            "type": "uk"
+          },
+          {
+            "size": "CM 22.5",
+            "type": "cm"
+          },
+          {
+            "size": "KR 225",
+            "type": "kr"
+          },
+          {
+            "size": "EU 35.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "8f97fc3d-245b-485a-b262-f965ca98bd8e",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:1",
+      "variantValue": "4",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "4",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 4",
+            "type": "us m"
+          },
+          {
+            "size": "UK 3.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 23",
+            "type": "cm"
+          },
+          {
+            "size": "KR 230",
+            "type": "kr"
+          },
+          {
+            "size": "EU 36",
+            "type": "eu"
+          },
+          {
+            "size": "US W 5.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "49a38ddb-b69d-4a1e-9f9d-21b0007960e0",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:2",
+      "variantValue": "4.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "4.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 4.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 4",
+            "type": "uk"
+          },
+          {
+            "size": "CM 23.5 (US M 4.5)",
+            "type": "cm"
+          },
+          {
+            "size": "KR 235 (US M 4.5)",
+            "type": "kr"
+          },
+          {
+            "size": "EU 36.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 6",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "e04a5c69-0ab6-4d20-a6b3-13d08436a13c",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:3",
+      "variantValue": "5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 4.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 23.5 (US M 5)",
+            "type": "cm"
+          },
+          {
+            "size": "KR 235 (US M 5)",
+            "type": "kr"
+          },
+          {
+            "size": "EU 37.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 6.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "194502875966",
+          "type": "UPC"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "42888997-a1f0-4115-a590-0e51d2efdf01",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:4",
+      "variantValue": "5.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "5.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 5.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 24 (US M 5.5)",
+            "type": "cm"
+          },
+          {
+            "size": "KR 240 (US M 5.5)",
+            "type": "kr"
+          },
+          {
+            "size": "EU 38",
+            "type": "eu"
+          },
+          {
+            "size": "US W 7",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "0009c909-6fa3-4a38-9920-43eaa7a7fe46",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:5",
+      "variantValue": "6",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "6",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 6",
+            "type": "us m"
+          },
+          {
+            "size": "UK 5.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 24 (US M 6)",
+            "type": "cm"
+          },
+          {
+            "size": "KR 240 (US M 6)",
+            "type": "kr"
+          },
+          {
+            "size": "EU 38.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 7.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502875980",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502875980",
+          "type": "UPC"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "f6e4995b-0bdf-477f-b757-47b79ffa22b3",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:6",
+      "variantValue": "6.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "6.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 6.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 6 (EU 39)",
+            "type": "uk"
+          },
+          {
+            "size": "CM 24.5",
+            "type": "cm"
+          },
+          {
+            "size": "KR 245",
+            "type": "kr"
+          },
+          {
+            "size": "EU 39",
+            "type": "eu"
+          },
+          {
+            "size": "US W 8",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502875997",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502875997",
+          "type": "UPC"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "95a26e09-0c04-4fdc-b8e0-36342c260871",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:7",
+      "variantValue": "7",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "7",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 7",
+            "type": "us m"
+          },
+          {
+            "size": "UK 6 (EU 40)",
+            "type": "uk"
+          },
+          {
+            "size": "CM 25",
+            "type": "cm"
+          },
+          {
+            "size": "KR 250",
+            "type": "kr"
+          },
+          {
+            "size": "EU 40",
+            "type": "eu"
+          },
+          {
+            "size": "US W 8.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "194502876000",
+          "type": "UPC"
+        },
+        {
+          "identifier": "00194502876000",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "2409300000655",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "0654bcf7-895c-47b2-baff-9940e34f8556",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:8",
+      "variantValue": "7.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "7.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 7.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 6.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 25.5",
+            "type": "cm"
+          },
+          {
+            "size": "KR 255",
+            "type": "kr"
+          },
+          {
+            "size": "EU 40.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 9",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "194502876017",
+          "type": "UPC"
+        },
+        {
+          "identifier": "00194502876017",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "2409300000662",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "24f67f42-1da8-4fdd-87da-f491f8875185",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:9",
+      "variantValue": "8",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "8",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 8",
+            "type": "us m"
+          },
+          {
+            "size": "UK 7",
+            "type": "uk"
+          },
+          {
+            "size": "CM 26",
+            "type": "cm"
+          },
+          {
+            "size": "KR 260",
+            "type": "kr"
+          },
+          {
+            "size": "EU 41",
+            "type": "eu"
+          },
+          {
+            "size": "US W 9.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "0194502876024",
+          "type": "EAN-13"
+        },
+        {
+          "identifier": "00194502876024",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502876024",
+          "type": "UPC"
+        },
+        {
+          "identifier": "63336276",
+          "type": "GTIN-8"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "c9c459e6-0de4-4432-aba5-bcdc09f6b6ee",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:10",
+      "variantValue": "8.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "8.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 8.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 7.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 26.5",
+            "type": "cm"
+          },
+          {
+            "size": "KR 265",
+            "type": "kr"
+          },
+          {
+            "size": "EU 42",
+            "type": "eu"
+          },
+          {
+            "size": "US W 10",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "194502876031",
+          "type": "UPC"
+        },
+        {
+          "identifier": "00194502876031",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "2409300000686",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "a2ea632e-b87a-46a1-b35d-739b8050fdf2",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:11",
+      "variantValue": "9",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "9",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 9",
+            "type": "us m"
+          },
+          {
+            "size": "UK 8",
+            "type": "uk"
+          },
+          {
+            "size": "CM 27",
+            "type": "cm"
+          },
+          {
+            "size": "KR 270",
+            "type": "kr"
+          },
+          {
+            "size": "EU 42.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 10.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "194502876048",
+          "type": "UPC"
+        },
+        {
+          "identifier": "00194502876048",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "2409300000693",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "6ac30e67-8a53-4f5f-b268-d65f57ee1003",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:12",
+      "variantValue": "9.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "9.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 9.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 8.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 27.5",
+            "type": "cm"
+          },
+          {
+            "size": "KR 275",
+            "type": "kr"
+          },
+          {
+            "size": "EU 43",
+            "type": "eu"
+          },
+          {
+            "size": "US W 11",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502876055",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502876055",
+          "type": "UPC"
+        },
+        {
+          "identifier": "2460001649697",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "65fb1eaf-7e2c-4f96-8f9d-74e93b4a36f4",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:13",
+      "variantValue": "10",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "10",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 10",
+            "type": "us m"
+          },
+          {
+            "size": "UK 9",
+            "type": "uk"
+          },
+          {
+            "size": "CM 28",
+            "type": "cm"
+          },
+          {
+            "size": "KR 280",
+            "type": "kr"
+          },
+          {
+            "size": "EU 44",
+            "type": "eu"
+          },
+          {
+            "size": "US W 11.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502876062",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502876062",
+          "type": "UPC"
+        },
+        {
+          "identifier": "2409300000716",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "b208e557-0a94-4012-a640-533ce10fee9a",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:14",
+      "variantValue": "10.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "10.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 10.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 9.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 28.5",
+            "type": "cm"
+          },
+          {
+            "size": "KR 285",
+            "type": "kr"
+          },
+          {
+            "size": "EU 44.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 12",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "2409300000723",
+          "type": "EAN-13"
+        },
+        {
+          "identifier": "194502876079",
+          "type": "UPC"
+        },
+        {
+          "identifier": "00194502876079",
+          "type": "ITF-14"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "01cac555-be33-4953-9f2d-b2ad8ac6d8d0",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:15",
+      "variantValue": "11",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "11",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 11",
+            "type": "us m"
+          },
+          {
+            "size": "UK 10",
+            "type": "uk"
+          },
+          {
+            "size": "CM 29",
+            "type": "cm"
+          },
+          {
+            "size": "KR 290",
+            "type": "kr"
+          },
+          {
+            "size": "EU 45",
+            "type": "eu"
+          },
+          {
+            "size": "US W 12.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502876086",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502876086",
+          "type": "UPC"
+        },
+        {
+          "identifier": "2409300000730",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "29b377fd-37b0-4e5f-b751-42264fbbf757",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:16",
+      "variantValue": "11.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "11.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 11.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 10.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 29.5",
+            "type": "cm"
+          },
+          {
+            "size": "KR 295",
+            "type": "kr"
+          },
+          {
+            "size": "EU 45.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 13",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502876093",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502876093",
+          "type": "UPC"
+        },
+        {
+          "identifier": "0194502876093",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "bd020a9c-dee0-44f3-bd6b-6be301107d7d",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:17",
+      "variantValue": "12",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "12",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 12",
+            "type": "us m"
+          },
+          {
+            "size": "UK 11",
+            "type": "uk"
+          },
+          {
+            "size": "CM 30",
+            "type": "cm"
+          },
+          {
+            "size": "KR 300",
+            "type": "kr"
+          },
+          {
+            "size": "EU 46",
+            "type": "eu"
+          },
+          {
+            "size": "US W 13.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502876109",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502876109",
+          "type": "UPC"
+        },
+        {
+          "identifier": "2460001649741",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "854bf93f-c6f3-47e7-b36c-4e718d62bd58",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:18",
+      "variantValue": "12.5",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "12.5",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 12.5",
+            "type": "us m"
+          },
+          {
+            "size": "UK 11.5",
+            "type": "uk"
+          },
+          {
+            "size": "CM 30.5",
+            "type": "cm"
+          },
+          {
+            "size": "KR 305",
+            "type": "kr"
+          },
+          {
+            "size": "EU 47",
+            "type": "eu"
+          },
+          {
+            "size": "US W 14",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "194502876116",
+          "type": "UPC"
+        },
+        {
+          "identifier": "00194502876116",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "0194502876116",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "b9ce0997-236c-4e8c-baff-30c019a12f4e",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:19",
+      "variantValue": "13",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "13",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 13",
+            "type": "us m"
+          },
+          {
+            "size": "UK 12",
+            "type": "uk"
+          },
+          {
+            "size": "CM 31",
+            "type": "cm"
+          },
+          {
+            "size": "KR 310",
+            "type": "kr"
+          },
+          {
+            "size": "EU 47.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 14.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "59302223",
+          "type": "GTIN-8"
+        },
+        {
+          "identifier": "194502876123",
+          "type": "UPC"
+        },
+        {
+          "identifier": "00194502876123",
+          "type": "ITF-14"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "79d4d09f-baef-4d96-a9a0-4dce4b51b1e6",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:20",
+      "variantValue": "14",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "14",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 14",
+            "type": "us m"
+          },
+          {
+            "size": "UK 13",
+            "type": "uk"
+          },
+          {
+            "size": "CM 32",
+            "type": "cm"
+          },
+          {
+            "size": "KR 320",
+            "type": "kr"
+          },
+          {
+            "size": "EU 48.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 15.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502876130",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502876130",
+          "type": "UPC"
+        },
+        {
+          "identifier": "0194502876130",
+          "type": "EAN-13"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    },
+    {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "6bf4f6ab-b992-4915-a7bd-0dd09a762a80",
+      "variantName": "Nike-Dunk-Low-Retro-White-Black-2021:21",
+      "variantValue": "15",
+      "sizeChart": {
+        "defaultConversion": {
+          "size": "15",
+          "type": "us m"
+        },
+        "availableConversions": [
+          {
+            "size": "US M 15",
+            "type": "us m"
+          },
+          {
+            "size": "UK 14",
+            "type": "uk"
+          },
+          {
+            "size": "CM 33",
+            "type": "cm"
+          },
+          {
+            "size": "KR 330",
+            "type": "kr"
+          },
+          {
+            "size": "EU 49.5",
+            "type": "eu"
+          },
+          {
+            "size": "US W 16.5",
+            "type": "us w"
+          }
+        ]
+      },
+      "gtins": [
+        {
+          "identifier": "00194502876147",
+          "type": "ITF-14"
+        },
+        {
+          "identifier": "194502876147",
+          "type": "UPC"
+        },
+        {
+          "identifier": "58915134",
+          "type": "GTIN-8"
+        }
+      ],
+      "isFlexEligible": true,
+      "isDirectEligible": true
+    }
+  ]
+}

@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Match the same logic as /api/stockx/status
     const { data: stockxAccount, error: accountError } = await supabase
       .from('stockx_accounts')
-      .select('id, account_email')
+      .select('user_id, account_email')
       .eq('user_id', user.id)
       .single()
 

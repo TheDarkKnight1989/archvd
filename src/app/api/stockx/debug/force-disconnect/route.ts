@@ -27,7 +27,7 @@ export async function DELETE(request: NextRequest) {
     // First, check if record exists
     const { data: existing, error: checkError } = await adminSupabase
       .from('stockx_accounts')
-      .select('id, user_id, account_email')
+      .select('user_id, account_email')
       .eq('user_id', user.id)
       .single();
 
@@ -60,7 +60,7 @@ export async function DELETE(request: NextRequest) {
     // Verify deletion
     const { data: verify } = await adminSupabase
       .from('stockx_accounts')
-      .select('id')
+      .select('user_id')
       .eq('user_id', user.id)
       .single();
 

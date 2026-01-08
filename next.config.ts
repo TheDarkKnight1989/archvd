@@ -22,6 +22,22 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  // Redirects from old URLs to new Ledger page
+  async redirects() {
+    return [
+      {
+        source: '/portfolio/sales',
+        destination: '/portfolio/ledger',
+        permanent: true,
+      },
+      {
+        source: '/portfolio/transactions/history',
+        destination: '/portfolio/ledger',
+        permanent: true,
+      },
+    ]
+  },
 };
 
 export default withPWA({

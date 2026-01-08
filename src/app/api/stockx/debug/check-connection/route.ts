@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     // Check stockx_accounts with regular client (what Orders API uses)
     const { data: accountViaRegular, error: regularError } = await supabase
       .from('stockx_accounts')
-      .select('id, user_id, account_email, created_at, updated_at')
+      .select('user_id, account_email, created_at, updated_at')
       .eq('user_id', user.id)
       .single();
 
@@ -40,14 +40,14 @@ export async function GET(request: NextRequest) {
     const adminSupabase = createServiceRoleClient();
     const { data: accountViaAdmin, error: adminError } = await adminSupabase
       .from('stockx_accounts')
-      .select('id, user_id, account_email, created_at, updated_at')
+      .select('user_id, account_email, created_at, updated_at')
       .eq('user_id', user.id)
       .single();
 
     // Also check if there are ANY records in the table
     const { data: allAccounts, error: allError } = await adminSupabase
       .from('stockx_accounts')
-      .select('id, user_id, account_email')
+      .select('user_id, account_email')
       .limit(10);
 
     return NextResponse.json({
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         error: regularError?.message || null,
         errorCode: regularError?.code || null,
         data: accountViaRegular ? {
-          id: accountViaRegular.id,
+          userId: accountViaRegular.user_id,
           email: accountViaRegular.account_email,
           createdAt: accountViaRegular.created_at
         } : null
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         error: adminError?.message || null,
         errorCode: adminError?.code || null,
         data: accountViaAdmin ? {
-          id: accountViaAdmin.id,
+          userId: accountViaAdmin.user_id,
           email: accountViaAdmin.account_email,
           createdAt: accountViaAdmin.created_at
         } : null
@@ -84,7 +84,6 @@ export async function GET(request: NextRequest) {
         count: allAccounts?.length || 0,
         error: allError?.message || null,
         accounts: allAccounts?.map(a => ({
-          id: a.id,
           userId: a.user_id,
           email: a.account_email
         })) || []

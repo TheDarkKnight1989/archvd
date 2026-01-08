@@ -1,0 +1,121 @@
+{
+  "total": 8,
+  "synced": 8,
+  "skipped": 0,
+  "failed": 0,
+  "totalDuration": 216161,
+  "results": [
+    {
+      "sku": "IF2885-100",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 22,
+          "marketDataRefreshed": 22,
+          "priceSnapshotsInserted": 22
+        },
+        "errors": [],
+        "productId": "fbc2f03d-e7dc-4800-9d0d-0a2995c03d37"
+      },
+      "duration": 26237
+    },
+    {
+      "sku": "DH8565-100",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 23,
+          "marketDataRefreshed": 23,
+          "priceSnapshotsInserted": 23
+        },
+        "errors": [],
+        "productId": "02a1f163-4072-4297-9f68-a24e397da290"
+      },
+      "duration": 28238
+    },
+    {
+      "sku": "AQ0818-148",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 22,
+          "marketDataRefreshed": 22,
+          "priceSnapshotsInserted": 22
+        },
+        "errors": [],
+        "productId": "0b8a6d84-639c-47ce-957a-ed9f86079c06"
+      },
+      "duration": 26219
+    },
+    {
+      "sku": "AA3834-101",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 22,
+          "marketDataRefreshed": 22,
+          "priceSnapshotsInserted": 22
+        },
+        "errors": [],
+        "productId": "7f9c67ff-2cd4-4e27-8b64-518900a1bc0b"
+      },
+      "duration": 26299
+    },
+    {
+      "sku": "CV9388-100",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 24,
+          "marketDataRefreshed": 24,
+          "priceSnapshotsInserted": 24
+        },
+        "errors": [],
+        "productId": "253f8ae0-e498-4613-bb87-de479e4e9c63"
+      },
+      "duration": 28275
+    },
+    {
+      "sku": "CT8480-001",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 23,
+          "marketDataRefreshed": 23,
+          "priceSnapshotsInserted": 23
+        },
+        "errors": [],
+        "productId": "599b227d-d0bc-4166-b3ed-979da0fdf16c"
+      },
+      "duration": 27802
+    },
+    {
+      "sku": "AQ0818-100",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 18,
+          "marketDataRefreshed": 18,
+          "priceSnapshotsInserted": 18
+        },
+        "errors": [],
+        "productId": "106cf74a-d00e-4d0d-a25a-e8821db1ed7f"
+      },
+      "duration": 21968
+    },
+    {
+      "sku": "AJ4219-400",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 27,
+          "marketDataRefreshed": 27,
+          "priceSnapshotsInserted": 27
+        },
+        "errors": [],
+        "productId": "ea2d8ce5-b912-4fb0-b1dd-21c2032e92aa"
+      },
+      "duration": 31123
+    }
+  ]
+}

@@ -1,0 +1,2268 @@
+{
+  "total": 149,
+  "synced": 147,
+  "skipped": 2,
+  "failed": 0,
+  "totalDuration": 6447607,
+  "results": [
+    {
+      "catalogId": "2002r-protection-pack-phantom-m2002rdb",
+      "result": {
+        "success": true,
+        "catalogId": "2002r-protection-pack-phantom-m2002rdb",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30103
+    },
+    {
+      "catalogId": "2002r-protection-pack-rain-cloud-m2002rda",
+      "result": {
+        "success": true,
+        "catalogId": "2002r-protection-pack-rain-cloud-m2002rda",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31212
+    },
+    {
+      "catalogId": "9060-black-castlerock-u9060blk",
+      "result": {
+        "success": true,
+        "catalogId": "9060-black-castlerock-u9060blk",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 34554
+    },
+    {
+      "catalogId": "9060-triple-black-u9060bpm",
+      "result": {
+        "success": true,
+        "catalogId": "9060-triple-black-u9060bpm",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30097
+    },
+    {
+      "catalogId": "a-ma-maniere-x-wmns-air-jordan-3-retro-black-violet-ore-fz4811-001",
+      "result": {
+        "success": true,
+        "catalogId": "a-ma-maniere-x-wmns-air-jordan-3-retro-black-violet-ore-fz4811-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29852
+    },
+    {
+      "catalogId": "a-ma-maniere-x-wmns-air-jordan-3-retro-sp-violet-ore-dh3434-110",
+      "result": {
+        "success": true,
+        "catalogId": "a-ma-maniere-x-wmns-air-jordan-3-retro-sp-violet-ore-dh3434-110",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33076
+    },
+    {
+      "catalogId": "a-ma-maniere-x-wmns-air-jordan-4-retro-fossil-stone-fz4810-200",
+      "result": {
+        "success": true,
+        "catalogId": "a-ma-maniere-x-wmns-air-jordan-4-retro-fossil-stone-fz4810-200",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30624
+    },
+    {
+      "catalogId": "air-jordan-1-retro-high-og-black-toe-reimagined-dz5485-061",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-1-retro-high-og-black-toe-reimagined-dz5485-061",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30355
+    },
+    {
+      "catalogId": "air-jordan-1-retro-high-og-shattered-backboard-2025-dz5485-008",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-1-retro-high-og-shattered-backboard-2025-dz5485-008",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31037
+    },
+    {
+      "catalogId": "air-jordan-1-retro-low-og-chicago-2025-hq6998-600",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-1-retro-low-og-chicago-2025-hq6998-600",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32602
+    },
+    {
+      "catalogId": "air-jordan-10-retro-shadow-2025-hj6779-001",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-10-retro-shadow-2025-hj6779-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32812
+    },
+    {
+      "catalogId": "air-jordan-11-retro-columbia-2024-ct8012-104",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-11-retro-columbia-2024-ct8012-104",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32360
+    },
+    {
+      "catalogId": "air-jordan-11-retro-gamma-blue-2025-ct8012-017",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-11-retro-gamma-blue-2025-ct8012-017",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33767
+    },
+    {
+      "catalogId": "air-jordan-11-retro-gs-columbia-legend-blue-2024-378038-104",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-11-retro-gs-columbia-legend-blue-2024-378038-104",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32556
+    },
+    {
+      "catalogId": "air-jordan-11-retro-gs-gamma-blue-2025-378038-047",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-11-retro-gs-gamma-blue-2025-378038-047",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32363
+    },
+    {
+      "catalogId": "air-jordan-11-retro-low-bred-2025-fv5104-006",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-11-retro-low-bred-2025-fv5104-006",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33914
+    },
+    {
+      "catalogId": "air-jordan-11-retro-rare-air-ih0296-400",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-11-retro-rare-air-ih0296-400",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31076
+    },
+    {
+      "catalogId": "air-jordan-12-retro-taxi-2025-ct8013-117",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-12-retro-taxi-2025-ct8013-117",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30666
+    },
+    {
+      "catalogId": "air-jordan-3-retro-black-cement-reimagined-dn3707-010",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-3-retro-black-cement-reimagined-dn3707-010",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33389
+    },
+    {
+      "catalogId": "air-jordan-3-retro-gs-pure-money-2025-dm0967-111",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-3-retro-gs-pure-money-2025-dm0967-111",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31468
+    },
+    {
+      "catalogId": "air-jordan-3-retro-og-sp-diffused-blue-hv8571-100",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-3-retro-og-sp-diffused-blue-hv8571-100",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30210
+    },
+    {
+      "catalogId": "air-jordan-3-retro-pure-money-2025-ct8532-111",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-3-retro-pure-money-2025-ct8532-111",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33693
+    },
+    {
+      "catalogId": "air-jordan-4-retro-black-canvas-dh7138-006",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-black-canvas-dh7138-006",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31975
+    },
+    {
+      "catalogId": "air-jordan-4-retro-black-cat-2025-fv5029-010",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-black-cat-2025-fv5029-010",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29879
+    },
+    {
+      "catalogId": "air-jordan-4-retro-bred-reimagined-fv5029-006",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-bred-reimagined-fv5029-006",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 239,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "variantId": 6690,
+            "region": "2",
+            "stage": "market_data",
+            "error": "Failed to insert price history: TypeError: fetch failed"
+          }
+        ]
+      },
+      "duration": 331595
+    },
+    {
+      "catalogId": "air-jordan-4-retro-cave-stone-fq8138-200",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-cave-stone-fq8138-200",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32210
+    },
+    {
+      "catalogId": "air-jordan-4-retro-fear-2024-fq8138-002",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-fear-2024-fq8138-002",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 34206
+    },
+    {
+      "catalogId": "air-jordan-4-retro-gs-bred-reimagined-fq8213-006",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-gs-bred-reimagined-fq8213-006",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31506
+    },
+    {
+      "catalogId": "air-jordan-4-retro-infrared-dh6927-061",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-infrared-dh6927-061",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30347
+    },
+    {
+      "catalogId": "air-jordan-4-retro-military-black-dh6927-111",
+      "result": null,
+      "skipped": true,
+      "duration": 49
+    },
+    {
+      "catalogId": "air-jordan-4-retro-military-blue-2024-fv5029-141",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-military-blue-2024-fv5029-141",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30844
+    },
+    {
+      "catalogId": "air-jordan-4-retro-og-fire-red-2020-dc7770-160",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-og-fire-red-2020-dc7770-160",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31794
+    },
+    {
+      "catalogId": "air-jordan-4-retro-og-gs-white-cement-2025-ib4171-100",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-og-gs-white-cement-2025-ib4171-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31025
+    },
+    {
+      "catalogId": "air-jordan-4-retro-og-white-cement-2025-fv5029-100",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-og-white-cement-2025-fv5029-100",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33173
+    },
+    {
+      "catalogId": "air-jordan-4-retro-oxidized-green-fq8138-103",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-oxidized-green-fq8138-103",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 239,
+          "priceSnapshotsInserted": 239,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "variantId": 8938,
+            "region": "1",
+            "stage": "market_data",
+            "error": "Failed to upsert market data: TypeError: fetch failed"
+          }
+        ]
+      },
+      "duration": 333315
+    },
+    {
+      "catalogId": "air-jordan-4-retro-red-thunder-ct8527-016",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-red-thunder-ct8527-016",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 239,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "variantId": 9029,
+            "region": "2",
+            "stage": "market_data",
+            "error": "Failed to insert price history: TypeError: fetch failed"
+          }
+        ]
+      },
+      "duration": 335582
+    },
+    {
+      "catalogId": "air-jordan-4-retro-se-craft-olive-fb9927-200",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-se-craft-olive-fb9927-200",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29847
+    },
+    {
+      "catalogId": "air-jordan-4-retro-thunder-2023-dh6927-017",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-thunder-2023-dh6927-017",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 245,
+          "priceSnapshotsInserted": 245,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "variantId": 9490,
+            "region": "3",
+            "stage": "market_data",
+            "error": "Failed to upsert market data: TypeError: fetch failed"
+          }
+        ]
+      },
+      "duration": 334790
+    },
+    {
+      "catalogId": "air-jordan-4-retro-white-thunder-fq8138-001",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-white-thunder-fq8138-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31084
+    },
+    {
+      "catalogId": "air-jordan-5-retro-fire-red-2025-hq7978-101",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-5-retro-fire-red-2025-hq7978-101",
+        "counts": {
+          "variantsSynced": 252,
+          "marketDataRefreshed": 252,
+          "priceSnapshotsInserted": 252,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32509
+    },
+    {
+      "catalogId": "air-jordan-5-retro-grape-2025-hq7978-100",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-5-retro-grape-2025-hq7978-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 35690
+    },
+    {
+      "catalogId": "air-jordan-5-sp-muslin-ct8480-001",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-5-sp-muslin-ct8480-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 239,
+          "priceSnapshotsInserted": 239,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "variantId": 10450,
+            "region": "3",
+            "stage": "market_data",
+            "error": "Failed to upsert market data: TypeError: fetch failed"
+          }
+        ]
+      },
+      "duration": 333178
+    },
+    {
+      "catalogId": "air-jordan-jordan-4-retro-gs-black-cat-2025-ib4171-010",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-jordan-4-retro-gs-black-cat-2025-ib4171-010",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31686
+    },
+    {
+      "catalogId": "air-max-95-obsidian-harbor-blue-hf5515-400",
+      "result": {
+        "success": true,
+        "catalogId": "air-max-95-obsidian-harbor-blue-hf5515-400",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31548
+    },
+    {
+      "catalogId": "air-max-95-og-neon-2025-hm4740-004",
+      "result": {
+        "success": true,
+        "catalogId": "air-max-95-og-neon-2025-hm4740-004",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33032
+    },
+    {
+      "catalogId": "april-skateboards-x-dunk-low-sb-turbo-green-fd2562-400",
+      "result": {
+        "success": true,
+        "catalogId": "april-skateboards-x-dunk-low-sb-turbo-green-fd2562-400",
+        "counts": {
+          "variantsSynced": 252,
+          "marketDataRefreshed": 252,
+          "priceSnapshotsInserted": 252,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31178
+    },
+    {
+      "catalogId": "ben-jerry-s-x-dunk-low-sb-chunky-dunky-cu3244-100",
+      "result": {
+        "success": true,
+        "catalogId": "ben-jerry-s-x-dunk-low-sb-chunky-dunky-cu3244-100",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33544
+    },
+    {
+      "catalogId": "born-x-raised-x-dunk-low-sb-one-block-at-a-time-fn7819-400",
+      "result": {
+        "success": true,
+        "catalogId": "born-x-raised-x-dunk-low-sb-one-block-at-a-time-fn7819-400",
+        "counts": {
+          "variantsSynced": 245,
+          "marketDataRefreshed": 245,
+          "priceSnapshotsInserted": 245,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30558
+    },
+    {
+      "catalogId": "corteiz-x-air-max-95-sp-black-tour-yellow-fb2709-003",
+      "result": {
+        "success": true,
+        "catalogId": "corteiz-x-air-max-95-sp-black-tour-yellow-fb2709-003",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31338
+    },
+    {
+      "catalogId": "crenshaw-skate-club-x-dunk-low-sb-fn4193-100",
+      "result": {
+        "success": true,
+        "catalogId": "crenshaw-skate-club-x-dunk-low-sb-fn4193-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31448
+    },
+    {
+      "catalogId": "dunk-low-black-white-dd1391-100",
+      "result": null,
+      "skipped": true,
+      "duration": 131
+    },
+    {
+      "catalogId": "dunk-low-sb-big-money-fz3129-200",
+      "result": {
+        "success": true,
+        "catalogId": "dunk-low-sb-big-money-fz3129-200",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32668
+    },
+    {
+      "catalogId": "dunk-low-sb-black-history-month-hf3058-300",
+      "result": {
+        "success": true,
+        "catalogId": "dunk-low-sb-black-history-month-hf3058-300",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30964
+    },
+    {
+      "catalogId": "dunk-low-sb-j-pack-chicago-bq6817-600",
+      "result": {
+        "success": true,
+        "catalogId": "dunk-low-sb-j-pack-chicago-bq6817-600",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30828
+    },
+    {
+      "catalogId": "dunk-low-sb-krampus-hv1668-001",
+      "result": {
+        "success": true,
+        "catalogId": "dunk-low-sb-krampus-hv1668-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31891
+    },
+    {
+      "catalogId": "dunk-low-sb-mummy-dm0774-111",
+      "result": {
+        "success": true,
+        "catalogId": "dunk-low-sb-mummy-dm0774-111",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30977
+    },
+    {
+      "catalogId": "dunk-low-sb-st-patrick-s-day-bq6817-303",
+      "result": {
+        "success": true,
+        "catalogId": "dunk-low-sb-st-patrick-s-day-bq6817-303",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29573
+    },
+    {
+      "catalogId": "ebay-x-dunk-low-sb-sandy-bodecker-fd8777-100",
+      "result": {
+        "success": true,
+        "catalogId": "ebay-x-dunk-low-sb-sandy-bodecker-fd8777-100",
+        "counts": {
+          "variantsSynced": 264,
+          "marketDataRefreshed": 264,
+          "priceSnapshotsInserted": 264,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33507
+    },
+    {
+      "catalogId": "fragment-design-x-travis-scott-x-air-jordan-1-low-og-sp-sail-military-blue-dm7866-104",
+      "result": {
+        "success": true,
+        "catalogId": "fragment-design-x-travis-scott-x-air-jordan-1-low-og-sp-sail-military-blue-dm7866-104",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29913
+    },
+    {
+      "catalogId": "fragment-design-x-travis-scott-x-air-jordan-1-retro-high-dh3227-105",
+      "result": {
+        "success": true,
+        "catalogId": "fragment-design-x-travis-scott-x-air-jordan-1-retro-high-dh3227-105",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30730
+    },
+    {
+      "catalogId": "fragment-design-x-travis-scott-x-air-jordan-1-retro-low-dm7866-140",
+      "result": {
+        "success": true,
+        "catalogId": "fragment-design-x-travis-scott-x-air-jordan-1-retro-low-dm7866-140",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31287
+    },
+    {
+      "catalogId": "futura-laboratories-x-dunk-low-sb-bleached-aqua-hf6061-400",
+      "result": {
+        "success": true,
+        "catalogId": "futura-laboratories-x-dunk-low-sb-bleached-aqua-hf6061-400",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29574
+    },
+    {
+      "catalogId": "gel-1130-black-pure-silver-1201a906-001",
+      "result": {
+        "success": true,
+        "catalogId": "gel-1130-black-pure-silver-1201a906-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 28269
+    },
+    {
+      "catalogId": "gel-1130-clay-canyon-1201a256-113",
+      "result": {
+        "success": true,
+        "catalogId": "gel-1130-clay-canyon-1201a256-113",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29365
+    },
+    {
+      "catalogId": "gel-1130-neon-pack-pink-1202a525-700",
+      "result": {
+        "success": true,
+        "catalogId": "gel-1130-neon-pack-pink-1202a525-700",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30648
+    },
+    {
+      "catalogId": "gel-1130-white-cloud-grey-1201a256-118",
+      "result": {
+        "success": true,
+        "catalogId": "gel-1130-white-cloud-grey-1201a256-118",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32271
+    },
+    {
+      "catalogId": "gel-1130-white-pure-silver-1201b020-100",
+      "result": {
+        "success": true,
+        "catalogId": "gel-1130-white-pure-silver-1201b020-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 28832
+    },
+    {
+      "catalogId": "gel-kayano-14-white-graphite-grey-1203a537-110",
+      "result": {
+        "success": true,
+        "catalogId": "gel-kayano-14-white-graphite-grey-1203a537-110",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33320
+    },
+    {
+      "catalogId": "gel-nyc-cream-mineral-beige-1203a383-104",
+      "result": {
+        "success": true,
+        "catalogId": "gel-nyc-cream-mineral-beige-1203a383-104",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31523
+    },
+    {
+      "catalogId": "gel-nyc-graphite-grey-black-1201a789-020",
+      "result": {
+        "success": true,
+        "catalogId": "gel-nyc-graphite-grey-black-1201a789-020",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33720
+    },
+    {
+      "catalogId": "grateful-dead-x-dunk-low-sb-grateful-dead-dunk",
+      "result": {
+        "success": true,
+        "catalogId": "grateful-dead-x-dunk-low-sb-grateful-dead-dunk",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 34653
+    },
+    {
+      "catalogId": "grateful-dead-x-dunk-low-sb-orange-bear-cj5378-800",
+      "result": {
+        "success": true,
+        "catalogId": "grateful-dead-x-dunk-low-sb-orange-bear-cj5378-800",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 35328
+    },
+    {
+      "catalogId": "grateful-dead-x-dunk-low-sb-yellow-bear-cj5378-700",
+      "result": {
+        "success": true,
+        "catalogId": "grateful-dead-x-dunk-low-sb-yellow-bear-cj5378-700",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33507
+    },
+    {
+      "catalogId": "jarritos-x-dunk-low-sb-fd0860-001",
+      "result": {
+        "success": true,
+        "catalogId": "jarritos-x-dunk-low-sb-fd0860-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32657
+    },
+    {
+      "catalogId": "kith-x-nike-air-max-95-gs-el-dorado-im6039-200",
+      "result": {
+        "success": true,
+        "catalogId": "kith-x-nike-air-max-95-gs-el-dorado-im6039-200",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30702
+    },
+    {
+      "catalogId": "nardwuar-x-dunk-low-sb-tam-o-shanter-hat-ii1493-600",
+      "result": {
+        "success": true,
+        "catalogId": "nardwuar-x-dunk-low-sb-tam-o-shanter-hat-ii1493-600",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31389
+    },
+    {
+      "catalogId": "nike-air-max-95-big-bubble-solar-red-im7410-001",
+      "result": {
+        "success": true,
+        "catalogId": "nike-air-max-95-big-bubble-solar-red-im7410-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31936
+    },
+    {
+      "catalogId": "nike-sb-x-air-jordan-4-retro-pine-green-dr5415-103",
+      "result": {
+        "success": true,
+        "catalogId": "nike-sb-x-air-jordan-4-retro-pine-green-dr5415-103",
+        "counts": {
+          "variantsSynced": 241,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "variantId": 18919,
+            "region": "3",
+            "stage": "market_data",
+            "error": "Failed to upsert market data: TypeError: fetch failed"
+          }
+        ]
+      },
+      "duration": 334303
+    },
+    {
+      "catalogId": "nike-sb-x-air-jordan-4-retro-sp-navy-dr5415-100",
+      "result": {
+        "success": true,
+        "catalogId": "nike-sb-x-air-jordan-4-retro-sp-navy-dr5415-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31779
+    },
+    {
+      "catalogId": "off-white-x-air-jordan-1-retro-high-og-aa3834-101",
+      "result": {
+        "success": true,
+        "catalogId": "off-white-x-air-jordan-1-retro-high-og-aa3834-101",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31860
+    },
+    {
+      "catalogId": "off-white-x-air-jordan-1-retro-high-og-powder-blue-aq0818-148",
+      "result": {
+        "success": true,
+        "catalogId": "off-white-x-air-jordan-1-retro-high-og-powder-blue-aq0818-148",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 34743
+    },
+    {
+      "catalogId": "off-white-x-air-jordan-1-retro-high-og-white-2018-aq0818-100",
+      "result": {
+        "success": true,
+        "catalogId": "off-white-x-air-jordan-1-retro-high-og-white-2018-aq0818-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30252
+    },
+    {
+      "catalogId": "off-white-x-air-jordan-5-sp-dh8565-100",
+      "result": {
+        "success": true,
+        "catalogId": "off-white-x-air-jordan-5-sp-dh8565-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30802
+    },
+    {
+      "catalogId": "off-white-x-wmns-air-jordan-4-sp-sail-cv9388-100",
+      "result": {
+        "success": true,
+        "catalogId": "off-white-x-wmns-air-jordan-4-sp-sail-cv9388-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31851
+    },
+    {
+      "catalogId": "p-6000-black-cool-grey-if6199-003",
+      "result": {
+        "success": true,
+        "catalogId": "p-6000-black-cool-grey-if6199-003",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29141
+    },
+    {
+      "catalogId": "p-6000-metallic-silver-cn0149-001",
+      "result": {
+        "success": true,
+        "catalogId": "p-6000-metallic-silver-cn0149-001",
+        "counts": {
+          "variantsSynced": 264,
+          "marketDataRefreshed": 264,
+          "priceSnapshotsInserted": 264,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33807
+    },
+    {
+      "catalogId": "paris-saint-germain-x-air-jordan-5-retro-off-noir-hq3004-001",
+      "result": {
+        "success": true,
+        "catalogId": "paris-saint-germain-x-air-jordan-5-retro-off-noir-hq3004-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 34398
+    },
+    {
+      "catalogId": "sean-wotherspoon-x-air-max-97-1-aj4219-400-571f1838-7346-4d43-85f0-8dde12b778cb",
+      "result": {
+        "success": true,
+        "catalogId": "sean-wotherspoon-x-air-max-97-1-aj4219-400-571f1838-7346-4d43-85f0-8dde12b778cb",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31021
+    },
+    {
+      "catalogId": "solefly-x-air-jordan-3-miami-if4491-100",
+      "result": {
+        "success": true,
+        "catalogId": "solefly-x-air-jordan-3-miami-if4491-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30563
+    },
+    {
+      "catalogId": "strangelove-x-dunk-low-sb-valentine-s-day-ct2552-800",
+      "result": {
+        "success": true,
+        "catalogId": "strangelove-x-dunk-low-sb-valentine-s-day-ct2552-800",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32219
+    },
+    {
+      "catalogId": "supreme-x-air-force-1-low-box-logo-baroque-brown-cu9225-200",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-air-force-1-low-box-logo-baroque-brown-cu9225-200",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29958
+    },
+    {
+      "catalogId": "supreme-x-air-force-1-low-box-logo-black-white-cu9225-002",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-air-force-1-low-box-logo-black-white-cu9225-002",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29069
+    },
+    {
+      "catalogId": "supreme-x-air-force-1-low-box-logo-white-black-cu9225-102",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-air-force-1-low-box-logo-white-black-cu9225-102",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29764
+    },
+    {
+      "catalogId": "supreme-x-air-force-1-low-box-logo-white-cu9225-100",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-air-force-1-low-box-logo-white-cu9225-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 37557
+    },
+    {
+      "catalogId": "supreme-x-air-force-1-mid-box-logo-triple-black-fz8784-001",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-air-force-1-mid-box-logo-triple-black-fz8784-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31147
+    },
+    {
+      "catalogId": "supreme-x-air-force-1-mid-box-logo-triple-white-fz8784-100",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-air-force-1-mid-box-logo-triple-white-fz8784-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31507
+    },
+    {
+      "catalogId": "supreme-x-dunk-high-sb-rammellzee-fd8779-100",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-dunk-high-sb-rammellzee-fd8779-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32782
+    },
+    {
+      "catalogId": "supreme-x-dunk-low-sb-camper-green-hq8487-300",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-dunk-low-sb-camper-green-hq8487-300",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29303
+    },
+    {
+      "catalogId": "supreme-x-dunk-low-sb-ink-hq8487-500",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-dunk-low-sb-ink-hq8487-500",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29449
+    },
+    {
+      "catalogId": "supreme-x-dunk-low-sb-ocean-fog-hq8487-400",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-dunk-low-sb-ocean-fog-hq8487-400",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 28512
+    },
+    {
+      "catalogId": "supreme-x-dunk-low-sb-rammellzee-fd8778-001",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-dunk-low-sb-rammellzee-fd8778-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 28787
+    },
+    {
+      "catalogId": "supreme-x-dunk-low-sb-triple-black-hq8487-001",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-dunk-low-sb-triple-black-hq8487-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32790
+    },
+    {
+      "catalogId": "supreme-x-dunk-low-sb-white-metallic-silver-hq8487-100",
+      "result": {
+        "success": true,
+        "catalogId": "supreme-x-dunk-low-sb-white-metallic-silver-hq8487-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30766
+    },
+    {
+      "catalogId": "the-powerpuff-girls-x-dunk-low-pro-sb-qs-blossom-fd2631-600",
+      "result": {
+        "success": true,
+        "catalogId": "the-powerpuff-girls-x-dunk-low-pro-sb-qs-blossom-fd2631-600",
+        "counts": {
+          "variantsSynced": 241,
+          "marketDataRefreshed": 241,
+          "priceSnapshotsInserted": 241,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29050
+    },
+    {
+      "catalogId": "the-powerpuff-girls-x-dunk-low-pro-sb-qs-bubbles-fz8320-400",
+      "result": {
+        "success": true,
+        "catalogId": "the-powerpuff-girls-x-dunk-low-pro-sb-qs-bubbles-fz8320-400",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29847
+    },
+    {
+      "catalogId": "the-powerpuff-girls-x-dunk-low-pro-sb-qs-buttercup-fz8319-300",
+      "result": {
+        "success": true,
+        "catalogId": "the-powerpuff-girls-x-dunk-low-pro-sb-qs-buttercup-fz8319-300",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30049
+    },
+    {
+      "catalogId": "the-wizard-of-oz-x-dunk-low-sb-ruby-slipper-fz1291-600",
+      "result": {
+        "success": true,
+        "catalogId": "the-wizard-of-oz-x-dunk-low-sb-ruby-slipper-fz1291-600",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30941
+    },
+    {
+      "catalogId": "tom-sachs-x-mars-yard-3-0-da6676-100",
+      "result": {
+        "success": true,
+        "catalogId": "tom-sachs-x-mars-yard-3-0-da6676-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33130
+    },
+    {
+      "catalogId": "travis-scott-x-air-jordan-1-low-mocha-cq4277-001",
+      "result": {
+        "success": true,
+        "catalogId": "travis-scott-x-air-jordan-1-low-mocha-cq4277-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29374
+    },
+    {
+      "catalogId": "travis-scott-x-air-jordan-1-low-og-sp-black-phantom-dm7866-001",
+      "result": {
+        "success": true,
+        "catalogId": "travis-scott-x-air-jordan-1-low-og-sp-black-phantom-dm7866-001",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31003
+    },
+    {
+      "catalogId": "travis-scott-x-air-jordan-1-low-og-sp-velvet-brown-dm7866-202",
+      "result": {
+        "success": true,
+        "catalogId": "travis-scott-x-air-jordan-1-low-og-sp-velvet-brown-dm7866-202",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 28236
+    },
+    {
+      "catalogId": "travis-scott-x-dunk-low-sb-ct5053-101",
+      "result": {
+        "success": true,
+        "catalogId": "travis-scott-x-dunk-low-sb-ct5053-101",
+        "counts": {
+          "variantsSynced": 264,
+          "marketDataRefreshed": 264,
+          "priceSnapshotsInserted": 264,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31551
+    },
+    {
+      "catalogId": "travis-scott-x-wmns-air-jordan-1-low-og-olive-dz4137-106",
+      "result": {
+        "success": true,
+        "catalogId": "travis-scott-x-wmns-air-jordan-1-low-og-olive-dz4137-106",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 34991
+    },
+    {
+      "catalogId": "travis-scott-x-wmns-air-jordan-1-retro-low-og-sp-canary-dz4137-700",
+      "result": {
+        "success": true,
+        "catalogId": "travis-scott-x-wmns-air-jordan-1-retro-low-og-sp-canary-dz4137-700",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30850
+    },
+    {
+      "catalogId": "verdy-x-dunk-low-sb-visty-fn6040-400",
+      "result": {
+        "success": true,
+        "catalogId": "verdy-x-dunk-low-sb-visty-fn6040-400",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30289
+    },
+    {
+      "catalogId": "why-so-sad-x-dunk-low-sb-the-predatory-bird-dx5549-400",
+      "result": {
+        "success": true,
+        "catalogId": "why-so-sad-x-dunk-low-sb-the-predatory-bird-dx5549-400",
+        "counts": {
+          "variantsSynced": 264,
+          "marketDataRefreshed": 264,
+          "priceSnapshotsInserted": 264,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33865
+    },
+    {
+      "catalogId": "wmns-air-jordan-1-retro-high-og-satin-shadow-fd4810-010",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-air-jordan-1-retro-high-og-satin-shadow-fd4810-010",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31385
+    },
+    {
+      "catalogId": "wmns-air-jordan-4-retro-shimmer-dj0675-200",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-air-jordan-4-retro-shimmer-dj0675-200",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32285
+    },
+    {
+      "catalogId": "wmns-air-max-95-pink-foam-hj5996-001",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-air-max-95-pink-foam-hj5996-001",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30922
+    },
+    {
+      "catalogId": "wmns-air-zoom-vomero-5-photon-dust-metallic-silver-fd0884-025",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-air-zoom-vomero-5-photon-dust-metallic-silver-fd0884-025",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 34767
+    },
+    {
+      "catalogId": "wmns-classic-ultra-mini-boot-chestnut-1116109-che",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-classic-ultra-mini-boot-chestnut-1116109-che",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30545
+    },
+    {
+      "catalogId": "wmns-dunk-low-black-white-dd1503-101",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-dunk-low-black-white-dd1503-101",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32947
+    },
+    {
+      "catalogId": "wmns-dunk-low-cacao-wow-dd1503-124",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-dunk-low-cacao-wow-dd1503-124",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 34912
+    },
+    {
+      "catalogId": "wmns-dunk-low-photon-dust-dd1503-103",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-dunk-low-photon-dust-dd1503-103",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31419
+    },
+    {
+      "catalogId": "wmns-gel-1130-white-silver-pink-1202a507-100",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-gel-1130-white-silver-pink-1202a507-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31453
+    },
+    {
+      "catalogId": "wmns-handball-spezial-earth-strata-gum-if6490",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-handball-spezial-earth-strata-gum-if6490",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31667
+    },
+    {
+      "catalogId": "wmns-lowmel-black-1144032-blk",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-lowmel-black-1144032-blk",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29837
+    },
+    {
+      "catalogId": "wmns-lowmel-chestnut-1144032-che",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-lowmel-chestnut-1144032-che",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 27993
+    },
+    {
+      "catalogId": "wmns-lowmel-sand-1144032-san",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-lowmel-sand-1144032-san",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30083
+    },
+    {
+      "catalogId": "wmns-samba-og-cow-print-jr1256",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-samba-og-cow-print-jr1256",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30043
+    },
+    {
+      "catalogId": "wmns-samba-og-preloved-red-leopard-ji2734",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-samba-og-preloved-red-leopard-ji2734",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30521
+    },
+    {
+      "catalogId": "wmns-samba-og-white-clear-granite-ig9030",
+      "result": {
+        "success": true,
+        "catalogId": "wmns-samba-og-white-clear-granite-ig9030",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30220
+    },
+    {
+      "catalogId": "yeezy-boost-350-v2-beluga-bb1826",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-boost-350-v2-beluga-bb1826",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30892
+    },
+    {
+      "catalogId": "yeezy-boost-350-v2-carbon-beluga-hq7045",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-boost-350-v2-carbon-beluga-hq7045",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29124
+    },
+    {
+      "catalogId": "yeezy-boost-350-v2-cream-white-cp9366",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-boost-350-v2-cream-white-cp9366",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29352
+    },
+    {
+      "catalogId": "yeezy-boost-350-v2-mx-dark-salt-id4811",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-boost-350-v2-mx-dark-salt-id4811",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33002
+    },
+    {
+      "catalogId": "yeezy-boost-350-v2-onyx-hq4540",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-boost-350-v2-onyx-hq4540",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29654
+    },
+    {
+      "catalogId": "yeezy-boost-350-v2-pure-oat-hq6316",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-boost-350-v2-pure-oat-hq6316",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31701
+    },
+    {
+      "catalogId": "yeezy-boost-350-v2-sand-taupe-fz5241",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-boost-350-v2-sand-taupe-fz5241",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33415
+    },
+    {
+      "catalogId": "yeezy-boost-350-v2-zyon-fz1267",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-boost-350-v2-zyon-fz1267",
+        "counts": {
+          "variantsSynced": 242,
+          "marketDataRefreshed": 242,
+          "priceSnapshotsInserted": 242,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33292
+    },
+    {
+      "catalogId": "yeezy-foam-runner-mx-granite-ie4931",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-foam-runner-mx-granite-ie4931",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 29608
+    },
+    {
+      "catalogId": "yeezy-foam-runner-onyx-hp8739",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-foam-runner-onyx-hp8739",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30920
+    },
+    {
+      "catalogId": "yeezy-slides-azure-id4133",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-slides-azure-id4133",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31968
+    },
+    {
+      "catalogId": "yeezy-slides-onyx-hq6448",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-slides-onyx-hq6448",
+        "counts": {
+          "variantsSynced": 245,
+          "marketDataRefreshed": 245,
+          "priceSnapshotsInserted": 245,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 33383
+    },
+    {
+      "catalogId": "yeezy-slides-slate-grey-id2350",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-slides-slate-grey-id2350",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31823
+    },
+    {
+      "catalogId": "yeezy-slides-slate-marina-id2349",
+      "result": {
+        "success": true,
+        "catalogId": "yeezy-slides-slate-marina-id2349",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31954
+    },
+    {
+      "catalogId": "yuto-horigome-x-dunk-low-sb-asparagus-hf8022-300",
+      "result": {
+        "success": true,
+        "catalogId": "yuto-horigome-x-dunk-low-sb-asparagus-hf8022-300",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31813
+    },
+    {
+      "catalogId": "yuto-horigome-x-dunk-low-sb-yuto-dunk-sb",
+      "result": {
+        "success": true,
+        "catalogId": "yuto-horigome-x-dunk-low-sb-yuto-dunk-sb",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 30449
+    },
+    {
+      "catalogId": "zion-williamson-x-air-jordan-1-retro-low-og-voodoo-alternate-ih2309-500",
+      "result": {
+        "success": true,
+        "catalogId": "zion-williamson-x-air-jordan-1-retro-low-og-voodoo-alternate-ih2309-500",
+        "counts": {
+          "variantsSynced": 246,
+          "marketDataRefreshed": 246,
+          "priceSnapshotsInserted": 246,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 32067
+    }
+  ]
+}

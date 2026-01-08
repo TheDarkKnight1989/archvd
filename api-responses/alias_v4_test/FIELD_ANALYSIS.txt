@@ -1,0 +1,382 @@
+================================================================================
+ALIAS V4 API - COMPLETE FIELD ANALYSIS
+================================================================================
+
+
+ENDPOINT: /catalog?query=DD1391-100
+--------------------------------------------------------------------------------
+catalog_items: array
+  Examples: "[1 items]"
+catalog_items[0].allowed_sizes: array
+  Examples: "[28 items]"
+catalog_items[0].allowed_sizes[0].display_name: string
+  Examples: "4"
+catalog_items[0].allowed_sizes[0].us_size_equivalent: number
+  Examples: 4
+catalog_items[0].allowed_sizes[0].value: number
+  Examples: 4
+catalog_items[0].allowed_sizes[1].display_name: string
+  Examples: "4.5"
+catalog_items[0].allowed_sizes[1].us_size_equivalent: number
+  Examples: 4.5
+catalog_items[0].allowed_sizes[1].value: number
+  Examples: 4.5
+catalog_items[0].allowed_sizes[2].display_name: string
+  Examples: "5"
+catalog_items[0].allowed_sizes[2].us_size_equivalent: number
+  Examples: 5
+catalog_items[0].allowed_sizes[2].value: number
+  Examples: 5
+catalog_items[0].brand: string
+  Examples: "Nike"
+catalog_items[0].catalog_id: string
+  Examples: "dunk-low-black-white-dd1391-100"
+catalog_items[0].colorway: string
+  Examples: "White/Black/White"
+catalog_items[0].gender: string
+  Examples: "men"
+catalog_items[0].main_picture_url: string
+  Examples: "https://image.goat.com/glow-4-5-25/750/attachments/product_template_pictures/images/071/445/308/ori
+catalog_items[0].maximum_listing_price_cents: string
+  Examples: "200000"
+catalog_items[0].minimum_listing_price_cents: string
+  Examples: "2500"
+catalog_items[0].name: string
+  Examples: "Nike Dunk Low 'Black White'"
+catalog_items[0].nickname: string
+  Examples: "Black White"
+catalog_items[0].product_category: string
+  Examples: "PRODUCT_CATEGORY_SHOES"
+catalog_items[0].product_category_v2: string
+  Examples: "shoes"
+catalog_items[0].product_type: string
+  Examples: "sneakers"
+catalog_items[0].release_date: string
+  Examples: "2021-03-10T23:59:59.999Z"
+catalog_items[0].requested_pictures: array
+  Examples: "[8 items]"
+catalog_items[0].requested_pictures[0].quantity: string
+  Examples: "1"
+catalog_items[0].requested_pictures[0].type: string
+  Examples: "PICTURE_TYPE_OUTER"
+catalog_items[0].requested_pictures[1].quantity: string
+  Examples: "1"
+catalog_items[0].requested_pictures[1].type: string
+  Examples: "PICTURE_TYPE_INNER"
+catalog_items[0].requested_pictures[2].quantity: string
+  Examples: "1"
+catalog_items[0].requested_pictures[2].type: string
+  Examples: "PICTURE_TYPE_TOP"
+catalog_items[0].requires_listing_pictures: boolean
+  Examples: false
+catalog_items[0].resellable: boolean
+  Examples: true
+catalog_items[0].retail_price_cents: string
+  Examples: "10000"
+catalog_items[0].size_unit: string
+  Examples: "SIZE_UNIT_US"
+catalog_items[0].sku: string
+  Examples: "DD1391 100"
+has_more: boolean
+  Examples: false
+next_pagination_token: string
+  Examples: ""
+
+ENDPOINT: /catalog/dunk-low-black-white-dd1391-100
+--------------------------------------------------------------------------------
+catalog_item.allowed_sizes: array
+  Examples: "[28 items]"
+catalog_item.allowed_sizes[0].display_name: string
+  Examples: "4"
+catalog_item.allowed_sizes[0].us_size_equivalent: number
+  Examples: 4
+catalog_item.allowed_sizes[0].value: number
+  Examples: 4
+catalog_item.allowed_sizes[1].display_name: string
+  Examples: "4.5"
+catalog_item.allowed_sizes[1].us_size_equivalent: number
+  Examples: 4.5
+catalog_item.allowed_sizes[1].value: number
+  Examples: 4.5
+catalog_item.allowed_sizes[2].display_name: string
+  Examples: "5"
+catalog_item.allowed_sizes[2].us_size_equivalent: number
+  Examples: 5
+catalog_item.allowed_sizes[2].value: number
+  Examples: 5
+catalog_item.brand: string
+  Examples: "Nike"
+catalog_item.catalog_id: string
+  Examples: "dunk-low-black-white-dd1391-100"
+catalog_item.colorway: string
+  Examples: "White/Black/White"
+catalog_item.gender: string
+  Examples: "men"
+catalog_item.main_picture_url: string
+  Examples: "https://image.goat.com/glow-4-5-25/750/attachments/product_template_pictures/images/071/445/308/ori
+catalog_item.maximum_listing_price_cents: string
+  Examples: "200000"
+catalog_item.minimum_listing_price_cents: string
+  Examples: "2500"
+catalog_item.name: string
+  Examples: "Nike Dunk Low 'Black White'"
+catalog_item.nickname: string
+  Examples: "Black White"
+catalog_item.product_category: string
+  Examples: "PRODUCT_CATEGORY_SHOES"
+catalog_item.product_category_v2: string
+  Examples: "shoes"
+catalog_item.product_type: string
+  Examples: "sneakers"
+catalog_item.release_date: string
+  Examples: "2021-03-10T23:59:59.999Z"
+catalog_item.requested_pictures: array
+  Examples: "[8 items]"
+catalog_item.requested_pictures[0].quantity: string
+  Examples: "1"
+catalog_item.requested_pictures[0].type: string
+  Examples: "PICTURE_TYPE_OUTER"
+catalog_item.requested_pictures[1].quantity: string
+  Examples: "1"
+catalog_item.requested_pictures[1].type: string
+  Examples: "PICTURE_TYPE_INNER"
+catalog_item.requested_pictures[2].quantity: string
+  Examples: "1"
+catalog_item.requested_pictures[2].type: string
+  Examples: "PICTURE_TYPE_TOP"
+catalog_item.requires_listing_pictures: boolean
+  Examples: false
+catalog_item.resellable: boolean
+  Examples: true
+catalog_item.retail_price_cents: string
+  Examples: "10000"
+catalog_item.size_unit: string
+  Examples: "SIZE_UNIT_US"
+catalog_item.sku: string
+  Examples: "DD1391 100"
+
+ENDPOINT: /pricing_insights/availabilities/dunk-low-black-white-dd1391-100
+--------------------------------------------------------------------------------
+variants: array
+  Examples: "[241 items]"
+variants[0].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[0].availability.highest_offer_price_cents: string
+  Examples: "10500"
+variants[0].availability.last_sold_listing_price_cents: string
+  Examples: "11500"
+variants[0].availability.lowest_listing_price_cents: string
+  Examples: "9600"
+variants[0].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[0].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[0].size: number
+  Examples: 0
+variants[1].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[1].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[1].availability.last_sold_listing_price_cents: string
+  Examples: "22200"
+variants[1].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[1].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[1].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[1].size: number
+  Examples: 3
+variants[2].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[2].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[2].availability.last_sold_listing_price_cents: string
+  Examples: "39200"
+variants[2].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[2].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[2].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[2].size: number
+  Examples: 3.5
+
+ENDPOINT: /pricing_insights/availabilities/dunk-low-black-white-dd1391-100?region_id=1
+--------------------------------------------------------------------------------
+variants: array
+  Examples: "[177 items]"
+variants[0].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[0].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[0].availability.last_sold_listing_price_cents: string
+  Examples: "0"
+variants[0].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[0].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[0].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[0].size: number
+  Examples: 0.5
+variants[1].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[1].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[1].availability.last_sold_listing_price_cents: string
+  Examples: "0"
+variants[1].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[1].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[1].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[1].size: number
+  Examples: 1
+variants[2].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[2].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[2].availability.last_sold_listing_price_cents: string
+  Examples: "0"
+variants[2].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[2].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[2].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[2].size: number
+  Examples: 1.5
+
+ENDPOINT: /pricing_insights/availabilities/dunk-low-black-white-dd1391-100?consigned=false
+--------------------------------------------------------------------------------
+variants: array
+  Examples: "[235 items]"
+variants[0].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[0].availability.highest_offer_price_cents: string
+  Examples: "10500"
+variants[0].availability.last_sold_listing_price_cents: string
+  Examples: "11500"
+variants[0].availability.lowest_listing_price_cents: string
+  Examples: "8600"
+variants[0].consigned: boolean
+  Examples: false
+variants[0].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[0].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[0].size: number
+  Examples: 0
+variants[1].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[1].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[1].availability.last_sold_listing_price_cents: string
+  Examples: "22200"
+variants[1].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[1].consigned: boolean
+  Examples: false
+variants[1].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[1].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[1].size: number
+  Examples: 3
+variants[2].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[2].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[2].availability.last_sold_listing_price_cents: string
+  Examples: "21000"
+variants[2].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[2].consigned: boolean
+  Examples: false
+variants[2].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_NO_ORIGINAL_BOX"
+variants[2].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW_WITH_DEFECTS"
+variants[2].size: number
+  Examples: 3.5
+
+ENDPOINT: /pricing_insights/availabilities/dunk-low-black-white-dd1391-100?consigned=true
+--------------------------------------------------------------------------------
+variants: array
+  Examples: "[213 items]"
+variants[0].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[0].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[0].availability.last_sold_listing_price_cents: string
+  Examples: "0"
+variants[0].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[0].consigned: boolean
+  Examples: true
+variants[0].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[0].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[0].size: number
+  Examples: 3
+variants[1].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[1].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[1].availability.last_sold_listing_price_cents: string
+  Examples: "39200"
+variants[1].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[1].consigned: boolean
+  Examples: true
+variants[1].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_GOOD_CONDITION"
+variants[1].product_condition: string
+  Examples: "PRODUCT_CONDITION_NEW"
+variants[1].size: number
+  Examples: 3.5
+variants[2].availability.global_indicator_price_cents: string
+  Examples: "0"
+variants[2].availability.highest_offer_price_cents: string
+  Examples: "0"
+variants[2].availability.last_sold_listing_price_cents: string
+  Examples: "0"
+variants[2].availability.lowest_listing_price_cents: string
+  Examples: "0"
+variants[2].consigned: boolean
+  Examples: true
+variants[2].packaging_condition: string
+  Examples: "PACKAGING_CONDITION_BADLY_DAMAGED"
+variants[2].product_condition: string
+  Examples: "PRODUCT_CONDITION_USED"
+variants[2].size: number
+  Examples: 3.5
+
+ENDPOINT: /pricing_insights/recent_sales?catalog_id=dunk-low-black-white-dd1391-100&consigned=false&limit=10
+--------------------------------------------------------------------------------
+code: number
+  Examples: 3
+details: array
+  Examples: "[0 items]"
+message: string
+  Examples: "Missing parameter: input.Size"
+
+ENDPOINT: /pricing_insights/offer_histogram?catalog_id=dunk-low-black-white-dd1391-100&size=10&product_condition=PRODUCT_CONDITION_NEW&packaging_condition=PACKAGING_CONDITION_GOOD_CONDITION
+--------------------------------------------------------------------------------
+offer_histogram.bins: array
+  Examples: "[4 items]"
+offer_histogram.bins[0].count: string
+  Examples: "1"
+offer_histogram.bins[0].offer_price_cents: string
+  Examples: "5500"
+offer_histogram.bins[1].count: string
+  Examples: "1"
+offer_histogram.bins[1].offer_price_cents: string
+  Examples: "4500"
+offer_histogram.bins[2].count: string
+  Examples: "1"
+offer_histogram.bins[2].offer_price_cents: string
+  Examples: "3100"

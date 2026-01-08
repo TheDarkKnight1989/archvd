@@ -1,0 +1,125 @@
+{
+  "total": 7,
+  "synced": 2,
+  "skipped": 1,
+  "failed": 4,
+  "totalDuration": 65506,
+  "results": [
+    {
+      "catalogId": "dunk-low-black-white-dd1391-100",
+      "result": null,
+      "skipped": true,
+      "duration": 678
+    },
+    {
+      "catalogId": "dunk-low-retro-white-black-panda-dd1391-100",
+      "result": {
+        "success": false,
+        "catalogId": "dunk-low-retro-white-black-panda-dd1391-100",
+        "counts": {
+          "variantsSynced": 0,
+          "marketDataRefreshed": 0,
+          "priceSnapshotsInserted": 0,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "stage": "catalog_fetch",
+            "error": "Alias API error: 503 Service Unavailable"
+          }
+        ]
+      },
+      "duration": 511
+    },
+    {
+      "catalogId": "air-jordan-1-retro-high-og-chicago-lost-found-dz5485-612",
+      "result": {
+        "success": false,
+        "catalogId": "air-jordan-1-retro-high-og-chicago-lost-found-dz5485-612",
+        "counts": {
+          "variantsSynced": 0,
+          "marketDataRefreshed": 0,
+          "priceSnapshotsInserted": 0,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "stage": "catalog_fetch",
+            "error": "Alias API error: 503 Service Unavailable"
+          }
+        ]
+      },
+      "duration": 400
+    },
+    {
+      "catalogId": "air-jordan-4-retro-military-black-dh6927-111",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-4-retro-military-black-dh6927-111",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31882
+    },
+    {
+      "catalogId": "air-jordan-1-retro-high-og-bred-toe-555088-610",
+      "result": {
+        "success": false,
+        "catalogId": "air-jordan-1-retro-high-og-bred-toe-555088-610",
+        "counts": {
+          "variantsSynced": 0,
+          "marketDataRefreshed": 0,
+          "priceSnapshotsInserted": 0,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "stage": "catalog_fetch",
+            "error": "Alias API error: 503 Service Unavailable"
+          }
+        ]
+      },
+      "duration": 293
+    },
+    {
+      "catalogId": "dunk-low-championship-red-dd1391-600",
+      "result": {
+        "success": false,
+        "catalogId": "dunk-low-championship-red-dd1391-600",
+        "counts": {
+          "variantsSynced": 0,
+          "marketDataRefreshed": 0,
+          "priceSnapshotsInserted": 0,
+          "salesRecordsInserted": 0
+        },
+        "errors": [
+          {
+            "stage": "catalog_fetch",
+            "error": "Alias API error: 503 Service Unavailable"
+          }
+        ]
+      },
+      "duration": 207
+    },
+    {
+      "catalogId": "air-jordan-3-retro-white-cement-reimagined-dn3707-100",
+      "result": {
+        "success": true,
+        "catalogId": "air-jordan-3-retro-white-cement-reimagined-dn3707-100",
+        "counts": {
+          "variantsSynced": 240,
+          "marketDataRefreshed": 240,
+          "priceSnapshotsInserted": 240,
+          "salesRecordsInserted": 0
+        },
+        "errors": []
+      },
+      "duration": 31534
+    }
+  ]
+}

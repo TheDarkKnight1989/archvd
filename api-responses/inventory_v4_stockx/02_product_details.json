@@ -1,0 +1,59 @@
+{
+  "request": {
+    "endpoint": "/v2/catalog/products/5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+    "params": {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe"
+    },
+    "timestamp": "2025-12-09T14:33:29.805Z"
+  },
+  "response": {
+    "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+    "brand": "Nike",
+    "productType": "sneakers",
+    "styleId": "DD1391-100",
+    "urlKey": "nike-dunk-low-retro-white-black-2021",
+    "title": "Nike Dunk Low Retro White Black Panda",
+    "productAttributes": {
+      "color": null,
+      "colorway": "White/Black",
+      "gender": "men",
+      "releaseDate": "2021-03-10",
+      "retailPrice": 115,
+      "season": null
+    },
+    "sizeChart": {
+      "defaultConversion": {
+        "name": "US M",
+        "type": "us m"
+      },
+      "availableConversions": [
+        {
+          "name": "US M",
+          "type": "us m"
+        },
+        {
+          "name": "US W",
+          "type": "us w"
+        },
+        {
+          "name": "UK",
+          "type": "uk"
+        },
+        {
+          "name": "CM",
+          "type": "cm"
+        },
+        {
+          "name": "KR",
+          "type": "kr"
+        },
+        {
+          "name": "EU",
+          "type": "eu"
+        }
+      ]
+    },
+    "isFlexEligible": true,
+    "isDirectEligible": true
+  }
+}

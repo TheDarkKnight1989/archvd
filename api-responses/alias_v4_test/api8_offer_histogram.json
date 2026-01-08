@@ -1,0 +1,22 @@
+{
+  "offer_histogram": {
+    "bins": [
+      {
+        "offer_price_cents": "5500",
+        "count": "1"
+      },
+      {
+        "offer_price_cents": "4500",
+        "count": "1"
+      },
+      {
+        "offer_price_cents": "3100",
+        "count": "1"
+      },
+      {
+        "offer_price_cents": "2500",
+        "count": "1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "total": 1,
+  "synced": 0,
+  "skipped": 1,
+  "failed": 0,
+  "totalDuration": 183,
+  "results": [
+    {
+      "sku": "HQ8487-500",
+      "result": null,
+      "skipped": true,
+      "duration": 182
+    }
+  ]
+}

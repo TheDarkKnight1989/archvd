@@ -1,0 +1,471 @@
+{
+  "total": 45,
+  "synced": 24,
+  "skipped": 21,
+  "failed": 0,
+  "totalDuration": 571684,
+  "results": [
+    {
+      "sku": "IM7410-001",
+      "result": null,
+      "skipped": true,
+      "duration": 413
+    },
+    {
+      "sku": "FB2709-003",
+      "result": null,
+      "skipped": true,
+      "duration": 105
+    },
+    {
+      "sku": "HJ5996-001",
+      "result": null,
+      "skipped": true,
+      "duration": 214
+    },
+    {
+      "sku": "HM4740-001",
+      "result": null,
+      "skipped": true,
+      "duration": 43
+    },
+    {
+      "sku": "HF5515-400",
+      "result": null,
+      "skipped": true,
+      "duration": 44
+    },
+    {
+      "sku": "FV5029-010",
+      "result": null,
+      "skipped": true,
+      "duration": 42
+    },
+    {
+      "sku": "FV5029-200",
+      "result": null,
+      "skipped": true,
+      "duration": 46
+    },
+    {
+      "sku": "FV5029-100",
+      "result": null,
+      "skipped": true,
+      "duration": 46
+    },
+    {
+      "sku": "FV5029-006",
+      "result": null,
+      "skipped": true,
+      "duration": 49
+    },
+    {
+      "sku": "FV5029-141",
+      "result": null,
+      "skipped": true,
+      "duration": 54
+    },
+    {
+      "sku": "FQ8138-002",
+      "result": null,
+      "skipped": true,
+      "duration": 104
+    },
+    {
+      "sku": "IB4171-100",
+      "result": null,
+      "skipped": true,
+      "duration": 43
+    },
+    {
+      "sku": "FQ8213-006",
+      "result": null,
+      "skipped": true,
+      "duration": 48
+    },
+    {
+      "sku": "DR5415-100",
+      "result": null,
+      "skipped": true,
+      "duration": 42
+    },
+    {
+      "sku": "FQ8138-001",
+      "result": null,
+      "skipped": true,
+      "duration": 42
+    },
+    {
+      "sku": "DR5415-103",
+      "result": null,
+      "skipped": true,
+      "duration": 45
+    },
+    {
+      "sku": "DH6927-017",
+      "result": null,
+      "skipped": true,
+      "duration": 44
+    },
+    {
+      "sku": "DH6927-111",
+      "result": null,
+      "skipped": true,
+      "duration": 39
+    },
+    {
+      "sku": "FB9927-200",
+      "result": null,
+      "skipped": true,
+      "duration": 41
+    },
+    {
+      "sku": "FQ8138-103",
+      "result": null,
+      "skipped": true,
+      "duration": 39
+    },
+    {
+      "sku": "DH7138-006",
+      "result": null,
+      "skipped": true,
+      "duration": 142
+    },
+    {
+      "sku": "CT8527-016",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 25,
+          "marketDataRefreshed": 25,
+          "priceSnapshotsInserted": 25
+        },
+        "errors": [],
+        "productId": "50b8dfb8-327b-4703-8a9b-e6a344aef7b8"
+      },
+      "duration": 31032
+    },
+    {
+      "sku": "DC7770-160",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 25,
+          "marketDataRefreshed": 25,
+          "priceSnapshotsInserted": 25
+        },
+        "errors": [],
+        "productId": "d514a683-46e2-4bc7-9027-fbcdaaaa9005"
+      },
+      "duration": 29300
+    },
+    {
+      "sku": "DH6927-061",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 21,
+          "marketDataRefreshed": 21,
+          "priceSnapshotsInserted": 21
+        },
+        "errors": [],
+        "productId": "5cf6161f-6568-4d07-899c-cc27d6f66749"
+      },
+      "duration": 30454
+    },
+    {
+      "sku": "DJ0675-200",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 18,
+          "marketDataRefreshed": 18,
+          "priceSnapshotsInserted": 18
+        },
+        "errors": [],
+        "productId": "d7a70a20-f0fa-4ed7-a5f3-de8893baf1c9"
+      },
+      "duration": 24187
+    },
+    {
+      "sku": "DZ4137-700",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 23,
+          "marketDataRefreshed": 23,
+          "priceSnapshotsInserted": 23
+        },
+        "errors": [],
+        "productId": "b5751ee5-d0db-4422-a38f-ae122ed521e5"
+      },
+      "duration": 27629
+    },
+    {
+      "sku": "FZ4810-200",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 23,
+          "marketDataRefreshed": 23,
+          "priceSnapshotsInserted": 23
+        },
+        "errors": [],
+        "productId": "a468cd0d-f452-4f81-8282-1a7c7e633255"
+      },
+      "duration": 27491
+    },
+    {
+      "sku": "FZ4811-001",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 22,
+          "marketDataRefreshed": 22,
+          "priceSnapshotsInserted": 22
+        },
+        "errors": [],
+        "productId": "f514c18f-9903-41d4-b311-300acd3f22d3"
+      },
+      "duration": 26310
+    },
+    {
+      "sku": "FD4810-010",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 22,
+          "marketDataRefreshed": 22,
+          "priceSnapshotsInserted": 22
+        },
+        "errors": [],
+        "productId": "11af805f-f7b6-4dea-9067-d147cf25c038"
+      },
+      "duration": 25655
+    },
+    {
+      "sku": "DH3434-110",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 22,
+          "marketDataRefreshed": 22,
+          "priceSnapshotsInserted": 22
+        },
+        "errors": [],
+        "productId": "241fdc4a-364e-45a6-a94c-1f94f5bd4c85"
+      },
+      "duration": 26716
+    },
+    {
+      "sku": "HV8571-100",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 26,
+          "marketDataRefreshed": 26,
+          "priceSnapshotsInserted": 26
+        },
+        "errors": [],
+        "productId": "b0357082-9561-404d-99d4-2afb6c036941"
+      },
+      "duration": 32235
+    },
+    {
+      "sku": "JI2734",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 24,
+          "marketDataRefreshed": 24,
+          "priceSnapshotsInserted": 24
+        },
+        "errors": [],
+        "productId": "5641458d-749d-4fa6-9116-599c1fe09450"
+      },
+      "duration": 28948
+    },
+    {
+      "sku": "144032-SAN",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 8,
+          "marketDataRefreshed": 8,
+          "priceSnapshotsInserted": 8
+        },
+        "errors": [],
+        "productId": "bb0dbb58-4f61-4209-a288-43d93c77b487"
+      },
+      "duration": 11084
+    },
+    {
+      "sku": "1116109-CHE",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 8,
+          "marketDataRefreshed": 8,
+          "priceSnapshotsInserted": 8
+        },
+        "errors": [],
+        "productId": "f1ecf14c-ec7f-4aa3-9aeb-5e7f7662b250"
+      },
+      "duration": 12494
+    },
+    {
+      "sku": "1144032-BLK",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 8,
+          "marketDataRefreshed": 8,
+          "priceSnapshotsInserted": 8
+        },
+        "errors": [],
+        "productId": "81798423-3ee6-40ae-ba61-400d196914da"
+      },
+      "duration": 11706
+    },
+    {
+      "sku": "1144032-CHE",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 8,
+          "marketDataRefreshed": 8,
+          "priceSnapshotsInserted": 8
+        },
+        "errors": [],
+        "productId": "3b405fb3-f98b-4c2e-aef4-50af36163256"
+      },
+      "duration": 11612
+    },
+    {
+      "sku": "IG9030",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 21,
+          "marketDataRefreshed": 21,
+          "priceSnapshotsInserted": 21
+        },
+        "errors": [],
+        "productId": "d2da8fc0-ef8d-41df-b913-f9e76556c2d8"
+      },
+      "duration": 25005
+    },
+    {
+      "sku": "IF6490",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 21,
+          "marketDataRefreshed": 21,
+          "priceSnapshotsInserted": 21
+        },
+        "errors": [],
+        "productId": "5c55a21e-77f0-43f0-ab19-9d8751024c66"
+      },
+      "duration": 24537
+    },
+    {
+      "sku": "JR1256",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 22,
+          "marketDataRefreshed": 22,
+          "priceSnapshotsInserted": 22
+        },
+        "errors": [],
+        "productId": "bed32f54-2dc2-44c6-9db8-8c9d7c4262e5"
+      },
+      "duration": 24956
+    },
+    {
+      "sku": "DD1503-124",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 15,
+          "marketDataRefreshed": 15,
+          "priceSnapshotsInserted": 15
+        },
+        "errors": [],
+        "productId": "200f2f35-2133-4bfb-9256-bc033277f61c"
+      },
+      "duration": 20677
+    },
+    {
+      "sku": "DD1503-103",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 25,
+          "marketDataRefreshed": 25,
+          "priceSnapshotsInserted": 25
+        },
+        "errors": [],
+        "productId": "796882e1-685f-4bbb-8720-075b76db84dd"
+      },
+      "duration": 29388
+    },
+    {
+      "sku": "1202A507-100",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 15,
+          "marketDataRefreshed": 15,
+          "priceSnapshotsInserted": 15
+        },
+        "errors": [],
+        "productId": "00225eed-6cdf-44f2-a43d-5e799a2f5606"
+      },
+      "duration": 19970
+    },
+    {
+      "sku": "1203A383-104",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 21,
+          "marketDataRefreshed": 21,
+          "priceSnapshotsInserted": 21
+        },
+        "errors": [],
+        "productId": "030cb8cc-fb57-4cd0-8c08-c4b323b6732f"
+      },
+      "duration": 23707
+    },
+    {
+      "sku": "1202A525-700",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 15,
+          "marketDataRefreshed": 15,
+          "priceSnapshotsInserted": 15
+        },
+        "errors": [],
+        "productId": "6199b840-9be5-45ea-9b8e-e541625fc835"
+      },
+      "duration": 18923
+    },
+    {
+      "sku": "FD0884-025",
+      "result": {
+        "success": true,
+        "counts": {
+          "variantsSynced": 22,
+          "marketDataRefreshed": 22,
+          "priceSnapshotsInserted": 22
+        },
+        "errors": [],
+        "productId": "c34a77e4-5bf8-4cdf-8f99-bb3445eac23d"
+      },
+      "duration": 25982
+    }
+  ]
+}

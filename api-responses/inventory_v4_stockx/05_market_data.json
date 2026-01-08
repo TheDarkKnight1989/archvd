@@ -1,0 +1,41 @@
+{
+  "request": {
+    "endpoint": "/v2/catalog/products/5e6a1e57-1c7d-435a-82bd-5666a13560fe/variants/55da4110-5983-439f-9ae4-d7d054f67723/market-data?currencyCode=GBP",
+    "params": {
+      "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+      "variantId": "55da4110-5983-439f-9ae4-d7d054f67723"
+    },
+    "timestamp": "2025-12-09T14:33:33.707Z"
+  },
+  "response": {
+    "productId": "5e6a1e57-1c7d-435a-82bd-5666a13560fe",
+    "variantId": "55da4110-5983-439f-9ae4-d7d054f67723",
+    "currencyCode": "GBP",
+    "highestBidAmount": "27",
+    "lowestAskAmount": null,
+    "flexLowestAskAmount": null,
+    "earnMoreAmount": "100",
+    "sellFasterAmount": "59",
+    "standardMarketData": {
+      "lowestAsk": null,
+      "highestBidAmount": "27",
+      "sellFaster": "59",
+      "earnMore": "100",
+      "beatUS": null
+    },
+    "flexMarketData": {
+      "lowestAsk": null,
+      "highestBidAmount": "27",
+      "sellFaster": null,
+      "earnMore": null,
+      "beatUS": null
+    },
+    "directMarketData": {
+      "lowestAsk": null,
+      "highestBidAmount": "27",
+      "sellFaster": null,
+      "earnMore": null,
+      "beatUS": null
+    }
+  }
+}

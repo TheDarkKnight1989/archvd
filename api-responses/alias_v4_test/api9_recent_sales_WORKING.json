@@ -1,0 +1,74 @@
+{
+  "recent_sales": [
+    {
+      "purchased_at": "2025-12-09T18:24:08.701Z",
+      "price_cents": "6500",
+      "size": 10,
+      "consigned": true,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-09T18:18:06.675Z",
+      "price_cents": "6500",
+      "size": 10,
+      "consigned": true,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-09T07:29:13.258Z",
+      "price_cents": "6300",
+      "size": 10,
+      "consigned": false,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-09T05:25:35.391Z",
+      "price_cents": "6300",
+      "size": 10,
+      "consigned": false,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-09T03:54:59.838Z",
+      "price_cents": "6500",
+      "size": 10,
+      "consigned": true,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-09T03:22:51.203Z",
+      "price_cents": "6300",
+      "size": 10,
+      "consigned": false,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-09T02:19:19.349Z",
+      "price_cents": "6400",
+      "size": 10,
+      "consigned": false,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-09T01:53:36.720Z",
+      "price_cents": "5400",
+      "size": 10,
+      "consigned": false,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-07T18:18:59.508Z",
+      "price_cents": "6300",
+      "size": 10,
+      "consigned": false,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    },
+    {
+      "purchased_at": "2025-12-07T14:03:27.497Z",
+      "price_cents": "6100",
+      "size": 10,
+      "consigned": false,
+      "catalog_id": "dunk-low-black-white-dd1391-100"
+    }
+  ]
+}
