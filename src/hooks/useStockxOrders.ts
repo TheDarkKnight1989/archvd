@@ -163,48 +163,69 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
     try {
       // Try to find order in local state first
       let order = state.orders.find(o => o.orderNumber === orderNumber)
-      let directUrl = order?.shipment?.shippingLabelUrl || order?.shipment?.shippingDocumentUrl
-      let derivedShippingId = shippingId || order?.initiatedShipments?.inbound?.displayId
+
+      // Get shipping URLs from order
+      let pdfUrl = order?.shipment?.shippingDocumentUrl
+      let pngUrl = order?.shipment?.shippingLabelUrl
 
       // If no shipping info in cached order, fetch full details from API
-      if (!directUrl && !derivedShippingId) {
+      if (!pdfUrl && !pngUrl) {
         console.log('[useStockxOrders] Fetching full order details for shipping info')
         const detailsRes = await fetch(`/api/stockx/orders/${orderNumber}`)
         if (detailsRes.ok) {
           const detailsData = await detailsRes.json()
           const fullOrder = detailsData.order
           if (fullOrder) {
-            directUrl = fullOrder.shipment?.shippingLabelUrl || fullOrder.shipment?.shippingDocumentUrl
-            derivedShippingId = fullOrder.initiatedShipments?.inbound?.displayId
+            pdfUrl = fullOrder.shipment?.shippingDocumentUrl
+            pngUrl = fullOrder.shipment?.shippingLabelUrl
             console.log('[useStockxOrders] Full order shipping info:', {
-              directUrl,
-              derivedShippingId,
+              pdfUrl,
+              pngUrl,
               shipment: fullOrder.shipment,
-              initiatedShipments: fullOrder.initiatedShipments,
             })
           }
         }
       }
 
       let blob: Blob
+      let filename: string
 
-      if (directUrl) {
-        // Use direct URL from order data
-        const response = await fetch(directUrl)
+      // Extract shippingId from shippingDocumentUrl and use our API (handles auth)
+      // URL format: https://api.stockx.com/v2/selling/orders/{orderNumber}/shipping-document/{shippingId}
+      if (pdfUrl) {
+        const urlParts = pdfUrl.split('/shipping-document/')
+        const extractedShippingId = urlParts[1] || shippingId
+
+        if (extractedShippingId) {
+          console.log('[useStockxOrders] Downloading PDF via API:', {
+            orderNumber,
+            shippingId: extractedShippingId,
+          })
+
+          // Use our API endpoint which adds auth headers
+          const response = await fetch(
+            `/api/stockx/orders/${orderNumber}/shipping-label?shippingId=${extractedShippingId}`
+          )
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `Failed to download PDF: ${response.status}`)
+          }
+
+          blob = await response.blob()
+          filename = `stockx-label-${orderNumber}.pdf`
+        } else {
+          throw new Error('Could not extract shipping ID from URL')
+        }
+      } else if (pngUrl) {
+        // Use PNG label URL directly (pre-signed, no auth needed)
+        console.log('[useStockxOrders] Downloading PNG from:', pngUrl)
+        const response = await fetch(pngUrl)
         if (!response.ok) {
-          throw new Error('Failed to download label from direct URL')
+          throw new Error(`Failed to download PNG: ${response.status}`)
         }
         blob = await response.blob()
-      } else if (derivedShippingId) {
-        // Use API endpoint with shippingId
-        const response = await fetch(
-          `/api/stockx/orders/${orderNumber}/shipping-label?shippingId=${derivedShippingId}`
-        )
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || 'Failed to download label')
-        }
-        blob = await response.blob()
+        filename = `stockx-label-${orderNumber}.png`
       } else {
         throw new Error('Shipping label not found. Please try downloading from StockX directly.')
       }
@@ -212,7 +233,7 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `stockx-label-${orderNumber}.pdf`
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
