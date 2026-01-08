@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
       {
         error: 'Failed to fetch orders',
         details: error.message,
+        stack: error.stack?.split('\n').slice(0, 5).join('\n'),
         duration_ms: duration,
       },
       { status: 500 }
