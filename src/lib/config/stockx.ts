@@ -36,7 +36,7 @@ function loadConfig(): StockxConfig {
   try {
     config = stockxConfigSchema.parse({
       enabled: process.env.NEXT_PUBLIC_STOCKX_ENABLE === 'true',
-      mockMode: process.env.NEXT_PUBLIC_STOCKX_MOCK !== 'false', // Default true for safety
+      mockMode: process.env.NEXT_PUBLIC_STOCKX_MOCK === 'true', // Only mock if explicitly set
       apiBaseUrl: process.env.STOCKX_API_BASE_URL,
       clientId: process.env.STOCKX_CLIENT_ID,
       clientSecret: process.env.STOCKX_CLIENT_SECRET,
