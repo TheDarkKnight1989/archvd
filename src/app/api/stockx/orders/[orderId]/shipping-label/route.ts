@@ -62,12 +62,21 @@ export async function GET(
       userId: user.id,
       orderId,
       shippingId,
+      stockxUrl: `https://api.stockx.com/v2/selling/orders/${orderId}/shipping-document/${shippingId}`,
     })
 
     const ordersService = getOrdersService(user.id)
     const pdfBlob = await ordersService.getShippingDocument(orderId, shippingId)
 
     const duration = Date.now() - startTime
+
+    // Log what we received
+    console.log('[Shipping Label] Response received:', {
+      type: typeof pdfBlob,
+      isBlob: pdfBlob instanceof Blob,
+      size: pdfBlob instanceof Blob ? pdfBlob.size : 'N/A',
+      duration_ms: duration,
+    })
 
     // Return PDF as downloadable file
     const headers = new Headers()

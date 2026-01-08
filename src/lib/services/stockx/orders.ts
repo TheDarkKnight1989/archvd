@@ -180,15 +180,18 @@ export class StockxOrdersService {
     orderNumber: string,
     shippingId: string
   ): Promise<Blob> {
+    const endpoint = `/v2/selling/orders/${orderNumber}/shipping-document/${shippingId}`
     console.log('[StockX Orders] Fetching shipping document:', {
       orderNumber,
       shippingId,
+      fullEndpoint: endpoint,
+      fullUrl: `https://api.stockx.com${endpoint}`,
     })
 
     const response = await withStockxRetry(
       () =>
         this.client.request<Blob>(
-          `/v2/selling/orders/${orderNumber}/shipping-document/${shippingId}`,
+          endpoint,
           {
             method: 'GET',
             headers: {
@@ -198,6 +201,8 @@ export class StockxOrdersService {
         ),
       { label: `Get shipping label: ${orderNumber}/${shippingId}` }
     )
+
+    console.log('[StockX Orders] Shipping document response type:', typeof response, response instanceof Blob ? 'is Blob' : 'not Blob')
 
     return response
   }
