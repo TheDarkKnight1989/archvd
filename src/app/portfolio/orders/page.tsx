@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { toast } from 'sonner'
 import { useStockxOrders } from '@/hooks/useStockxOrders'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -435,9 +436,10 @@ export default function OrdersPage() {
   const handleDownloadLabel = async (orderId: string) => {
     try {
       await downloadLabel(orderId)
-    } catch (err) {
+      toast.success('Label downloaded')
+    } catch (err: any) {
       console.error('Failed to download label:', err)
-      // TODO: Show toast error
+      toast.error(err.message || 'Failed to download label')
     }
   }
 

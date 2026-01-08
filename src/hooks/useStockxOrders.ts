@@ -161,9 +161,12 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
   // Uses shippingLabelUrl from order data (preferred) or API endpoint with shippingId
   const downloadLabel = useCallback(async (orderNumber: string, shippingId?: string) => {
     try {
-      // Try to find order in local state to get direct URL
+      // Try to find order in local state to get direct URL or shippingId
       const order = state.orders.find(o => o.orderNumber === orderNumber)
       const directUrl = order?.shipment?.shippingLabelUrl || order?.shipment?.shippingDocumentUrl
+
+      // Try to get shippingId from initiatedShipments (for CREATED orders)
+      const derivedShippingId = shippingId || order?.initiatedShipments?.inbound?.displayId
 
       let blob: Blob
 
@@ -174,17 +177,18 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
           throw new Error('Failed to download label from direct URL')
         }
         blob = await response.blob()
-      } else if (shippingId) {
+      } else if (derivedShippingId) {
         // Use API endpoint with shippingId
         const response = await fetch(
-          `/api/stockx/orders/${orderNumber}/shipping-label?shippingId=${shippingId}`
+          `/api/stockx/orders/${orderNumber}/shipping-label?shippingId=${derivedShippingId}`
         )
         if (!response.ok) {
-          throw new Error('Failed to download label')
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Failed to download label')
         }
         blob = await response.blob()
       } else {
-        throw new Error('No shipping label URL available and no shippingId provided')
+        throw new Error('No shipping label available yet. StockX may still be generating it.')
       }
 
       const url = window.URL.createObjectURL(blob)
