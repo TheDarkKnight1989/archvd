@@ -64,6 +64,20 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
     syncing: false,
   })
 
+  // Fetch full order details (has payout, shipByDate, etc.)
+  const fetchOrderDetails = useCallback(async (orderNumber: string): Promise<Order | null> => {
+    try {
+      const res = await fetch(`/api/stockx/orders/${orderNumber}`)
+      if (res.ok) {
+        const data = await res.json()
+        return data.order
+      }
+    } catch (err) {
+      console.error('[useStockxOrders] Failed to fetch order details:', orderNumber, err)
+    }
+    return null
+  }, [])
+
   // Fetch orders from API
   const fetchOrders = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null, errorCode: null }))
@@ -101,10 +115,31 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
       const activeData = await activeRes.json()
       const historicalData = await historicalRes.json()
 
-      const allOrders = [
+      let allOrders: Order[] = [
         ...(activeData.orders || []),
         ...(historicalData.orders || []),
       ]
+
+      // Fetch full details for orders that need shipping (to get payout, shipByDate)
+      // The list endpoint doesn't return these fields
+      const ordersNeedingDetails = allOrders.filter(
+        (o) => o.status === 'CREATED' || o.status === 'PENDING'
+      )
+
+      if (ordersNeedingDetails.length > 0) {
+        console.log('[useStockxOrders] Fetching full details for', ordersNeedingDetails.length, 'orders')
+        const detailPromises = ordersNeedingDetails.map((o) => fetchOrderDetails(o.orderNumber))
+        const details = await Promise.all(detailPromises)
+
+        // Merge detailed data into orders
+        allOrders = allOrders.map((order) => {
+          const detail = details.find((d) => d?.orderNumber === order.orderNumber)
+          if (detail) {
+            return { ...order, ...detail }
+          }
+          return order
+        })
+      }
 
       setState((prev) => ({
         ...prev,
@@ -122,7 +157,7 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
         errorCode: 'api_error',
       }))
     }
-  }, [])
+  }, [fetchOrderDetails])
 
   // Sync orders (trigger fresh fetch from StockX API)
   const syncOrders = useCallback(async () => {

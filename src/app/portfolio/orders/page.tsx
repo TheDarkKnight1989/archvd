@@ -214,6 +214,7 @@ function OrderRow({
 }) {
   const handleCopyOrderId = () => {
     navigator.clipboard.writeText(order.orderNumber)
+    toast.success('Order number copied')
   }
 
   const shipByInfo = order.shipment?.shipByDate ? formatRelativeTime(order.shipment.shipByDate) : null
@@ -221,6 +222,17 @@ function OrderRow({
 
   return (
     <tr className="hover:bg-muted/50 border-b border-border/50">
+      {/* Order Number */}
+      <td className="px-4 py-3">
+        <button
+          onClick={handleCopyOrderId}
+          className="text-xs font-mono text-muted hover:text-fg transition-colors"
+          title="Click to copy"
+        >
+          {order.orderNumber}
+        </button>
+      </td>
+
       {/* Product */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
@@ -306,6 +318,7 @@ function OrderCard({
 }) {
   const handleCopyOrderId = () => {
     navigator.clipboard.writeText(order.orderNumber)
+    toast.success('Order number copied')
   }
 
   const shipByInfo = order.shipment?.shipByDate ? formatRelativeTime(order.shipment.shipByDate) : null
@@ -314,6 +327,18 @@ function OrderCard({
 
   return (
     <div className="bg-elev-1 rounded-xl border border-border/50 p-4">
+      {/* Order Number */}
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={handleCopyOrderId}
+          className="text-xs font-mono text-muted hover:text-fg transition-colors"
+          title="Click to copy"
+        >
+          {order.orderNumber}
+        </button>
+        <OrderStatusBadge status={order.status} />
+      </div>
+
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -321,10 +346,7 @@ function OrderCard({
             {order.product?.productName || styleId}
           </h3>
           <p className="text-xs text-muted">{styleId}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-muted">Size: {order.variant?.variantValue || order.variant?.variantName}</span>
-            <OrderStatusBadge status={order.status} />
-          </div>
+          <span className="text-xs text-muted">Size: {order.variant?.variantValue || order.variant?.variantName}</span>
         </div>
       </div>
 
@@ -606,6 +628,7 @@ export default function OrdersPage() {
                   <table className="w-full">
                     <thead className="border-b bg-muted/50">
                       <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Order #</th>
                         <th className="px-4 py-3 text-left text-sm font-medium">Product</th>
                         <th className="px-4 py-3 text-left text-sm font-medium">Size</th>
                         <th className="px-4 py-3 text-right text-sm font-medium">Sale</th>
