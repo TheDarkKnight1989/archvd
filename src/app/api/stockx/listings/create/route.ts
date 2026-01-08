@@ -243,55 +243,38 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Get variant_id by matching size - try V4 first, then V3 fallback
+      // Get variant_id by matching size from V4 variants table
+      // Try exact match first, then UK→US conversion (UK+1=US for sneakers)
       let variantId: string | null = null
 
-      // Try V4 variants table
-      const { data: v4Variant } = await supabase
+      // Exact match on item size
+      const { data: exactVariant } = await supabase
         .from('inventory_v4_stockx_variants')
         .select('stockx_variant_id')
         .eq('stockx_product_id', styleCatalog.stockx_product_id)
         .eq('variant_value', v4Item.size)
         .maybeSingle()
 
-      if (v4Variant?.stockx_variant_id) {
-        variantId = v4Variant.stockx_variant_id
-        console.log('[Create Listing] Found variant in V4 table:', variantId)
+      if (exactVariant?.stockx_variant_id) {
+        variantId = exactVariant.stockx_variant_id
+        console.log('[Create Listing] Found variant with exact size match:', variantId)
       } else {
-        // V3 fallback: Try stockx_variants table (legacy)
-        console.log('[Create Listing] V4 variant not found, trying V3 fallback...')
+        // Try UK→US size conversion (UK+1=US for men's sneakers)
+        const ukSize = parseFloat(v4Item.size)
+        if (!isNaN(ukSize)) {
+          const usSize = (ukSize + 1).toString()
+          console.log('[Create Listing] Trying US size conversion:', { ukSize, usSize })
 
-        // V3 uses string product_id, not UUID - need to handle both formats
-        const productIdStr = styleCatalog.stockx_product_id.toString()
+          const { data: usVariant } = await supabase
+            .from('inventory_v4_stockx_variants')
+            .select('stockx_variant_id')
+            .eq('stockx_product_id', styleCatalog.stockx_product_id)
+            .eq('variant_value', usSize)
+            .maybeSingle()
 
-        const { data: v3Variant } = await supabase
-          .from('stockx_variants')
-          .select('stockx_variant_id')
-          .eq('stockx_product_id', productIdStr)
-          .eq('variant_value', v4Item.size)
-          .maybeSingle()
-
-        if (v3Variant?.stockx_variant_id) {
-          variantId = v3Variant.stockx_variant_id
-          console.log('[Create Listing] Found variant in V3 table:', variantId)
-        } else {
-          // Try UK+1 = US size conversion as last resort
-          const ukSize = parseFloat(v4Item.size)
-          if (!isNaN(ukSize)) {
-            const usSize = (ukSize + 1).toString()
-            console.log('[Create Listing] Trying US size conversion:', { ukSize, usSize })
-
-            const { data: usVariant } = await supabase
-              .from('stockx_variants')
-              .select('stockx_variant_id')
-              .eq('stockx_product_id', productIdStr)
-              .eq('variant_value', usSize)
-              .maybeSingle()
-
-            if (usVariant?.stockx_variant_id) {
-              variantId = usVariant.stockx_variant_id
-              console.log('[Create Listing] Found variant using US size:', variantId)
-            }
+          if (usVariant?.stockx_variant_id) {
+            variantId = usVariant.stockx_variant_id
+            console.log('[Create Listing] Found variant with US size:', variantId)
           }
         }
       }
@@ -304,7 +287,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             code: 'INCOMPLETE_MAPPING',
-            error: `No StockX variant found for size ${v4Item.size}. The product may not be available in this size.`,
+            error: `StockX variant data not synced for size ${v4Item.size}. Please refresh market data for this product.`,
           },
           { status: 400 }
         )
@@ -314,7 +297,7 @@ export async function POST(request: NextRequest) {
         stockx_product_id: styleCatalog.stockx_product_id,
         stockx_variant_id: variantId,
       }
-      console.log('[Create Listing] Using V4/V3 mapping:', mapping)
+      console.log('[Create Listing] Using V4 mapping:', mapping)
     }
 
     if (!mapping) {
