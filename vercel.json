@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/sync-stockx-orders",
-      "schedule": "0,30 * * * *"
+      "schedule": "0 7 * * *"
     }
   ]
 }
