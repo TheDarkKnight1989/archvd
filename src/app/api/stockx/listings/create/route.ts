@@ -243,19 +243,63 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Get variant_id by matching size
-      const { data: variant, error: variantError } = await supabase
+      // Get variant_id by matching size - try V4 first, then V3 fallback
+      let variantId: string | null = null
+
+      // Try V4 variants table
+      const { data: v4Variant } = await supabase
         .from('inventory_v4_stockx_variants')
         .select('stockx_variant_id')
         .eq('stockx_product_id', styleCatalog.stockx_product_id)
         .eq('variant_value', v4Item.size)
-        .single()
+        .maybeSingle()
 
-      if (variantError || !variant?.stockx_variant_id) {
+      if (v4Variant?.stockx_variant_id) {
+        variantId = v4Variant.stockx_variant_id
+        console.log('[Create Listing] Found variant in V4 table:', variantId)
+      } else {
+        // V3 fallback: Try stockx_variants table (legacy)
+        console.log('[Create Listing] V4 variant not found, trying V3 fallback...')
+
+        // V3 uses string product_id, not UUID - need to handle both formats
+        const productIdStr = styleCatalog.stockx_product_id.toString()
+
+        const { data: v3Variant } = await supabase
+          .from('stockx_variants')
+          .select('stockx_variant_id')
+          .eq('stockx_product_id', productIdStr)
+          .eq('variant_value', v4Item.size)
+          .maybeSingle()
+
+        if (v3Variant?.stockx_variant_id) {
+          variantId = v3Variant.stockx_variant_id
+          console.log('[Create Listing] Found variant in V3 table:', variantId)
+        } else {
+          // Try UK+1 = US size conversion as last resort
+          const ukSize = parseFloat(v4Item.size)
+          if (!isNaN(ukSize)) {
+            const usSize = (ukSize + 1).toString()
+            console.log('[Create Listing] Trying US size conversion:', { ukSize, usSize })
+
+            const { data: usVariant } = await supabase
+              .from('stockx_variants')
+              .select('stockx_variant_id')
+              .eq('stockx_product_id', productIdStr)
+              .eq('variant_value', usSize)
+              .maybeSingle()
+
+            if (usVariant?.stockx_variant_id) {
+              variantId = usVariant.stockx_variant_id
+              console.log('[Create Listing] Found variant using US size:', variantId)
+            }
+          }
+        }
+      }
+
+      if (!variantId) {
         console.error('[Create Listing] No matching variant for size:', {
           productId: styleCatalog.stockx_product_id,
           size: v4Item.size,
-          error: variantError?.message,
         })
         return NextResponse.json(
           {
@@ -268,9 +312,9 @@ export async function POST(request: NextRequest) {
 
       mapping = {
         stockx_product_id: styleCatalog.stockx_product_id,
-        stockx_variant_id: variant.stockx_variant_id,
+        stockx_variant_id: variantId,
       }
-      console.log('[Create Listing] Using V4 mapping:', mapping)
+      console.log('[Create Listing] Using V4/V3 mapping:', mapping)
     }
 
     if (!mapping) {
