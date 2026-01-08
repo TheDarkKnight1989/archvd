@@ -41,13 +41,26 @@ function verifyCronSecret(request: NextRequest): boolean {
  */
 function mapStatusToDb(status: OrderStatus): 'ACTIVE' | 'COMPLETED' | 'CANCELLED' {
   switch (status) {
+    // Active - still in progress
+    case 'CREATED':
     case 'PENDING':
-    case 'CONFIRMED':
-    case 'IN_TRANSIT':
+    case 'SHIPPED':
+    case 'RECEIVED':
+    case 'AUTHENTICATING':
+    case 'AUTHENTICATED':
+    case 'PAYOUTPENDING':
+    case 'CCAUTHORIZATIONFAILED':
       return 'ACTIVE'
+    // Completed - successfully done
+    case 'PAYOUTCOMPLETED':
+    case 'SYSTEMFULFILLED':
+    case 'COMPLETED':
     case 'DELIVERED':
       return 'COMPLETED'
+    // Cancelled/Failed
     case 'CANCELLED':
+    case 'PAYOUTFAILED':
+    case 'SUSPENDED':
       return 'CANCELLED'
     default:
       return 'ACTIVE'
@@ -122,19 +135,19 @@ export async function GET(request: NextRequest) {
         for (const order of allOrders) {
           const record = {
             user_id: account.user_id,
-            stockx_order_id: order.orderId,
+            stockx_order_id: order.orderNumber,
             stockx_listing_id: order.listingId,
-            stockx_product_id: order.productId,
-            stockx_variant_id: order.variantId,
-            amount: toCents(order.amount.amount),
-            currency_code: order.amount.currencyCode,
+            stockx_product_id: order.product.productId,
+            stockx_variant_id: order.variant.variantId,
+            amount: toCents(order.amount),
+            currency_code: order.currencyCode,
             status: mapStatusToDb(order.status),
             sold_at: order.createdAt,
-            shipped_at: order.shipping?.shippedAt || null,
-            delivered_at: order.shipping?.deliveredAt || null,
-            payout_amount: order.payout?.amount ? toCents(order.payout.amount) : null,
-            tracking_number: order.shipping?.trackingNumber || null,
-            carrier: order.shipping?.carrier || null,
+            shipped_at: null, // Not in new API response
+            delivered_at: null, // Not in new API response
+            payout_amount: order.payout?.totalPayout ? toCents(order.payout.totalPayout) : null,
+            tracking_number: order.shipment?.trackingNumber || null,
+            carrier: order.shipment?.carrierCode || null,
             last_synced_at: new Date().toISOString(),
           }
 
@@ -148,7 +161,7 @@ export async function GET(request: NextRequest) {
           if (upsertError) {
             console.error('[Cron Orders] Upsert error:', {
               userId: account.user_id,
-              orderId: order.orderId,
+              orderNumber: order.orderNumber,
               error: upsertError.message,
             })
           } else {

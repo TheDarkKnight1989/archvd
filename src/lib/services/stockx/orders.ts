@@ -11,57 +11,76 @@
 import { getStockxClient } from './client'
 import { withStockxRetry } from './retry'
 
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED'
+// Active order statuses
+export type ActiveOrderStatus =
+  | 'CREATED'
+  | 'CCAUTHORIZATIONFAILED'
+  | 'SHIPPED'
+  | 'RECEIVED'
+  | 'AUTHENTICATING'
+  | 'AUTHENTICATED'
+  | 'PAYOUTPENDING'
+  | 'PAYOUTCOMPLETED'
+  | 'SYSTEMFULFILLED'
+  | 'PAYOUTFAILED'
+  | 'SUSPENDED'
+  | 'PENDING'
+
+// Historical order statuses
+export type HistoricalOrderStatus =
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'DELIVERED'
+
+export type OrderStatus = ActiveOrderStatus | HistoricalOrderStatus | string
 
 export interface Order {
-  orderId: string
-  listingId: string
-  productId: string
-  variantId: string
-  sku: string
-  size: string
-  amount: {
-    amount: string
-    currencyCode: string
+  askId: string
+  orderNumber: string
+  listingId: string | null
+  amount: string
+  currencyCode: string | null
+  createdAt: string | null
+  updatedAt: string | null
+  variant: {
+    variantId: string
+    variantName: string
+    variantValue: string | null
   }
-  payout: {
-    amount: string
-    currencyCode: string
-    breakdown?: {
-      commissionRate?: number
-      commissionAmount?: string
-      processingFee?: string
-      adjustments?: Array<{
-        type: string
-        amount: string
-        description: string
-      }>
-    }
+  product: {
+    productId: string
+    productName: string | null
+    styleId: string | null
   }
   status: OrderStatus
-  createdAt: string
-  updatedAt: string
-  // Ship-by deadline (critical for sellers)
-  shipByDate?: string
-  // Product details (denormalized from catalog)
-  product?: {
-    title?: string
-    brand?: string
-    imageUrl?: string
-    styleId?: string
-  }
-  buyer?: {
-    userId?: string
-    username?: string
-    region?: string
-    country?: string
-  }
-  shipping?: {
-    carrier?: string
-    trackingNumber?: string
-    labelUrl?: string
-    shippedAt?: string
-    deliveredAt?: string
+  shipment: {
+    shipByDate: string | null
+    trackingNumber: string | null
+    trackingUrl: string | null
+    carrierCode: string | null
+    shippingLabelUrl: string | null
+    shippingDocumentUrl: string | null
+  } | null
+  initiatedShipments?: {
+    inbound: {
+      displayId: string
+      inventoryType: 'STANDARD' | 'FLEX' | 'DFS' | 'DIRECT'
+    }
+  } | null
+  authenticationDetails?: {
+    status: string | null
+    failureNotes: string | null
+  } | null
+  payout: {
+    totalPayout: string
+    salePrice: string
+    totalAdjustments: string
+    currencyCode: string
+    adjustments: Array<{
+      adjustmentType: string
+      amount: string
+      percentage: string
+    }>
   }
 }
 
@@ -72,26 +91,30 @@ export type OrderTab = 'needs_shipping' | 'in_progress' | 'completed'
 
 export function getOrderTab(status: OrderStatus): OrderTab {
   switch (status) {
+    // Needs shipping - order created, waiting for seller to ship
+    case 'CREATED':
     case 'PENDING':
-    case 'CONFIRMED':
+    case 'CCAUTHORIZATIONFAILED':
       return 'needs_shipping'
-    case 'IN_TRANSIT':
+    // In progress - shipped, at StockX for authentication
+    case 'SHIPPED':
+    case 'RECEIVED':
+    case 'AUTHENTICATING':
+    case 'AUTHENTICATED':
+    case 'PAYOUTPENDING':
       return 'in_progress'
+    // Completed - done or failed states
+    case 'PAYOUTCOMPLETED':
+    case 'SYSTEMFULFILLED':
+    case 'COMPLETED':
     case 'DELIVERED':
-      return 'completed'
     case 'CANCELLED':
-      return 'completed' // Show cancelled in completed tab
+    case 'PAYOUTFAILED':
+    case 'SUSPENDED':
+      return 'completed'
     default:
       return 'needs_shipping'
   }
-}
-
-export interface ShippingDocument {
-  documentUrl: string
-  documentType: 'PDF' | 'PNG'
-  carrier: string
-  trackingNumber: string
-  expiresAt?: string
 }
 
 export class StockxOrdersService {
@@ -131,18 +154,18 @@ export class StockxOrdersService {
   }
 
   /**
-   * Get single order details by ID
-   * GET /v2/selling/orders/{orderId}
+   * Get single order details by order number
+   * GET /selling/orders/{orderNumber}
    */
-  async getOrder(orderId: string): Promise<Order> {
-    console.log('[StockX Orders] Fetching order:', orderId)
+  async getOrder(orderNumber: string): Promise<Order> {
+    console.log('[StockX Orders] Fetching order:', orderNumber)
 
     const response = await withStockxRetry(
       () =>
-        this.client.request<Order>(`/v2/selling/orders/${orderId}`, {
+        this.client.request<Order>(`/selling/orders/${orderNumber}`, {
           method: 'GET',
         }),
-      { label: `Get order: ${orderId}` }
+      { label: `Get order: ${orderNumber}` }
     )
 
     return response
@@ -150,54 +173,34 @@ export class StockxOrdersService {
 
   /**
    * Get shipping label/document for an order
-   * GET /v2/selling/orders/{orderId}/shipping-document
+   * GET /selling/orders/{orderNumber}/shipping-document/{shippingId}
    *
-   * Can request as PDF or JSON based on Accept header
+   * Returns PDF by default
    */
   async getShippingDocument(
-    orderId: string,
-    format: 'PDF' | 'JSON' = 'PDF'
-  ): Promise<ShippingDocument | Blob> {
+    orderNumber: string,
+    shippingId: string
+  ): Promise<Blob> {
     console.log('[StockX Orders] Fetching shipping document:', {
-      orderId,
-      format,
+      orderNumber,
+      shippingId,
     })
 
-    if (format === 'PDF') {
-      // Request PDF blob
-      const response = await withStockxRetry(
-        () =>
-          this.client.request<Blob>(
-            `/v2/selling/orders/${orderId}/shipping-document`,
-            {
-              method: 'GET',
-              headers: {
-                Accept: 'application/pdf',
-              },
-            }
-          ),
-        { label: `Get shipping label PDF: ${orderId}` }
-      )
+    const response = await withStockxRetry(
+      () =>
+        this.client.request<Blob>(
+          `/selling/orders/${orderNumber}/shipping-document/${shippingId}`,
+          {
+            method: 'GET',
+            headers: {
+              Accept: 'application/pdf',
+            },
+          }
+        ),
+      { label: `Get shipping label: ${orderNumber}/${shippingId}` }
+    )
 
-      return response
-    } else {
-      // Request JSON with URL
-      const response = await withStockxRetry(
-        () =>
-          this.client.request<ShippingDocument>(
-            `/v2/selling/orders/${orderId}/shipping-document`,
-            {
-              method: 'GET',
-              headers: {
-                Accept: 'application/json',
-              },
-            }
-          ),
-        { label: `Get shipping label info: ${orderId}` }
-      )
-
-      return response
-    }
+    return response
   }
 
   /**

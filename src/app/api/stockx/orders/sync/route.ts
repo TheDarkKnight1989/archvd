@@ -26,13 +26,26 @@ interface SyncResult {
  */
 function mapStatusToDb(status: OrderStatus): 'ACTIVE' | 'COMPLETED' | 'CANCELLED' {
   switch (status) {
+    // Active - still in progress
+    case 'CREATED':
     case 'PENDING':
-    case 'CONFIRMED':
-    case 'IN_TRANSIT':
+    case 'SHIPPED':
+    case 'RECEIVED':
+    case 'AUTHENTICATING':
+    case 'AUTHENTICATED':
+    case 'PAYOUTPENDING':
+    case 'CCAUTHORIZATIONFAILED':
       return 'ACTIVE'
+    // Completed - successfully done
+    case 'PAYOUTCOMPLETED':
+    case 'SYSTEMFULFILLED':
+    case 'COMPLETED':
     case 'DELIVERED':
       return 'COMPLETED'
+    // Cancelled/Failed
     case 'CANCELLED':
+    case 'PAYOUTFAILED':
+    case 'SUSPENDED':
       return 'CANCELLED'
     default:
       return 'ACTIVE'
@@ -101,26 +114,24 @@ export async function POST(request: NextRequest) {
         // Build the upsert record
         const record = {
           user_id: user.id,
-          stockx_order_id: order.orderId,
+          stockx_order_id: order.orderNumber,
           stockx_listing_id: order.listingId,
-          stockx_product_id: order.productId,
-          stockx_variant_id: order.variantId,
+          stockx_product_id: order.product.productId,
+          stockx_variant_id: order.variant.variantId,
           // Sale details
-          amount: toCents(order.amount.amount),
-          currency_code: order.amount.currencyCode,
+          amount: toCents(order.amount),
+          currency_code: order.currencyCode,
           status: mapStatusToDb(order.status),
           // Dates
           sold_at: order.createdAt,
-          shipped_at: order.shipping?.shippedAt || null,
-          delivered_at: order.shipping?.deliveredAt || null,
+          shipped_at: null, // Not in new API response
+          delivered_at: null, // Not in new API response
           // Payout
-          payout_amount: order.payout?.amount ? toCents(order.payout.amount) : null,
-          processing_fee: order.payout?.breakdown?.processingFee
-            ? toCents(order.payout.breakdown.processingFee)
-            : null,
+          payout_amount: order.payout?.totalPayout ? toCents(order.payout.totalPayout) : null,
+          processing_fee: null, // Compute from adjustments if needed
           // Shipping
-          tracking_number: order.shipping?.trackingNumber || null,
-          carrier: order.shipping?.carrier || null,
+          tracking_number: order.shipment?.trackingNumber || null,
+          carrier: order.shipment?.carrierCode || null,
           // Timestamps
           last_synced_at: new Date().toISOString(),
         }
@@ -137,10 +148,10 @@ export async function POST(request: NextRequest) {
 
         if (upsertError) {
           console.error('[Orders Sync] Upsert error:', {
-            orderId: order.orderId,
+            orderNumber: order.orderNumber,
             error: upsertError.message,
           })
-          result.errors.push(`Order ${order.orderId}: ${upsertError.message}`)
+          result.errors.push(`Order ${order.orderNumber}: ${upsertError.message}`)
         } else {
           // Check if it was an insert or update
           // Since we're upserting, we count all as updated for simplicity
@@ -148,10 +159,10 @@ export async function POST(request: NextRequest) {
         }
       } catch (err: any) {
         console.error('[Orders Sync] Processing error:', {
-          orderId: order.orderId,
+          orderNumber: order.orderNumber,
           error: err.message,
         })
-        result.errors.push(`Order ${order.orderId}: ${err.message}`)
+        result.errors.push(`Order ${order.orderNumber}: ${err.message}`)
       }
     }
 

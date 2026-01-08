@@ -1,10 +1,9 @@
 /**
  * StockX Shipping Label API
- * GET /api/stockx/orders/[orderId]/shipping-label?format=pdf|json
+ * GET /api/stockx/orders/[orderId]/shipping-label?shippingId={shippingId}
  *
- * Get shipping label for an order
- * - PDF format: Returns downloadable PDF blob
- * - JSON format: Returns label URL and metadata
+ * Get shipping label PDF for an order
+ * Requires shippingId from order details
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -43,7 +42,7 @@ export async function GET(
 
     const { orderId } = await params
     const searchParams = request.nextUrl.searchParams
-    const format = (searchParams.get('format') || 'pdf').toUpperCase() as 'PDF' | 'JSON'
+    const shippingId = searchParams.get('shippingId')
 
     if (!orderId) {
       return NextResponse.json(
@@ -52,38 +51,36 @@ export async function GET(
       )
     }
 
+    if (!shippingId) {
+      return NextResponse.json(
+        { error: 'Missing shippingId query parameter. Get this from order details.' },
+        { status: 400 }
+      )
+    }
+
     console.log('[Shipping Label] Fetching label:', {
       userId: user.id,
       orderId,
-      format,
+      shippingId,
     })
 
     const ordersService = getOrdersService(user.id)
-    const result = await ordersService.getShippingDocument(orderId, format)
+    const pdfBlob = await ordersService.getShippingDocument(orderId, shippingId)
 
     const duration = Date.now() - startTime
 
-    if (format === 'PDF' && result instanceof Blob) {
-      // Return PDF as downloadable file
-      const headers = new Headers()
-      headers.set('Content-Type', 'application/pdf')
-      headers.set(
-        'Content-Disposition',
-        `attachment; filename="stockx-label-${orderId}.pdf"`
-      )
+    // Return PDF as downloadable file
+    const headers = new Headers()
+    headers.set('Content-Type', 'application/pdf')
+    headers.set(
+      'Content-Disposition',
+      `attachment; filename="stockx-label-${orderId}.pdf"`
+    )
 
-      return new NextResponse(result, {
-        status: 200,
-        headers,
-      })
-    } else {
-      // Return JSON with label info
-      return NextResponse.json({
-        success: true,
-        shippingDocument: result,
-        duration_ms: duration,
-      })
-    }
+    return new NextResponse(pdfBlob, {
+      status: 200,
+      headers,
+    })
   } catch (error: any) {
     const duration = Date.now() - startTime
 

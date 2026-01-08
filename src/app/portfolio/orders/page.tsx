@@ -63,15 +63,29 @@ const formatRelativeTime = (dateStr: string) => {
 
 // Status badge component
 function OrderStatusBadge({ status }: { status: Order['status'] }) {
-  const config = {
+  const config: Record<string, { label: string; className: string }> = {
+    // Needs shipping
+    CREATED: { label: 'Created', className: 'bg-amber-500/20 text-amber-400 border-amber-500/50' },
     PENDING: { label: 'Pending', className: 'bg-amber-500/20 text-amber-400 border-amber-500/50' },
-    CONFIRMED: { label: 'Confirmed', className: 'bg-blue-500/20 text-blue-400 border-blue-500/50' },
-    IN_TRANSIT: { label: 'In Transit', className: 'bg-purple-500/20 text-purple-400 border-purple-500/50' },
+    CCAUTHORIZATIONFAILED: { label: 'Payment Issue', className: 'bg-red-500/20 text-red-400 border-red-500/50' },
+    // In progress
+    SHIPPED: { label: 'Shipped', className: 'bg-blue-500/20 text-blue-400 border-blue-500/50' },
+    RECEIVED: { label: 'Received', className: 'bg-blue-500/20 text-blue-400 border-blue-500/50' },
+    AUTHENTICATING: { label: 'Authenticating', className: 'bg-purple-500/20 text-purple-400 border-purple-500/50' },
+    AUTHENTICATED: { label: 'Authenticated', className: 'bg-purple-500/20 text-purple-400 border-purple-500/50' },
+    PAYOUTPENDING: { label: 'Payout Pending', className: 'bg-purple-500/20 text-purple-400 border-purple-500/50' },
+    // Completed
+    PAYOUTCOMPLETED: { label: 'Paid Out', className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' },
+    SYSTEMFULFILLED: { label: 'Fulfilled', className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' },
+    COMPLETED: { label: 'Completed', className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' },
     DELIVERED: { label: 'Delivered', className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' },
+    // Failed
     CANCELLED: { label: 'Cancelled', className: 'bg-red-500/20 text-red-400 border-red-500/50' },
+    PAYOUTFAILED: { label: 'Payout Failed', className: 'bg-red-500/20 text-red-400 border-red-500/50' },
+    SUSPENDED: { label: 'Suspended', className: 'bg-red-500/20 text-red-400 border-red-500/50' },
   }
 
-  const { label, className } = config[status] || config.PENDING
+  const { label, className } = config[status] || { label: status, className: 'bg-muted/20 text-muted border-muted/50' }
 
   return (
     <Badge variant="outline" className={cn('text-xs font-medium', className)}>
@@ -144,7 +158,7 @@ function OrderActions({
   onDownloadLabel: () => void
   onCopyOrderId: () => void
 }) {
-  const canDownloadLabel = order.status === 'PENDING' || order.status === 'CONFIRMED'
+  const canDownloadLabel = order.status === 'CREATED' || order.status === 'PENDING'
 
   return (
     <DropdownMenu>
@@ -164,10 +178,10 @@ function OrderActions({
           <Copy className="mr-2 h-4 w-4" />
           Copy Order ID
         </DropdownMenuItem>
-        {order.shipping?.trackingNumber && (
+        {order.shipment?.trackingNumber && (
           <DropdownMenuItem
             onClick={() => {
-              navigator.clipboard.writeText(order.shipping!.trackingNumber!)
+              navigator.clipboard.writeText(order.shipment!.trackingNumber!)
             }}
           >
             <Copy className="mr-2 h-4 w-4" />
@@ -176,7 +190,7 @@ function OrderActions({
         )}
         <DropdownMenuItem asChild>
           <a
-            href={`https://stockx.com/selling/orders/${order.orderId}`}
+            href={`https://stockx.com/selling/orders/${order.orderNumber}`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -195,53 +209,49 @@ function OrderRow({
   onDownloadLabel,
 }: {
   order: Order
-  onDownloadLabel: (orderId: string) => void
+  onDownloadLabel: (orderNumber: string) => void
 }) {
   const handleCopyOrderId = () => {
-    navigator.clipboard.writeText(order.orderId)
+    navigator.clipboard.writeText(order.orderNumber)
   }
 
-  const shipByInfo = order.shipByDate ? formatRelativeTime(order.shipByDate) : null
+  const shipByInfo = order.shipment?.shipByDate ? formatRelativeTime(order.shipment.shipByDate) : null
+  const styleId = order.product?.styleId || ''
 
   return (
     <tr className="hover:bg-muted/50 border-b border-border/50">
       {/* Product */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          {order.product?.imageUrl && (
-            <img
-              src={order.product.imageUrl}
-              alt={order.product?.title || order.sku}
-              className="h-10 w-10 rounded object-cover bg-elev-2"
-            />
-          )}
           <div className="min-w-0">
             <p className="font-medium text-sm truncate">
-              {order.product?.title || order.sku}
+              {order.product?.productName || styleId}
             </p>
-            <p className="text-xs text-muted truncate">{order.sku}</p>
+            <p className="text-xs text-muted truncate">{styleId}</p>
           </div>
         </div>
       </td>
 
       {/* Size */}
-      <td className="px-4 py-3 text-sm">{order.size}</td>
+      <td className="px-4 py-3 text-sm">{order.variant?.variantValue || order.variant?.variantName}</td>
 
       {/* Sale Price */}
       <td className="px-4 py-3 text-right">
         <div className="text-sm font-medium">
-          {formatCurrency(order.amount.amount, order.amount.currencyCode)}
+          {formatCurrency(order.amount, order.currencyCode || 'USD')}
         </div>
       </td>
 
       {/* Payout */}
       <td className="px-4 py-3 text-right">
         <div className="text-sm text-emerald-500 font-medium">
-          {formatCurrency(order.payout.amount, order.payout.currencyCode)}
+          {formatCurrency(order.payout.totalPayout, order.payout.currencyCode)}
         </div>
-        {order.payout.breakdown?.commissionAmount && (
+        {order.payout.adjustments.length > 0 && (
           <div className="text-xs text-muted">
-            -{formatCurrency(order.payout.breakdown.commissionAmount, order.payout.currencyCode)} fee
+            {order.payout.totalAdjustments !== '0' && (
+              <>{formatCurrency(order.payout.totalAdjustments, order.payout.currencyCode)} fees</>
+            )}
           </div>
         )}
       </td>
@@ -264,14 +274,14 @@ function OrderRow({
 
       {/* Created */}
       <td className="px-4 py-3 text-sm text-muted">
-        {formatDate(order.createdAt)}
+        {order.createdAt ? formatDate(order.createdAt) : '—'}
       </td>
 
       {/* Actions */}
       <td className="px-4 py-3 text-right">
         <OrderActions
           order={order}
-          onDownloadLabel={() => onDownloadLabel(order.orderId)}
+          onDownloadLabel={() => onDownloadLabel(order.orderNumber)}
           onCopyOrderId={handleCopyOrderId}
         />
       </td>
@@ -285,33 +295,27 @@ function OrderCard({
   onDownloadLabel,
 }: {
   order: Order
-  onDownloadLabel: (orderId: string) => void
+  onDownloadLabel: (orderNumber: string) => void
 }) {
   const handleCopyOrderId = () => {
-    navigator.clipboard.writeText(order.orderId)
+    navigator.clipboard.writeText(order.orderNumber)
   }
 
-  const shipByInfo = order.shipByDate ? formatRelativeTime(order.shipByDate) : null
-  const canDownloadLabel = order.status === 'PENDING' || order.status === 'CONFIRMED'
+  const shipByInfo = order.shipment?.shipByDate ? formatRelativeTime(order.shipment.shipByDate) : null
+  const canDownloadLabel = order.status === 'CREATED' || order.status === 'PENDING'
+  const styleId = order.product?.styleId || ''
 
   return (
     <div className="bg-elev-1 rounded-xl border border-border/50 p-4">
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
-        {order.product?.imageUrl && (
-          <img
-            src={order.product.imageUrl}
-            alt={order.product?.title || order.sku}
-            className="h-14 w-14 rounded-lg object-cover bg-elev-2 flex-shrink-0"
-          />
-        )}
         <div className="flex-1 min-w-0">
           <h3 className="font-medium text-sm line-clamp-2 mb-1">
-            {order.product?.title || order.sku}
+            {order.product?.productName || styleId}
           </h3>
-          <p className="text-xs text-muted">{order.sku}</p>
+          <p className="text-xs text-muted">{styleId}</p>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-muted">Size: {order.size}</span>
+            <span className="text-xs text-muted">Size: {order.variant?.variantValue || order.variant?.variantName}</span>
             <OrderStatusBadge status={order.status} />
           </div>
         </div>
@@ -322,13 +326,13 @@ function OrderCard({
         <div>
           <div className="text-[11px] text-muted mb-0.5">Sale Price</div>
           <div className="text-sm font-medium">
-            {formatCurrency(order.amount.amount, order.amount.currencyCode)}
+            {formatCurrency(order.amount, order.currencyCode || 'USD')}
           </div>
         </div>
         <div>
           <div className="text-[11px] text-muted mb-0.5">Your Payout</div>
           <div className="text-sm font-medium text-emerald-500">
-            {formatCurrency(order.payout.amount, order.payout.currencyCode)}
+            {formatCurrency(order.payout.totalPayout, order.payout.currencyCode)}
           </div>
         </div>
       </div>
@@ -350,7 +354,7 @@ function OrderCard({
             variant="outline"
             size="sm"
             className="flex-1"
-            onClick={() => onDownloadLabel(order.orderId)}
+            onClick={() => onDownloadLabel(order.orderNumber)}
           >
             <Download className="h-4 w-4 mr-1.5" />
             Download Label
@@ -358,7 +362,7 @@ function OrderCard({
         )}
         <OrderActions
           order={order}
-          onDownloadLabel={() => onDownloadLabel(order.orderId)}
+          onDownloadLabel={() => onDownloadLabel(order.orderNumber)}
           onCopyOrderId={handleCopyOrderId}
         />
       </div>
@@ -605,7 +609,7 @@ export default function OrdersPage() {
                     <tbody>
                       {orders.map((order) => (
                         <OrderRow
-                          key={order.orderId}
+                          key={order.orderNumber}
                           order={order}
                           onDownloadLabel={handleDownloadLabel}
                         />
@@ -619,7 +623,7 @@ export default function OrdersPage() {
               <div className="space-y-3 md:hidden">
                 {orders.map((order) => (
                   <OrderCard
-                    key={order.orderId}
+                    key={order.orderNumber}
                     order={order}
                     onDownloadLabel={handleDownloadLabel}
                   />

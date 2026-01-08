@@ -23,13 +23,26 @@ export interface OrdersState {
  */
 function getOrderTab(status: OrderStatus): OrderTab {
   switch (status) {
+    // Needs shipping - order created, waiting for seller to ship
+    case 'CREATED':
     case 'PENDING':
-    case 'CONFIRMED':
+    case 'CCAUTHORIZATIONFAILED':
       return 'needs_shipping'
-    case 'IN_TRANSIT':
+    // In progress - shipped, at StockX for authentication
+    case 'SHIPPED':
+    case 'RECEIVED':
+    case 'AUTHENTICATING':
+    case 'AUTHENTICATED':
+    case 'PAYOUTPENDING':
       return 'in_progress'
+    // Completed - done or failed states
+    case 'PAYOUTCOMPLETED':
+    case 'SYSTEMFULFILLED':
+    case 'COMPLETED':
     case 'DELIVERED':
     case 'CANCELLED':
+    case 'PAYOUTFAILED':
+    case 'SUSPENDED':
       return 'completed'
     default:
       return 'needs_shipping'
@@ -145,21 +158,39 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
   }, [fetchOrders])
 
   // Download shipping label
-  const downloadLabel = useCallback(async (orderId: string) => {
+  // Uses shippingLabelUrl from order data (preferred) or API endpoint with shippingId
+  const downloadLabel = useCallback(async (orderNumber: string, shippingId?: string) => {
     try {
-      const response = await fetch(
-        `/api/stockx/orders/${orderId}/shipping-label?format=pdf`
-      )
+      // Try to find order in local state to get direct URL
+      const order = state.orders.find(o => o.orderNumber === orderNumber)
+      const directUrl = order?.shipment?.shippingLabelUrl || order?.shipment?.shippingDocumentUrl
 
-      if (!response.ok) {
-        throw new Error('Failed to download label')
+      let blob: Blob
+
+      if (directUrl) {
+        // Use direct URL from order data
+        const response = await fetch(directUrl)
+        if (!response.ok) {
+          throw new Error('Failed to download label from direct URL')
+        }
+        blob = await response.blob()
+      } else if (shippingId) {
+        // Use API endpoint with shippingId
+        const response = await fetch(
+          `/api/stockx/orders/${orderNumber}/shipping-label?shippingId=${shippingId}`
+        )
+        if (!response.ok) {
+          throw new Error('Failed to download label')
+        }
+        blob = await response.blob()
+      } else {
+        throw new Error('No shipping label URL available and no shippingId provided')
       }
 
-      const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `stockx-label-${orderId}.pdf`
+      a.download = `stockx-label-${orderNumber}.pdf`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -170,7 +201,7 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
       console.error('[useStockxOrders] Download label error:', err)
       throw err
     }
-  }, [])
+  }, [state.orders])
 
   // Auto mark sold for completed orders
   const autoMarkSold = useCallback(async () => {
