@@ -53,6 +53,9 @@ export async function GET(
     const ordersService = getOrdersService(user.id)
     const order = await ordersService.getOrder(orderId)
 
+    // Debug: Log full order structure
+    console.log('[Order Details] Full order response:', JSON.stringify(order, null, 2))
+
     const duration = Date.now() - startTime
 
     return NextResponse.json({

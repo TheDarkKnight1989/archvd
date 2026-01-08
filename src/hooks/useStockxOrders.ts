@@ -158,15 +158,33 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
   }, [fetchOrders])
 
   // Download shipping label
-  // Uses shippingLabelUrl from order data (preferred) or API endpoint with shippingId
+  // Fetches full order details if needed to get shipping info
   const downloadLabel = useCallback(async (orderNumber: string, shippingId?: string) => {
     try {
-      // Try to find order in local state to get direct URL or shippingId
-      const order = state.orders.find(o => o.orderNumber === orderNumber)
-      const directUrl = order?.shipment?.shippingLabelUrl || order?.shipment?.shippingDocumentUrl
+      // Try to find order in local state first
+      let order = state.orders.find(o => o.orderNumber === orderNumber)
+      let directUrl = order?.shipment?.shippingLabelUrl || order?.shipment?.shippingDocumentUrl
+      let derivedShippingId = shippingId || order?.initiatedShipments?.inbound?.displayId
 
-      // Try to get shippingId from initiatedShipments (for CREATED orders)
-      const derivedShippingId = shippingId || order?.initiatedShipments?.inbound?.displayId
+      // If no shipping info in cached order, fetch full details from API
+      if (!directUrl && !derivedShippingId) {
+        console.log('[useStockxOrders] Fetching full order details for shipping info')
+        const detailsRes = await fetch(`/api/stockx/orders/${orderNumber}`)
+        if (detailsRes.ok) {
+          const detailsData = await detailsRes.json()
+          const fullOrder = detailsData.order
+          if (fullOrder) {
+            directUrl = fullOrder.shipment?.shippingLabelUrl || fullOrder.shipment?.shippingDocumentUrl
+            derivedShippingId = fullOrder.initiatedShipments?.inbound?.displayId
+            console.log('[useStockxOrders] Full order shipping info:', {
+              directUrl,
+              derivedShippingId,
+              shipment: fullOrder.shipment,
+              initiatedShipments: fullOrder.initiatedShipments,
+            })
+          }
+        }
+      }
 
       let blob: Blob
 
@@ -188,7 +206,7 @@ export function useStockxOrders(options: UseStockxOrdersOptions = {}) {
         }
         blob = await response.blob()
       } else {
-        throw new Error('No shipping label available yet. StockX may still be generating it.')
+        throw new Error('Shipping label not found. Please try downloading from StockX directly.')
       }
 
       const url = window.URL.createObjectURL(blob)
