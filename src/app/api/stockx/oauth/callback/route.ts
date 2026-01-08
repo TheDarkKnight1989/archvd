@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
 // Force dynamic rendering - never cache this route
@@ -311,7 +311,8 @@ export async function GET(request: NextRequest) {
     // ========================================================================
 
     // Store tokens in database
-    const supabase = await createClient();
+    // Use service role client to bypass RLS - user session is not available after OAuth redirect
+    const supabase = createServiceRoleClient();
 
     const { error: dbError } = await supabase
       .from('stockx_accounts')
