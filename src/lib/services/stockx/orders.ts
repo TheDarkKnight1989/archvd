@@ -2,10 +2,10 @@
  * StockX Orders Service
  * Handles order/sales operations for fulfilled listings
  *
- * Key endpoints:
- * - GET /selling/orders/active - List active orders
- * - GET /selling/orders/history - List historical orders
- * - GET /selling/orders/{orderNumber} - Get order details
+ * Key endpoints (all use /v2/ prefix like other selling endpoints):
+ * - GET /v2/selling/orders/active - List active orders
+ * - GET /v2/selling/orders/history - List historical orders
+ * - GET /v2/selling/orders/{orderNumber} - Get order details
  */
 
 import { getStockxClient } from './client'
@@ -126,7 +126,8 @@ export class StockxOrdersService {
 
   /**
    * Get all orders (active or historical)
-   * GET /selling/orders/active or /selling/orders/history
+   * GET /v2/selling/orders/active or /v2/selling/orders/history
+   * Note: All StockX selling endpoints use /v2/ prefix
    */
   async getOrders(
     status: 'ACTIVE' | 'HISTORICAL' = 'ACTIVE',
@@ -134,12 +135,10 @@ export class StockxOrdersService {
   ): Promise<Order[]> {
     console.log('[StockX Orders] Fetching orders:', { status, pageSize })
 
-    // Correct endpoints per StockX API docs:
-    // - Active orders: GET /selling/orders/active
-    // - Historical orders: GET /selling/orders/history
+    // All selling endpoints use /v2/ prefix (same as listings, batch, etc.)
     const endpoint = status === 'ACTIVE'
-      ? `/selling/orders/active?pageSize=${pageSize}`
-      : `/selling/orders/history?pageSize=${pageSize}`
+      ? `/v2/selling/orders/active?pageSize=${pageSize}`
+      : `/v2/selling/orders/history?pageSize=${pageSize}`
 
     const response = await withStockxRetry(
       () =>
@@ -155,14 +154,14 @@ export class StockxOrdersService {
 
   /**
    * Get single order details by order number
-   * GET /selling/orders/{orderNumber}
+   * GET /v2/selling/orders/{orderNumber}
    */
   async getOrder(orderNumber: string): Promise<Order> {
     console.log('[StockX Orders] Fetching order:', orderNumber)
 
     const response = await withStockxRetry(
       () =>
-        this.client.request<Order>(`/selling/orders/${orderNumber}`, {
+        this.client.request<Order>(`/v2/selling/orders/${orderNumber}`, {
           method: 'GET',
         }),
       { label: `Get order: ${orderNumber}` }
@@ -173,7 +172,7 @@ export class StockxOrdersService {
 
   /**
    * Get shipping label/document for an order
-   * GET /selling/orders/{orderNumber}/shipping-document/{shippingId}
+   * GET /v2/selling/orders/{orderNumber}/shipping-document/{shippingId}
    *
    * Returns PDF by default
    */
@@ -189,7 +188,7 @@ export class StockxOrdersService {
     const response = await withStockxRetry(
       () =>
         this.client.request<Blob>(
-          `/selling/orders/${orderNumber}/shipping-document/${shippingId}`,
+          `/v2/selling/orders/${orderNumber}/shipping-document/${shippingId}`,
           {
             method: 'GET',
             headers: {
