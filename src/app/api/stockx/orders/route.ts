@@ -59,6 +59,20 @@ export async function GET(request: NextRequest) {
     const ordersService = getOrdersService(user.id)
     const orders = await ordersService.getOrders(status)
 
+    // Debug: Log structure of first CREATED order
+    const createdOrder = orders.find(o => o.status === 'CREATED')
+    if (createdOrder) {
+      console.log('[Orders] CREATED order structure:', JSON.stringify({
+        orderNumber: createdOrder.orderNumber,
+        status: createdOrder.status,
+        shipment: createdOrder.shipment,
+        initiatedShipments: createdOrder.initiatedShipments,
+        payout: createdOrder.payout,
+        // Log any other fields that might contain ship by date
+        fullOrder: createdOrder,
+      }, null, 2))
+    }
+
     const duration = Date.now() - startTime
 
     return NextResponse.json({
