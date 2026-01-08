@@ -238,48 +238,53 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* KPI Cards - Realised Gains is hero */}
+      {/* KPI Cards - Profit is hero */}
       {filteredItems.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Realised Gains - Hero KPI */}
+          {/* Profit - Hero KPI */}
           <div className={cn(
             "bg-elev-1 rounded-xl p-4 border-l-4",
             kpis.totalMargin >= 0 ? "border-l-accent border-accent/20" : "border-l-red-500 border-red-500/20",
             "border border-l-4"
           )}>
-            <div className="text-xs text-muted uppercase tracking-wider mb-1">Realised Gains</div>
+            <div className="text-xs text-muted uppercase tracking-wider">Profit</div>
+            <div className="text-[10px] text-muted/50 mb-1">Net gain after costs</div>
             <div className={cn(
               "text-3xl font-bold mono",
               kpis.totalMargin >= 0 ? "text-accent" : "text-red-400"
             )}>
               {kpis.totalMargin >= 0 ? '+' : ''}{format(convert(kpis.totalMargin, 'GBP'))}
             </div>
+            <div className="text-xs text-muted mt-1">{kpis.count} sales</div>
           </div>
 
           {/* Total Sales - Secondary */}
           <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
-            <div className="text-xs text-muted/70 uppercase tracking-wider mb-1">Total Sales</div>
+            <div className="text-xs text-muted/70 uppercase tracking-wider">Total Sales</div>
+            <div className="text-[10px] text-muted/50 mb-1">Gross revenue</div>
             <div className="text-xl font-semibold text-fg mono">
               {format(convert(kpis.totalSales, 'GBP'))}
             </div>
           </div>
 
-          {/* Transactions - Secondary */}
+          {/* Cost Basis - Secondary */}
           <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
-            <div className="text-xs text-muted/70 uppercase tracking-wider mb-1">Transactions</div>
+            <div className="text-xs text-muted/70 uppercase tracking-wider">Cost Basis</div>
+            <div className="text-[10px] text-muted/50 mb-1">What you paid for sold items</div>
             <div className="text-xl font-semibold text-fg mono">
-              {kpis.count}
+              {format(convert(kpis.totalCOGS, 'GBP'))}
             </div>
           </div>
 
-          {/* Avg Gain - Secondary */}
+          {/* Avg Profit - Secondary */}
           <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
-            <div className="text-xs text-muted/70 uppercase tracking-wider mb-1">Avg Gain</div>
+            <div className="text-xs text-muted/70 uppercase tracking-wider">Avg Profit</div>
+            <div className="text-[10px] text-muted/50 mb-1">Per transaction</div>
             <div className={cn(
               "text-xl font-semibold mono",
               kpis.avgMargin >= 0 ? "text-accent" : "text-red-400"
             )}>
-              {kpis.avgMargin >= 0 ? '+' : ''}{kpis.avgMargin.toFixed(1)}%
+              {kpis.avgMargin >= 0 ? '+' : ''}{format(convert(kpis.totalMargin / kpis.count, 'GBP'))}
             </div>
           </div>
         </div>
