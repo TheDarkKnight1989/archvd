@@ -31,8 +31,23 @@ export async function GET(request: NextRequest) {
     // Check if StockX is in mock mode
     if (isStockxMockMode()) {
       return NextResponse.json(
-        { error: 'StockX is in mock mode. Real API calls are disabled.' },
+        { error: 'StockX is in mock mode. Real API calls are disabled.', code: 'MOCK_MODE' },
         { status: 503 }
+      )
+    }
+
+    // Check if user has a connected StockX account
+    // Match the same logic as /api/stockx/status
+    const { data: stockxAccount, error: accountError } = await supabase
+      .from('stockx_accounts')
+      .select('id, account_email')
+      .eq('user_id', user.id)
+      .single()
+
+    if (accountError || !stockxAccount) {
+      return NextResponse.json(
+        { error: 'StockX account not connected', code: 'NOT_CONNECTED' },
+        { status: 401 }
       )
     }
 

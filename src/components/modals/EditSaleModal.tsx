@@ -19,9 +19,10 @@ interface EditSaleModalProps {
   onSave: (updates: Partial<SalesItem>) => Promise<void>
 }
 
+// Platform options - use 'alias' for new/edited sales (legacy 'goat' values still displayed correctly)
 const PLATFORM_OPTIONS = [
   { value: 'stockx', label: 'StockX' },
-  { value: 'goat', label: 'Alias' },
+  { value: 'alias', label: 'Alias' },
   { value: 'ebay', label: 'eBay' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'tiktok', label: 'TikTok Shop' },
@@ -31,12 +32,22 @@ const PLATFORM_OPTIONS = [
   { value: 'other', label: 'Other' },
 ]
 
+// Normalize legacy platform values (goat → alias)
+const normalizePlatform = (platform: string | null | undefined): string => {
+  if (!platform) return ''
+  if (platform.toLowerCase() === 'goat') return 'alias'
+  return platform.toLowerCase()
+}
+
+const CURRENCY_OPTIONS = ['GBP', 'EUR', 'USD'] as const
+
 export function EditSaleModal({ sale, open, onClose, onSave }: EditSaleModalProps) {
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     sold_price: sale.sold_price?.toString() || '',
+    sale_currency: sale.sale_currency || 'GBP',
     sold_date: sale.sold_date?.split('T')[0] || '',
-    platform: sale.platform || '',
+    platform: normalizePlatform(sale.platform),
     sales_fee: sale.sales_fee?.toString() || '',
     purchase_price: sale.purchase_price?.toString() || '',
     notes: sale.notes || '',
@@ -70,6 +81,7 @@ export function EditSaleModal({ sale, open, onClose, onSave }: EditSaleModalProp
     try {
       const updates: Partial<SalesItem> = {
         sold_price: parseFloat(formData.sold_price),
+        sale_currency: formData.sale_currency,
         sold_date: formData.sold_date,
         platform: formData.platform || null,
         sales_fee: formData.sales_fee ? parseFloat(formData.sales_fee) : null,
@@ -128,24 +140,35 @@ export function EditSaleModal({ sale, open, onClose, onSave }: EditSaleModalProp
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-5">
-            {/* Sale Price */}
+            {/* Sale Price + Currency */}
             <div>
               <label className="block text-sm font-semibold text-fg mb-2">
                 <DollarSign className="h-4 w-4 inline mr-1" />
                 Sale Price *
               </label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.sold_price}
-                onChange={(e) => handleChange('sold_price', e.target.value)}
-                placeholder="250.00"
-                className={cn(
-                  'text-lg font-bold mono',
-                  errors.sold_price && 'border-red-500 focus:ring-red-500/30'
-                )}
-              />
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.sold_price}
+                  onChange={(e) => handleChange('sold_price', e.target.value)}
+                  placeholder="250.00"
+                  className={cn(
+                    'flex-1 text-lg font-bold mono',
+                    errors.sold_price && 'border-red-500 focus:ring-red-500/30'
+                  )}
+                />
+                <select
+                  value={formData.sale_currency}
+                  onChange={(e) => handleChange('sale_currency', e.target.value)}
+                  className="w-20 px-2 py-2 bg-elev-0 border border-border rounded-lg text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00FF94]/30 focus:border-[#00FF94]/30"
+                >
+                  {CURRENCY_OPTIONS.map((ccy) => (
+                    <option key={ccy} value={ccy}>{ccy}</option>
+                  ))}
+                </select>
+              </div>
               {errors.sold_price && (
                 <p className="text-xs text-red-400 mt-1">{errors.sold_price}</p>
               )}

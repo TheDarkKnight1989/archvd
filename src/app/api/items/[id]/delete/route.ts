@@ -1,7 +1,9 @@
 /**
- * Delete Item API
+ * Delete Item API - V4 FIRST
  * DELETE /api/items/[id]/delete
  * Permanently deletes an item from inventory
+ *
+ * Priority: V4 tables first, then clean up any legacy V3 data
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -26,94 +28,60 @@ export async function DELETE(
 
     console.log('[DELETE /api/items/[id]/delete]', { itemId: id, userId: user.id })
 
-    // Verify item belongs to user
-    const { data: item, error: fetchError } = await supabase
-      .from('Inventory')
-      .select('id, sku, brand, model, user_id')
+    // V4 FIRST: Try to find item in V4 table (source of truth)
+    const { data: v4Item, error: v4FetchError } = await supabase
+      .from('inventory_v4_items')
+      .select('id, style_id, user_id')
       .eq('id', id)
       .single()
 
-    if (fetchError || !item) {
-      console.error('[DELETE] Item not found:', fetchError)
-      return NextResponse.json({ error: 'Item not found' }, { status: 404 })
-    }
+    // If V4 item exists, verify ownership
+    if (v4Item) {
+      if (v4Item.user_id !== user.id) {
+        console.error('[DELETE] Unauthorized: V4 item belongs to different user')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      }
 
-    if (item.user_id !== user.id) {
-      console.error('[DELETE] Unauthorized: item belongs to different user')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
+      // Delete V4 listings first (cascade)
+      await supabase
+        .from('inventory_v4_listings')
+        .delete()
+        .eq('item_id', id)
 
-    // Delete related records first (cascade delete)
-    // 1. Delete inventory_market_links (V3)
-    await supabase
-      .from('inventory_market_links')
-      .delete()
-      .eq('item_id', id)
+      // Delete V4 item
+      const { error: v4DeleteError } = await supabase
+        .from('inventory_v4_items')
+        .delete()
+        .eq('id', id)
 
-    // 2. Delete StockX listings (V3 - if any)
-    await supabase
-      .from('stockx_listings')
-      .delete()
-      .eq('item_id', id)
+      if (v4DeleteError) {
+        console.error('[DELETE] Failed to delete V4 item:', v4DeleteError)
+        return NextResponse.json(
+          { error: 'Failed to delete item', details: v4DeleteError.message },
+          { status: 500 }
+        )
+      }
 
-    // 3. Delete V4 listings (source of truth for V4)
-    await supabase
-      .from('inventory_v4_listings')
-      .delete()
-      .eq('item_id', id)
+      // Clean up any related records
+      await supabase.from('expenses').delete().eq('item_id', id)
+      await supabase.from('watchlist_items').delete().eq('item_id', id)
 
-    // 4. Delete V4 item (if exists)
-    await supabase
-      .from('inventory_v4_items')
-      .delete()
-      .eq('id', id)
+      console.log('[DELETE] V4 item deleted successfully:', {
+        id: v4Item.id,
+        style_id: v4Item.style_id,
+      })
 
-    // 5. Delete expenses
-    await supabase
-      .from('expenses')
-      .delete()
-      .eq('item_id', id)
-
-    // 6. Delete watchlist items
-    await supabase
-      .from('watchlist_items')
-      .delete()
-      .eq('item_id', id)
-
-    // 7. Finally, delete the V3 item itself
-    const { error: deleteError } = await supabase
-      .from('Inventory')
-      .delete()
-      .eq('id', id)
-
-    if (deleteError) {
-      console.error('[DELETE] Failed to delete item:', deleteError)
-      return NextResponse.json(
-        { error: 'Failed to delete item', details: deleteError.message },
-        { status: 500 }
-      )
-    }
-
-    console.log('[DELETE] Item deleted successfully:', {
-      id: item.id,
-      sku: item.sku,
-      brand: item.brand,
-      model: item.model,
-    })
-
-    return NextResponse.json(
-      {
+      return NextResponse.json({
         success: true,
         message: 'Item deleted successfully',
-        item: {
-          id: item.id,
-          sku: item.sku,
-          brand: item.brand,
-          model: item.model,
-        },
-      },
-      { status: 200 }
-    )
+        item: { id: v4Item.id, style_id: v4Item.style_id },
+      })
+    }
+
+    // V4 item not found - return 404 (no V3 fallback)
+    console.error('[DELETE] Item not found in V4:', { id, error: v4FetchError?.message })
+    return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+
   } catch (error: any) {
     console.error('[DELETE /api/items/[id]/delete] Error:', error)
     return NextResponse.json(

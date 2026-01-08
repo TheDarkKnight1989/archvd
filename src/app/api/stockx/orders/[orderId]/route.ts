@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   const startTime = Date.now()
 
@@ -39,7 +39,7 @@ export async function GET(
       )
     }
 
-    const { orderId } = params
+    const { orderId } = await params
 
     if (!orderId) {
       return NextResponse.json(

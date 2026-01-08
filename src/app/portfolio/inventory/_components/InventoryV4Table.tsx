@@ -133,9 +133,7 @@ export interface InventoryV4TableProps {
   onReactivateListing?: (item: InventoryV4ItemFull) => void
   onDeleteListing?: (item: InventoryV4ItemFull) => void
   onPrintStockXLabel?: (item: InventoryV4ItemFull) => void
-  // Alias actions
-  onAttachAliasProduct?: (item: InventoryV4ItemFull) => void
-  onPlaceAliasListing?: (item: InventoryV4ItemFull) => void
+  // Alias actions (only used when item has actual Alias listing data)
   onEditAliasListing?: (item: InventoryV4ItemFull) => void
   onCancelAliasListing?: (item: InventoryV4ItemFull) => void
   // Status actions
@@ -922,8 +920,6 @@ function ActionsCell({
   onDeleteListing,
   onPrintStockXLabel,
   // Alias actions
-  onAttachAliasProduct,
-  onPlaceAliasListing,
   onEditAliasListing,
   onCancelAliasListing,
   // Status actions
@@ -947,9 +943,7 @@ function ActionsCell({
   onReactivateListing?: (item: InventoryV4ItemFull) => void
   onDeleteListing?: (item: InventoryV4ItemFull) => void
   onPrintStockXLabel?: (item: InventoryV4ItemFull) => void
-  // Alias actions
-  onAttachAliasProduct?: (item: InventoryV4ItemFull) => void
-  onPlaceAliasListing?: (item: InventoryV4ItemFull) => void
+  // Alias actions (only used when item has actual Alias listing data)
   onEditAliasListing?: (item: InventoryV4ItemFull) => void
   onCancelAliasListing?: (item: InventoryV4ItemFull) => void
   // Status actions
@@ -986,10 +980,8 @@ function ActionsCell({
         onReactivateListing={onReactivateListing ? () => onReactivateListing(item) : undefined}
         onDeleteListing={onDeleteListing ? () => onDeleteListing(item) : undefined}
         onPrintStockXLabel={onPrintStockXLabel ? () => onPrintStockXLabel(item) : undefined}
-        // Alias actions
+        // Alias actions (only shown when aliasListingStatus exists)
         aliasListingStatus={aliasListingStatus}
-        onAttachAliasProduct={onAttachAliasProduct ? () => onAttachAliasProduct(item) : undefined}
-        onPlaceAliasListing={onPlaceAliasListing ? () => onPlaceAliasListing(item) : undefined}
         onEditAliasListing={onEditAliasListing ? () => onEditAliasListing(item) : undefined}
         onCancelAliasListing={onCancelAliasListing ? () => onCancelAliasListing(item) : undefined}
         // Status actions
@@ -1029,8 +1021,6 @@ export function InventoryV4Table({
   onDeleteListing,
   onPrintStockXLabel,
   // Alias actions
-  onAttachAliasProduct,
-  onPlaceAliasListing,
   onEditAliasListing,
   onCancelAliasListing,
   // Status actions
@@ -1305,9 +1295,7 @@ export function InventoryV4Table({
             onReactivateListing={onReactivateListing}
             onDeleteListing={onDeleteListing}
             onPrintStockXLabel={onPrintStockXLabel}
-            // Alias actions
-            onAttachAliasProduct={onAttachAliasProduct}
-            onPlaceAliasListing={onPlaceAliasListing}
+            // Alias actions (only shown when item has actual Alias listing data)
             onEditAliasListing={onEditAliasListing}
             onCancelAliasListing={onCancelAliasListing}
             // Status actions
@@ -1322,7 +1310,7 @@ export function InventoryV4Table({
       }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allSelected, someSelected, selectedItems, onEdit, onDuplicate, onAdjustTaxRate, onDelete, onListOnStockX, onRepriceListing, onDeactivateListing, onReactivateListing, onDeleteListing, onPrintStockXLabel, onAttachAliasProduct, onPlaceAliasListing, onEditAliasListing, onCancelAliasListing, onAddToWatchlist, onAddToSellList, onMarkListed, onMarkSold, onMarkUnlisted, onTogglePersonals]
+    [allSelected, someSelected, selectedItems, onEdit, onDuplicate, onAdjustTaxRate, onDelete, onListOnStockX, onRepriceListing, onDeactivateListing, onReactivateListing, onDeleteListing, onPrintStockXLabel, onEditAliasListing, onCancelAliasListing, onAddToWatchlist, onAddToSellList, onMarkListed, onMarkSold, onMarkUnlisted, onTogglePersonals]
   )
 
   const table = useReactTable({

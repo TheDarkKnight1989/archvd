@@ -16,24 +16,41 @@ import { useInventoryV4 } from '@/hooks/useInventoryV4'
 import { useCurrency } from '@/hooks/useCurrency'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { InventoryV4Table } from './_components/InventoryV4Table'
-import { InventoryV4Toolbar, DEFAULT_FILTERS, type InventoryV4Filters } from './_components/InventoryV4Toolbar'
+import { InventoryV4Toolbar, DEFAULT_FILTERS, loadPersistedRegion, persistRegion, type InventoryV4Filters } from './_components/InventoryV4Toolbar'
 import { AddItemV4Modal } from './_components/AddItemV4Modal'
 import { MobileInventoryV4Card } from './_components/mobile/MobileInventoryV4Card'
 import { ListOnStockXModal } from '@/components/stockx/ListOnStockXModal'
+import { BulkListOnStockXModal } from '@/components/stockx/BulkListOnStockXModal'
 import { RepriceListingModal } from '@/components/stockx/RepriceListingModal'
 import { MarkAsSoldModal } from '@/components/modals/MarkAsSoldModal'
 import { BulkCommandBar } from './_components/BulkCommandBar'
 import { BulkRepriceModal } from './_components/BulkRepriceModal'
-import { RefreshCw, Plus } from 'lucide-react'
+import { RefreshCw, Plus, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import type { AliasRegionId } from '@/hooks/useUserSettings'
 import type { InventoryV4ItemFull } from '@/lib/inventory-v4/types'
 
 export default function InventoryPage() {
   const [addModalOpen, setAddModalOpen] = useState(false)
-  const [filters, setFilters] = useState<InventoryV4Filters>(DEFAULT_FILTERS)
+  const [filters, setFilters] = useState<InventoryV4Filters>(() => ({
+    ...DEFAULT_FILTERS,
+    region: loadPersistedRegion(),
+  }))
+
+  // Persist region changes to localStorage
+  useEffect(() => {
+    persistRegion(filters.region)
+  }, [filters.region])
 
   // Modal states
   const [selectedItem, setSelectedItem] = useState<InventoryV4ItemFull | null>(null)
@@ -49,11 +66,32 @@ export default function InventoryPage() {
 
   // Bulk action modal states
   const [bulkRepriceModalOpen, setBulkRepriceModalOpen] = useState(false)
+  const [bulkListModalOpen, setBulkListModalOpen] = useState(false)
+
+  // Confirmation dialog state for destructive actions
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    itemContext?: string
+    onConfirm: () => Promise<void>
+    confirmLabel?: string
+    variant?: 'danger' | 'warning'
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    onConfirm: async () => {},
+  })
+  const [confirmLoading, setConfirmLoading] = useState(false)
 
   // Map region filter to alias region ID
   const aliasRegion: AliasRegionId = filters.region === 'UK' ? '1' : filters.region === 'EU' ? '2' : '3'
 
-  const { items, isLoading, error, refetch, pendingSyncs, isSyncing } = useInventoryV4({
+  // Map region filter to currency code for StockX API
+  const regionCurrencyCode = filters.region === 'UK' ? 'GBP' : filters.region === 'EU' ? 'EUR' : 'USD'
+
+  const { items, isLoading, error, refetch, pendingSyncs, isSyncing, marketDataUnavailable } = useInventoryV4({
     aliasRegion,
     // Fetch all non-removed items - we filter client-side
     // Include 'active' for legacy items that haven't been migrated
@@ -294,24 +332,28 @@ export default function InventoryPage() {
     }
   }, [refetch])
 
-  const handleDeleteItem = useCallback(async (item: InventoryV4ItemFull) => {
-    if (!confirm(`Delete ${item.style.name || item.style_id}?`)) return
+  const handleDeleteItem = useCallback((item: InventoryV4ItemFull) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Delete Item',
+      description: 'This will permanently delete this item from your inventory. This action cannot be undone.',
+      itemContext: `${item.style.brand || ''} ${item.style.name || item.style_id}`.trim(),
+      confirmLabel: 'Delete Item',
+      variant: 'danger',
+      onConfirm: async () => {
+        const res = await fetch(`/api/items/${item.id}/delete`, {
+          method: 'DELETE',
+        })
 
-    try {
-      const res = await fetch(`/api/items/${item.id}/delete`, {
-        method: 'DELETE',
-      })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Failed to delete item')
+        }
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to delete item')
-      }
-
-      toast.success('Item deleted')
-      refetch()
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete item')
-    }
+        toast.success('Item deleted')
+        refetch()
+      },
+    })
   }, [refetch])
 
   // Edit item - open edit modal with item data
@@ -335,32 +377,36 @@ export default function InventoryPage() {
   }, [])
 
   // Delete StockX listing (not the item itself)
-  const handleDeleteListing = useCallback(async (item: InventoryV4ItemFull) => {
+  const handleDeleteListing = useCallback((item: InventoryV4ItemFull) => {
     const stockxListing = item.listings.find(l => l.platform === 'stockx')
     if (!stockxListing?.external_listing_id) {
       toast.error('No StockX listing found')
       return
     }
 
-    if (!confirm('Delete this StockX listing? This cannot be undone.')) return
+    setConfirmDialog({
+      open: true,
+      title: 'Delete StockX Listing',
+      description: 'This will remove your listing from StockX. The item will remain in your inventory.',
+      itemContext: `${item.style.brand || ''} ${item.style.name || item.style_id}`.trim(),
+      confirmLabel: 'Delete Listing',
+      variant: 'warning',
+      onConfirm: async () => {
+        const res = await fetch('/api/stockx/listings/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
+        })
 
-    try {
-      const res = await fetch('/api/stockx/listings/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
-      })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Failed to delete listing')
+        }
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to delete listing')
-      }
-
-      toast.success('Listing deleted')
-      refetch()
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete listing')
-    }
+        toast.success('Listing deleted')
+        refetch()
+      },
+    })
   }, [refetch])
 
   // Print StockX label
@@ -375,23 +421,20 @@ export default function InventoryPage() {
   }, [])
 
   // ==========================================================================
-  // ALIAS ACTION HANDLERS (placeholders)
+  // ALIAS ACTION HANDLERS
+  // Note: Alias listing management will be implemented when full Alias API
+  // integration is complete. The Alias section in RowActions only shows when
+  // items have actual Alias listing data synced from the platform.
   // ==========================================================================
 
-  const handleAttachAliasProduct = useCallback((_item: InventoryV4ItemFull) => {
-    toast.info('Attach Alias product coming soon')
-  }, [])
-
-  const handlePlaceAliasListing = useCallback((_item: InventoryV4ItemFull) => {
-    toast.info('Place Alias listing coming soon')
-  }, [])
-
   const handleEditAliasListing = useCallback((_item: InventoryV4ItemFull) => {
-    toast.info('Edit Alias listing coming soon')
+    // TODO: Implement Alias listing edit when API is ready
+    toast.info('Alias listing management coming soon')
   }, [])
 
   const handleCancelAliasListing = useCallback((_item: InventoryV4ItemFull) => {
-    toast.info('Cancel Alias listing coming soon')
+    // TODO: Implement Alias listing cancellation when API is ready
+    toast.info('Alias listing management coming soon')
   }, [])
 
   // ==========================================================================
@@ -606,7 +649,7 @@ export default function InventoryPage() {
           body: JSON.stringify({
             listingId: stockxListing.external_listing_id,
             askPrice,
-            currencyCode: 'GBP',
+            currencyCode: regionCurrencyCode,
           }),
         })
 
@@ -621,7 +664,7 @@ export default function InventoryPage() {
     }
 
     if (successCount > 0) {
-      toast.success(`Repriced ${successCount} listing${successCount === 1 ? '' : 's'} to £${askPrice.toFixed(2)}`)
+      toast.success(`Repriced ${successCount} listing${successCount === 1 ? '' : 's'} to ${currencySymbol}${askPrice.toFixed(2)}`)
     }
     if (errorCount > 0) {
       toast.error(`Failed to reprice ${errorCount} listing${errorCount === 1 ? '' : 's'}`)
@@ -630,43 +673,49 @@ export default function InventoryPage() {
     setBulkRepriceModalOpen(false)
     setSelectedItems(new Set())
     refetch()
-  }, [selectedWithStockxListings, refetch])
+  }, [selectedWithStockxListings, refetch, regionCurrencyCode, currencySymbol])
 
-  const handleBulkDelete = useCallback(async () => {
+  const handleBulkDelete = useCallback(() => {
     if (selectedItemsList.length === 0) return
 
-    if (!confirm(`Delete ${selectedItemsList.length} item${selectedItemsList.length === 1 ? '' : 's'}? This cannot be undone.`)) {
-      return
-    }
+    const count = selectedItemsList.length
+    setConfirmDialog({
+      open: true,
+      title: `Delete ${count} Item${count === 1 ? '' : 's'}`,
+      description: `This will permanently delete ${count} item${count === 1 ? '' : 's'} from your inventory. This action cannot be undone.`,
+      confirmLabel: `Delete ${count} Item${count === 1 ? '' : 's'}`,
+      variant: 'danger',
+      onConfirm: async () => {
+        let successCount = 0
+        let errorCount = 0
 
-    let successCount = 0
-    let errorCount = 0
+        for (const item of selectedItemsList) {
+          try {
+            const res = await fetch(`/api/items/${item.id}/delete`, {
+              method: 'DELETE',
+            })
 
-    for (const item of selectedItemsList) {
-      try {
-        const res = await fetch(`/api/items/${item.id}/delete`, {
-          method: 'DELETE',
-        })
-
-        if (res.ok) {
-          successCount++
-        } else {
-          errorCount++
+            if (res.ok) {
+              successCount++
+            } else {
+              errorCount++
+            }
+          } catch {
+            errorCount++
+          }
         }
-      } catch {
-        errorCount++
-      }
-    }
 
-    if (successCount > 0) {
-      toast.success(`Deleted ${successCount} item${successCount === 1 ? '' : 's'}`)
-    }
-    if (errorCount > 0) {
-      toast.error(`Failed to delete ${errorCount} item${errorCount === 1 ? '' : 's'}`)
-    }
+        if (successCount > 0) {
+          toast.success(`Deleted ${successCount} item${successCount === 1 ? '' : 's'}`)
+        }
+        if (errorCount > 0) {
+          toast.error(`Failed to delete ${errorCount} item${errorCount === 1 ? '' : 's'}`)
+        }
 
-    setSelectedItems(new Set())
-    refetch()
+        setSelectedItems(new Set())
+        refetch()
+      },
+    })
   }, [selectedItemsList, refetch])
 
   const handleClearSelection = useCallback(() => {
@@ -683,20 +732,30 @@ export default function InventoryPage() {
     let successCount = 0
     let errorCount = 0
 
+    // Use today's date for bulk marking
+    const today = new Date().toISOString().split('T')[0]
+
     for (const item of selectedItemsList) {
       try {
         const res = await fetch(`/api/items/${item.id}/mark-sold`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ soldPrice: item.purchase_price }),
+          body: JSON.stringify({
+            sold_price: item.purchase_price || 0,
+            sold_date: today,
+            sale_currency: 'GBP',
+          }),
         })
 
         if (res.ok) {
           successCount++
         } else {
+          const data = await res.json().catch(() => ({}))
+          console.error('[Bulk Mark Sold] Failed:', item.id, data.error || res.status)
           errorCount++
         }
-      } catch {
+      } catch (err) {
+        console.error('[Bulk Mark Sold] Exception:', item.id, err)
         errorCount++
       }
     }
@@ -763,7 +822,43 @@ export default function InventoryPage() {
     setSelectedItems(new Set())
   }, [selectedItemsList])
 
-  // Bulk List on StockX - opens list modal for items that can be listed
+  // Adapt InventoryV4ItemFull to EnrichedLineItem shape for BulkListOnStockXModal
+  const adaptItemsForBulkList = useMemo(() => {
+    return selectedItemsList.map(item => {
+      // Find StockX variant data from the style's variant_ids JSON
+      const variantIds = item.style.stockx_variant_ids as Record<string, string> | null
+      const variantId = variantIds ? variantIds[item.size] : null
+      const stockxListing = item.listings.find(l => l.platform === 'stockx')
+
+      return {
+        id: item.id,
+        sku: item.style_id,
+        brand: item.style.brand || undefined,
+        model: item.style.name || undefined,
+        colorway: item.style.colorway || undefined,
+        size_uk: item.size,
+        image: item.style.primary_image_url ? {
+          url: item.style.primary_image_url,
+          alt: `${item.style.brand} ${item.style.name}`,
+          src: item.style.primary_image_url,
+        } : undefined,
+        image_url: item.style.primary_image_url || undefined,
+        alias_image_url: item.style.alias_primary_image_url || undefined,
+        stockx: item.style.stockx_product_id ? {
+          mapped: true,
+          productId: item.style.stockx_product_id,
+          variantId: variantId || undefined,
+        } : undefined,
+        market: item.market_data ? {
+          currency: 'GBP',
+          lowestAsk: item.market_data.stockx_lowest_ask || undefined,
+        } : undefined,
+        _v4StockxListing: stockxListing || null,
+      }
+    })
+  }, [selectedItemsList])
+
+  // Bulk List on StockX - opens bulk list modal for multiple items
   const handleBulkListOnStockX = useCallback(() => {
     const itemsCanList = selectedItemsList.filter(item =>
       item.style.stockx_product_id && !item.listings.some(l => l.platform === 'stockx')
@@ -774,63 +869,68 @@ export default function InventoryPage() {
       return
     }
 
-    // For now, open single list modal for first item
-    // TODO: Implement true bulk listing
+    // Single item: use the individual list modal
     if (itemsCanList.length === 1) {
       setSelectedItem(itemsCanList[0])
       setListModalOpen(true)
+      setSelectedItems(new Set())
     } else {
-      toast.info(`Bulk listing ${itemsCanList.length} items coming soon. Opening first item...`)
-      setSelectedItem(itemsCanList[0])
-      setListModalOpen(true)
+      // Multiple items: use the bulk list modal
+      setBulkListModalOpen(true)
+      // Don't clear selection yet - bulk modal needs the items
     }
-    setSelectedItems(new Set())
   }, [selectedItemsList])
 
   // Bulk Delete StockX Listings
-  const handleBulkDeleteListings = useCallback(async () => {
+  const handleBulkDeleteListings = useCallback(() => {
     if (selectedWithStockxListings.length === 0) {
       toast.error('No items with StockX listings selected')
       return
     }
 
-    if (!confirm(`Delete ${selectedWithStockxListings.length} StockX listing${selectedWithStockxListings.length === 1 ? '' : 's'}? This cannot be undone.`)) {
-      return
-    }
+    const count = selectedWithStockxListings.length
+    setConfirmDialog({
+      open: true,
+      title: `Delete ${count} StockX Listing${count === 1 ? '' : 's'}`,
+      description: `This will remove ${count} listing${count === 1 ? '' : 's'} from StockX. The items will remain in your inventory.`,
+      confirmLabel: `Delete ${count} Listing${count === 1 ? '' : 's'}`,
+      variant: 'warning',
+      onConfirm: async () => {
+        let successCount = 0
+        let errorCount = 0
 
-    let successCount = 0
-    let errorCount = 0
+        for (const item of selectedWithStockxListings) {
+          const stockxListing = item.listings.find(l => l.platform === 'stockx')
+          if (!stockxListing?.external_listing_id) continue
 
-    for (const item of selectedWithStockxListings) {
-      const stockxListing = item.listings.find(l => l.platform === 'stockx')
-      if (!stockxListing?.external_listing_id) continue
+          try {
+            const res = await fetch('/api/stockx/listings/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
+            })
 
-      try {
-        const res = await fetch('/api/stockx/listings/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ listingId: stockxListing.external_listing_id }),
-        })
-
-        if (res.ok) {
-          successCount++
-        } else {
-          errorCount++
+            if (res.ok) {
+              successCount++
+            } else {
+              errorCount++
+            }
+          } catch {
+            errorCount++
+          }
         }
-      } catch {
-        errorCount++
-      }
-    }
 
-    if (successCount > 0) {
-      toast.success(`Deleted ${successCount} listing${successCount === 1 ? '' : 's'}`)
-    }
-    if (errorCount > 0) {
-      toast.error(`Failed to delete ${errorCount} listing${errorCount === 1 ? '' : 's'}`)
-    }
+        if (successCount > 0) {
+          toast.success(`Deleted ${successCount} listing${successCount === 1 ? '' : 's'}`)
+        }
+        if (errorCount > 0) {
+          toast.error(`Failed to delete ${errorCount} listing${errorCount === 1 ? '' : 's'}`)
+        }
 
-    setSelectedItems(new Set())
-    refetch()
+        setSelectedItems(new Set())
+        refetch()
+      },
+    })
   }, [selectedWithStockxListings, refetch])
 
   // Bulk Print StockX Labels
@@ -928,8 +1028,7 @@ export default function InventoryPage() {
               <Button
                 size="sm"
                 onClick={() => setAddModalOpen(true)}
-                className="gap-2 text-black hover:opacity-90"
-                style={{ backgroundColor: '#FF7900' }}
+                className="gap-2 text-black bg-orange-500 hover:bg-orange-600"
               >
                 <Plus className="h-4 w-4" />
                 Add Item
@@ -988,6 +1087,18 @@ export default function InventoryPage() {
           filteredItems={filteredItems.length}
         />
       </div>
+
+      {/* Market data warning */}
+      {marketDataUnavailable && (
+        <div className="max-w-[1600px] mx-auto px-4 pb-4">
+          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+            <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
+            <p className="text-sm text-amber-300">
+              Market pricing is temporarily unavailable. Inventory items are shown but price columns may be empty.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Table (Desktop) / Cards (Mobile) */}
       <div className="max-w-[1600px] mx-auto px-4 pb-8">
@@ -1124,9 +1235,7 @@ export default function InventoryPage() {
               onReactivateListing={handleReactivateListing}
               onDeleteListing={handleDeleteListing}
               onPrintStockXLabel={handlePrintStockXLabel}
-              // Alias actions
-              onAttachAliasProduct={handleAttachAliasProduct}
-              onPlaceAliasListing={handlePlaceAliasListing}
+              // Alias actions (only shown when item has actual Alias listing data)
               onEditAliasListing={handleEditAliasListing}
               onCancelAliasListing={handleCancelAliasListing}
               // Status actions
@@ -1246,6 +1355,90 @@ export default function InventoryPage() {
         onConfirm={handleBulkRepriceConfirm}
         listingCount={selectedWithStockxListings.length}
       />
+
+      {/* Bulk List on StockX Modal */}
+      <BulkListOnStockXModal
+        open={bulkListModalOpen}
+        onClose={() => {
+          setBulkListModalOpen(false)
+          setSelectedItems(new Set())
+        }}
+        onSuccess={() => {
+          setBulkListModalOpen(false)
+          setSelectedItems(new Set())
+          refetch()
+        }}
+        items={adaptItemsForBulkList as any}
+      />
+
+      {/* Confirmation Dialog for destructive actions */}
+      <Dialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => {
+          if (!open && !confirmLoading) {
+            setConfirmDialog(prev => ({ ...prev, open: false }))
+          }
+        }}
+      >
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                confirmDialog.variant === 'danger' ? 'bg-red-500/10' : 'bg-amber-500/10'
+              }`}>
+                <AlertTriangle className={`h-5 w-5 ${
+                  confirmDialog.variant === 'danger' ? 'text-red-400' : 'text-amber-400'
+                }`} />
+              </div>
+              <div>
+                <DialogTitle>{confirmDialog.title}</DialogTitle>
+                <DialogDescription>{confirmDialog.description}</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {confirmDialog.itemContext && (
+            <div className="px-6 py-4">
+              <div className="bg-elev-0 rounded-lg p-3 border border-border">
+                <div className="text-sm font-medium text-fg">
+                  {confirmDialog.itemContext}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+              disabled={confirmLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setConfirmLoading(true)
+                try {
+                  await confirmDialog.onConfirm()
+                  setConfirmDialog(prev => ({ ...prev, open: false }))
+                } catch (error: any) {
+                  toast.error(error.message || 'Operation failed')
+                } finally {
+                  setConfirmLoading(false)
+                }
+              }}
+              disabled={confirmLoading}
+              className={
+                confirmDialog.variant === 'danger'
+                  ? 'bg-red-500 text-white hover:bg-red-600'
+                  : 'bg-amber-500 text-black hover:bg-amber-400'
+              }
+            >
+              {confirmLoading ? 'Processing...' : confirmDialog.confirmLabel || 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

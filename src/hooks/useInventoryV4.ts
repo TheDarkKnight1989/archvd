@@ -69,6 +69,8 @@ export interface UseInventoryV4Return {
   pendingSyncs: number
   /** Whether sync polling is active */
   isSyncing: boolean
+  /** Whether market data failed to load (items still returned, but without pricing) */
+  marketDataUnavailable: boolean
 }
 
 interface ItemWithStyle {
@@ -155,6 +157,7 @@ export function useInventoryV4(
   const [error, setError] = useState<Error | null>(null)
   const [pendingSyncs, setPendingSyncs] = useState(0)
   const [isSyncing, setIsSyncing] = useState(false)
+  const [marketDataUnavailable, setMarketDataUnavailable] = useState(false)
 
   // Track style_ids for sync polling
   const styleIdsRef = useRef<string[]>([])
@@ -234,6 +237,7 @@ export function useInventoryV4(
     try {
       setIsLoading(true)
       setError(null)
+      setMarketDataUnavailable(false)
 
       // ========================================================================
       // 0. VERIFY AUTHENTICATED USER (required for RLS)
@@ -391,6 +395,7 @@ export function useInventoryV4(
         if (marketError) {
           console.warn('[useInventoryV4] Market data fetch failed:', marketError)
           // Continue without market data rather than failing completely
+          setMarketDataUnavailable(true)
         } else if (marketData) {
           // Build lookup map: "styleId|usSize" -> market row
           // size_display from RPC is already US size
@@ -610,6 +615,7 @@ export function useInventoryV4(
     refetch: fetchItems,
     pendingSyncs,
     isSyncing,
+    marketDataUnavailable,
   }
 }
 

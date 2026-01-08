@@ -11,6 +11,8 @@
 import { getStockxClient } from './client'
 import { withStockxRetry } from './retry'
 
+export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED'
+
 export interface Order {
   orderId: string
   listingId: string
@@ -25,27 +27,62 @@ export interface Order {
   payout: {
     amount: string
     currencyCode: string
-    breakdown: {
-      commissionRate: number
-      commissionAmount: string
-      adjustments: Array<{
+    breakdown?: {
+      commissionRate?: number
+      commissionAmount?: string
+      processingFee?: string
+      adjustments?: Array<{
         type: string
         amount: string
         description: string
       }>
     }
   }
-  status: 'PENDING' | 'CONFIRMED' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED'
+  status: OrderStatus
   createdAt: string
   updatedAt: string
+  // Ship-by deadline (critical for sellers)
+  shipByDate?: string
+  // Product details (denormalized from catalog)
+  product?: {
+    title?: string
+    brand?: string
+    imageUrl?: string
+    styleId?: string
+  }
   buyer?: {
-    userId: string
+    userId?: string
     username?: string
+    region?: string
+    country?: string
   }
   shipping?: {
     carrier?: string
     trackingNumber?: string
     labelUrl?: string
+    shippedAt?: string
+    deliveredAt?: string
+  }
+}
+
+/**
+ * Map raw API status to UI-friendly tab
+ */
+export type OrderTab = 'needs_shipping' | 'in_progress' | 'completed'
+
+export function getOrderTab(status: OrderStatus): OrderTab {
+  switch (status) {
+    case 'PENDING':
+    case 'CONFIRMED':
+      return 'needs_shipping'
+    case 'IN_TRANSIT':
+      return 'in_progress'
+    case 'DELIVERED':
+      return 'completed'
+    case 'CANCELLED':
+      return 'completed' // Show cancelled in completed tab
+    default:
+      return 'needs_shipping'
   }
 }
 

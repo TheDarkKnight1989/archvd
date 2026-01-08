@@ -12,11 +12,20 @@ import {
 } from '@tanstack/react-table'
 import { useCurrency } from '@/hooks/useCurrency'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MoreHorizontal, Copy, Edit, Undo2, Info } from 'lucide-react'
+import { MoreHorizontal, Copy, Edit, Undo2, Info, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { EditSaleModal } from '@/components/modals/EditSaleModal'
 import { ProductLineItem } from '@/components/product/ProductLineItem'
 import { TableBase, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/TableBase'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import type { SalesItem } from '@/hooks/useSalesTable'
 import {
   Popover,
@@ -51,6 +60,8 @@ export function SalesTable({
   const [copiedSku, setCopiedSku] = useState<string | null>(null)
   const [editingSale, setEditingSale] = useState<SalesItem | null>(null)
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [undoingSale, setUndoingSale] = useState<SalesItem | null>(null)
+  const [undoLoading, setUndoLoading] = useState(false)
 
   // Copy SKU to clipboard
   const handleCopySku = async (sku: string) => {
@@ -92,39 +103,49 @@ export function SalesTable({
     }
   }
 
-  // Undo sale - restore item to inventory
-  const handleUndoSale = async (saleId: string) => {
-    if (!confirm('Move this item back to inventory? The sale record will be deleted.')) {
-      return
-    }
+  // Undo sale - open confirmation modal
+  const handleUndoSale = (sale: SalesItem) => {
+    setUndoingSale(sale)
+  }
 
+  // Execute the undo after confirmation
+  const confirmUndoSale = async () => {
+    if (!undoingSale) return
+
+    setUndoLoading(true)
     try {
-      const response = await fetch(`/api/sales/${saleId}/undo`, {
+      const response = await fetch(`/api/sales/${undoingSale.id}/undo`, {
         method: 'POST',
       })
 
       const result = await response.json()
 
       if (!response.ok) {
-        alert(result.error || 'Failed to undo sale')
+        // Show error in modal instead of alert
+        console.error('[SalesTable] Undo failed:', result.error)
         return
       }
 
+      setUndoingSale(null)
       if (onRefresh) {
         onRefresh()
       }
     } catch (error) {
       console.error('[SalesTable] Error undoing sale:', error)
-      alert('Failed to undo sale')
+    } finally {
+      setUndoLoading(false)
     }
   }
 
   // Realised Gain/Loss tooltip breakdown
+  // IMPORTANT: Must use same formula as useSalesTable.ts for consistency
   const GainLossTooltipContent = ({ item }: { item: SalesItem }) => {
     const salePrice = item.sold_price || 0
     const fees = item.sales_fee || 0
-    const purchasePrice = item.purchase_price || 0
-    const realisedGain = item.margin_gbp || 0
+    // Use purchase_total if available (includes shipping etc), otherwise purchase_price
+    const costBasis = item.purchase_total || item.purchase_price || 0
+    // Calculate margin using same formula as hook to ensure numbers match
+    const realisedGain = salePrice - costBasis - fees
 
     return (
       <div className="text-xs space-y-1.5 min-w-[160px]">
@@ -137,15 +158,15 @@ export function SalesTable({
           <span className="mono text-red-400">−{format(convert(fees, 'GBP'))}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted">Purchase Price</span>
-          <span className="mono text-red-400">−{format(convert(purchasePrice, 'GBP'))}</span>
+          <span className="text-muted">Cost Basis</span>
+          <span className="mono text-red-400">−{format(convert(costBasis, 'GBP'))}</span>
         </div>
         <div className="border-t border-border pt-1.5 flex justify-between font-semibold">
           <span>{realisedGain >= 0 ? 'Realised Gain' : 'Realised Loss'}</span>
-          <span className={cn(
-            "mono",
-            realisedGain >= 0 ? "text-accent" : "text-red-400"
-          )}>
+          <span
+            className="mono"
+            style={{ color: realisedGain >= 0 ? '#00FF94' : '#F87171' }}
+          >
             {realisedGain >= 0 ? '+' : ''}{format(convert(realisedGain, 'GBP'))}
           </span>
         </div>
@@ -233,10 +254,10 @@ export function SalesTable({
             <TooltipProvider>
               <Tooltip delayDuration={200}>
                 <TooltipTrigger asChild>
-                  <div className={cn(
-                    "text-right mono text-[15px] font-bold cursor-help",
-                    isPositive ? "text-accent" : "text-red-400"
-                  )}>
+                  <div
+                    className="text-right mono text-[15px] font-bold cursor-help"
+                    style={{ color: isPositive ? '#00FF94' : '#F87171' }}
+                  >
                     {isPositive ? '+' : ''}{format(converted)}
                   </div>
                 </TooltipTrigger>
@@ -363,7 +384,7 @@ export function SalesTable({
                   <div className="my-1 border-t border-border" />
 
                   <button
-                    onClick={() => handleAction(() => handleUndoSale(item.id))}
+                    onClick={() => handleAction(() => handleUndoSale(item))}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-amber-400 hover:bg-elev-2 transition-colors"
                   >
                     <Undo2 className="h-4 w-4" />
@@ -486,6 +507,58 @@ export function SalesTable({
           onSave={handleSaveSale}
         />
       )}
+
+      {/* Undo Sale Confirmation Modal */}
+      <Dialog open={!!undoingSale} onOpenChange={(open) => !open && setUndoingSale(null)}>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
+                <AlertTriangle className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <DialogTitle>Undo Sale</DialogTitle>
+                <DialogDescription>
+                  This will restore the item to your inventory
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {undoingSale && (
+            <div className="px-6 py-4 space-y-3">
+              <div className="bg-elev-0 rounded-lg p-3 border border-border">
+                <div className="text-sm font-medium text-fg">
+                  {undoingSale.brand} {undoingSale.model}
+                </div>
+                <div className="text-xs text-muted mt-1">
+                  {undoingSale.sku} · Size {undoingSale.size_uk}
+                </div>
+              </div>
+              <p className="text-sm text-muted">
+                The sale record will be deleted and the item will be moved back to your inventory as &quot;In Stock&quot;.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setUndoingSale(null)}
+              disabled={undoLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmUndoSale}
+              disabled={undoLoading}
+              className="bg-amber-500 text-black hover:bg-amber-400"
+            >
+              {undoLoading ? 'Undoing...' : 'Undo Sale'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

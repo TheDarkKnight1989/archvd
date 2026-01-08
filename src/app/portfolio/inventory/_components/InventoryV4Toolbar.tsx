@@ -59,6 +59,41 @@ export const DEFAULT_FILTERS: InventoryV4Filters = {
 }
 
 // =============================================================================
+// PERSISTENCE HELPERS
+// =============================================================================
+
+const REGION_STORAGE_KEY = 'archvd_inventory_region'
+
+/**
+ * Load persisted region from localStorage.
+ * Returns the stored region or the default if not found/invalid.
+ */
+export function loadPersistedRegion(): Region {
+  if (typeof window === 'undefined') return DEFAULT_FILTERS.region
+  try {
+    const stored = localStorage.getItem(REGION_STORAGE_KEY)
+    if (stored && ['UK', 'EU', 'US'].includes(stored)) {
+      return stored as Region
+    }
+  } catch {
+    // localStorage not available
+  }
+  return DEFAULT_FILTERS.region
+}
+
+/**
+ * Save region to localStorage for persistence across sessions.
+ */
+export function persistRegion(region: Region): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(REGION_STORAGE_KEY, region)
+  } catch {
+    // localStorage not available
+  }
+}
+
+// =============================================================================
 // FILTER OPTIONS
 // =============================================================================
 

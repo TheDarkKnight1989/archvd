@@ -48,10 +48,8 @@ export interface RowActionsProps {
   onReactivateListing?: () => void
   onDeleteListing?: () => void
   onPrintStockXLabel?: () => void
-  // Alias actions
+  // Alias actions (only shown when aliasListingStatus exists)
   aliasListingStatus?: string | null
-  onAttachAliasProduct?: () => void
-  onPlaceAliasListing?: () => void
   onEditAliasListing?: () => void
   onCancelAliasListing?: () => void
   // Status actions
@@ -82,8 +80,6 @@ export function RowActions({
   onPrintStockXLabel,
   // Alias actions
   aliasListingStatus,
-  onAttachAliasProduct,
-  onPlaceAliasListing,
   onEditAliasListing,
   onCancelAliasListing,
   // Status actions
@@ -263,35 +259,15 @@ export function RowActions({
             </>
           )}
 
-          {/* SECTION 3: ALIAS ACTIONS */}
-          {(onAttachAliasProduct || onPlaceAliasListing || hasAliasListing) && (
+          {/* SECTION 3: ALIAS ACTIONS - Only show when item has actual Alias listing data */}
+          {hasAliasListing && (
             <>
               <div className="border-t border-[#15251B] my-1" />
               <div className="px-2 py-1.5">
                 <span className="text-xs font-semibold text-[#7FA08F] uppercase tracking-wide">Alias</span>
               </div>
 
-              {onAttachAliasProduct && (
-                <button
-                  onClick={() => handleAction(onAttachAliasProduct)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
-                >
-                  <Plus className="h-4 w-4" />
-                  Attach Alias product
-                </button>
-              )}
-
-              {!hasAliasListing && onPlaceAliasListing && (
-                <button
-                  onClick={() => handleAction(onPlaceAliasListing)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#00FF94] hover:bg-[#00FF94]/10 transition-all duration-120"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Place Listing
-                </button>
-              )}
-
-              {hasAliasListing && onEditAliasListing && (
+              {onEditAliasListing && (
                 <button
                   onClick={() => handleAction(onEditAliasListing)}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#E8F6EE] hover:bg-[#0B1510] transition-all duration-120"
@@ -301,7 +277,7 @@ export function RowActions({
                 </button>
               )}
 
-              {hasAliasListing && onCancelAliasListing && (
+              {onCancelAliasListing && (
                 <button
                   onClick={() => handleAction(onCancelAliasListing)}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-all duration-120"

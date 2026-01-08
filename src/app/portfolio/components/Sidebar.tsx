@@ -17,9 +17,9 @@ import {
   UploadCloud,
   Search,
   Package,
+  Truck,
   Eye,
   FileText,
-  ArrowLeftRight,
   List,
   MessageSquare,
   LogOut,
@@ -35,11 +35,11 @@ import { supabase } from '@/lib/supabase/client'
 const manageNav = [
   { id: 'portfolio', icon: LayoutGrid, href: '/portfolio', label: 'Overview' },
   { id: 'inventory', icon: Boxes, href: '/portfolio/inventory', label: 'Inventory' },
-  { id: 'transactions', icon: ArrowLeftRight, href: '/portfolio/transactions/history', label: 'Transactions' },
+  { id: 'ledger', icon: TrendingUp, href: '/portfolio/ledger', label: 'Ledger' },
 ]
 
 const sellNav = [
-  { id: 'sales', icon: TrendingUp, href: '/portfolio/sales', label: 'Sales', badge: 'BETA' },
+  { id: 'orders', icon: Truck, href: '/portfolio/orders', label: 'Orders' },
   { id: 'packages', icon: Package, href: '/portfolio/packages', label: 'Packages', badge: 'BETA' },
   { id: 'sell-lists', icon: List, href: '/sell-lists', label: 'Sell Lists' },
 ]

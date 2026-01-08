@@ -25,6 +25,7 @@ export interface SalesItem {
   purchase_date?: string | null
   sold_price?: number | null
   sold_date?: string | null
+  sale_currency?: string | null
   platform?: string | null
   sales_fee?: number | null
   location?: string | null
@@ -163,6 +164,7 @@ async function fetchSales(params: SalesTableParams): Promise<{ data: SalesItem[]
       purchase_date: item.purchase_date,
       sold_price: item.sold_price,
       sold_date: item.sold_date,
+      sale_currency: item.sale_currency,
       platform: item.platform,
       sales_fee: item.sales_fee,
       notes: item.notes,
@@ -240,6 +242,7 @@ function formatDateForCSV(dateStr: string | null | undefined): string {
 }
 
 // Export CSV helper
+// IMPORTANT: Cost Basis and Margin must use same formula as transformedData calculation
 export function exportSalesToCSV(items: SalesItem[], filename = 'sales-export.csv') {
   const headers = [
     'SKU',
@@ -248,7 +251,7 @@ export function exportSalesToCSV(items: SalesItem[], filename = 'sales-export.cs
     'Colorway',
     'Size (UK)',
     'Condition',
-    'Purchase Price',
+    'Cost Basis',
     'Purchase Date',
     'Sold Price',
     'Sold Date',
@@ -261,25 +264,35 @@ export function exportSalesToCSV(items: SalesItem[], filename = 'sales-export.cs
     'Notes',
   ]
 
-  const rows = items.map(item => [
-    item.sku || '',
-    item.brand || '',
-    item.model || '',
-    item.colorway || '',
-    item.size_uk || '',
-    item.condition || '',
-    item.purchase_price?.toFixed(2) || '0.00',
-    formatDateForCSV(item.purchase_date),
-    item.sold_price?.toFixed(2) || '0.00',
-    formatDateForCSV(item.sold_date),
-    item.platform || '',
-    item.sales_fee?.toFixed(2) || '0.00',
-    item.margin_gbp?.toFixed(2) || '0.00',
-    item.margin_percent?.toFixed(2) || '0.00',
-    item.location || '',
-    item.tags?.join('; ') || '',
-    item.notes || '',
-  ])
+  const rows = items.map(item => {
+    // Use same cost basis calculation as hook: purchase_total || purchase_price
+    const costBasis = item.purchase_total || item.purchase_price || 0
+    const salePrice = item.sold_price || 0
+    const fees = item.sales_fee || 0
+    // Recalculate margin to ensure it matches exactly
+    const margin = salePrice - costBasis - fees
+    const marginPercent = costBasis > 0 ? (margin / costBasis) * 100 : 0
+
+    return [
+      item.sku || '',
+      item.brand || '',
+      item.model || '',
+      item.colorway || '',
+      item.size_uk || '',
+      item.condition || '',
+      costBasis.toFixed(2),
+      formatDateForCSV(item.purchase_date),
+      salePrice.toFixed(2),
+      formatDateForCSV(item.sold_date),
+      item.platform || '',
+      fees.toFixed(2),
+      margin.toFixed(2),
+      marginPercent.toFixed(2),
+      item.location || '',
+      item.tags?.join('; ') || '',
+      item.notes || '',
+    ]
+  })
 
   const csvContent = [
     headers.join(','),

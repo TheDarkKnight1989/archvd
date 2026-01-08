@@ -224,14 +224,19 @@ export function MobileInventoryItemCard({
                   </div>
                 </div>
 
-                {listedPrice && (
-                  <div>
-                    <div className="text-[11px] text-muted/70 mb-0.5">Listed {symbol()}</div>
-                    <div className="text-xs font-medium mono tabular-nums text-emerald-500 leading-tight">
+                <div>
+                  <div className="text-[11px] text-muted/70 mb-0.5">Listed {symbol()}</div>
+                  <div className={cn(
+                    'text-xs font-medium mono tabular-nums leading-tight',
+                    listedPrice ? 'text-emerald-500' : 'text-muted'
+                  )}>
+                    {listedPrice ? (
                       <PlainMoneyCell value={listedPrice} currency={currency} />
-                    </div>
+                    ) : (
+                      '—'
+                    )}
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Right Column */}

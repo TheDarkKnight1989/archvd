@@ -28,10 +28,10 @@ interface MarkAsSoldModalProps {
   onSuccess?: () => void
 }
 
-// Platform options matching database constraint and validation schema
+// Platform options - use 'alias' for new sales (legacy 'goat' values still displayed correctly)
 const PLATFORMS = [
   { value: 'stockx', label: 'StockX' },
-  { value: 'goat', label: 'Alias' },
+  { value: 'alias', label: 'Alias' },
   { value: 'ebay', label: 'eBay' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'tiktok', label: 'TikTok Shop' },
