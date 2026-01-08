@@ -71,7 +71,7 @@ export interface Order {
     status: string | null
     failureNotes: string | null
   } | null
-  payout: {
+  payout?: {
     totalPayout: string
     salePrice: string
     totalAdjustments: string
@@ -81,7 +81,7 @@ export interface Order {
       amount: string
       percentage: string
     }>
-  }
+  } | null
 }
 
 /**

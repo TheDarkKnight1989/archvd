@@ -244,15 +244,21 @@ function OrderRow({
 
       {/* Payout */}
       <td className="px-4 py-3 text-right">
-        <div className="text-sm text-emerald-500 font-medium">
-          {formatCurrency(order.payout.totalPayout, order.payout.currencyCode)}
-        </div>
-        {order.payout.adjustments.length > 0 && (
-          <div className="text-xs text-muted">
-            {order.payout.totalAdjustments !== '0' && (
-              <>{formatCurrency(order.payout.totalAdjustments, order.payout.currencyCode)} fees</>
+        {order.payout ? (
+          <>
+            <div className="text-sm text-emerald-500 font-medium">
+              {formatCurrency(order.payout.totalPayout, order.payout.currencyCode)}
+            </div>
+            {order.payout.adjustments?.length > 0 && (
+              <div className="text-xs text-muted">
+                {order.payout.totalAdjustments !== '0' && (
+                  <>{formatCurrency(order.payout.totalAdjustments, order.payout.currencyCode)} fees</>
+                )}
+              </div>
             )}
-          </div>
+          </>
+        ) : (
+          <span className="text-sm text-muted">—</span>
         )}
       </td>
 
@@ -332,7 +338,9 @@ function OrderCard({
         <div>
           <div className="text-[11px] text-muted mb-0.5">Your Payout</div>
           <div className="text-sm font-medium text-emerald-500">
-            {formatCurrency(order.payout.totalPayout, order.payout.currencyCode)}
+            {order.payout
+              ? formatCurrency(order.payout.totalPayout, order.payout.currencyCode)
+              : '—'}
           </div>
         </div>
       </div>
