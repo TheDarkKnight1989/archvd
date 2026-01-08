@@ -3,9 +3,9 @@
  * Handles order/sales operations for fulfilled listings
  *
  * Key endpoints:
- * - GET /v2/selling/orders - List all orders (ACTIVE or HISTORICAL)
- * - GET /v2/selling/orders/{orderId} - Get order details
- * - GET /v2/selling/orders/{orderId}/shipping-document - Get shipping label
+ * - GET /selling/orders/active - List active orders
+ * - GET /selling/orders/history - List historical orders
+ * - GET /selling/orders/{orderNumber} - Get order details
  */
 
 import { getStockxClient } from './client'
@@ -103,7 +103,7 @@ export class StockxOrdersService {
 
   /**
    * Get all orders (active or historical)
-   * GET /v2/selling/orders?status={status}
+   * GET /selling/orders/active or /selling/orders/history
    */
   async getOrders(
     status: 'ACTIVE' | 'HISTORICAL' = 'ACTIVE',
@@ -111,10 +111,17 @@ export class StockxOrdersService {
   ): Promise<Order[]> {
     console.log('[StockX Orders] Fetching orders:', { status, pageSize })
 
+    // Correct endpoints per StockX API docs:
+    // - Active orders: GET /selling/orders/active
+    // - Historical orders: GET /selling/orders/history
+    const endpoint = status === 'ACTIVE'
+      ? `/selling/orders/active?pageSize=${pageSize}`
+      : `/selling/orders/history?pageSize=${pageSize}`
+
     const response = await withStockxRetry(
       () =>
         this.client.request<{ orders: Order[] }>(
-          `/v2/selling/orders?status=${status}&pageSize=${pageSize}`,
+          endpoint,
           { method: 'GET' }
         ),
       { label: `Get ${status} orders` }

@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
         const baseUrl = getStockxApiBaseUrl()
 
         results.checks.ordersApi.requestDetails = {
-          url: `${baseUrl}/v2/selling/orders?status=ACTIVE&pageSize=1`,
+          url: `${baseUrl}/selling/orders/active?pageSize=1`,
           hasToken: true,
           tokenPreview: maskStockxToken(tokenData.access_token),
           hasApiKey: !!apiKey,
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
           headers['x-api-key'] = apiKey
         }
 
-        const response = await fetch(`${baseUrl}/v2/selling/orders?status=ACTIVE&pageSize=1`, {
+        const response = await fetch(`${baseUrl}/selling/orders/active?pageSize=1`, {
           method: 'GET',
           headers,
         })
