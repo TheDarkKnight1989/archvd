@@ -241,7 +241,7 @@ export function ListOnStockXModal({
           )
         } else if (data.code === 'INCOMPLETE_MAPPING') {
           throw new Error(
-            'StockX mapping is incomplete. Missing product or variant ID.'
+            'StockX variant data not synced. Go to the Market page for this product and click "Sync StockX" to refresh.'
           )
         } else {
           const errorMsg = data.error || data.details || `API error (${response.status})`
