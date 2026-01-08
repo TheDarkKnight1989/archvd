@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { useStockxOrders } from '@/hooks/useStockxOrders'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,8 @@ import {
   ExternalLink,
   AlertCircle,
   Zap,
+  MapPin,
+  Loader2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -42,6 +44,27 @@ const formatDate = (dateStr: string) => {
     month: 'short',
     year: 'numeric',
   })
+}
+
+const formatDateTime = (dateStr: string) => {
+  const date = new Date(dateStr)
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Parse size from variantValue or extract from variantName
+// variantName format: "Nike-Air-Max-Plus-Aquarius-Blue:4" -> "4"
+const parseSize = (variant: { variantValue?: string | null; variantName?: string } | undefined) => {
+  if (!variant) return '—'
+  if (variant.variantValue) return variant.variantValue
+  if (variant.variantName?.includes(':')) {
+    return variant.variantName.split(':').pop() || '—'
+  }
+  return variant.variantName || '—'
 }
 
 const formatRelativeTime = (dateStr: string) => {
@@ -153,11 +176,9 @@ function OrderTabs({
 function OrderActions({
   order,
   onDownloadLabel,
-  onCopyOrderId,
 }: {
   order: Order
   onDownloadLabel: () => void
-  onCopyOrderId: () => void
 }) {
   const canDownloadLabel = order.status === 'CREATED' || order.status === 'PENDING'
 
@@ -175,14 +196,23 @@ function OrderActions({
             Download Label
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={onCopyOrderId}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copy Order ID
-        </DropdownMenuItem>
+        {order.shipment?.trackingUrl && (
+          <DropdownMenuItem asChild>
+            <a
+              href={order.shipment.trackingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MapPin className="mr-2 h-4 w-4" />
+              Track Package
+            </a>
+          </DropdownMenuItem>
+        )}
         {order.shipment?.trackingNumber && (
           <DropdownMenuItem
             onClick={() => {
               navigator.clipboard.writeText(order.shipment!.trackingNumber!)
+              toast.success('Tracking number copied')
             }}
           >
             <Copy className="mr-2 h-4 w-4" />
@@ -208,9 +238,11 @@ function OrderActions({
 function OrderRow({
   order,
   onDownloadLabel,
+  isDownloading,
 }: {
   order: Order
   onDownloadLabel: (orderNumber: string) => void
+  isDownloading?: boolean
 }) {
   const handleCopyOrderId = () => {
     navigator.clipboard.writeText(order.orderNumber)
@@ -219,6 +251,10 @@ function OrderRow({
 
   const shipByInfo = order.shipment?.shipByDate ? formatRelativeTime(order.shipment.shipByDate) : null
   const styleId = order.product?.styleId || ''
+  const canDownloadLabel = order.status === 'CREATED' || order.status === 'PENDING'
+
+  // Calculate net fees (negative = fees taken, positive = refund like VAT)
+  const netFees = order.payout ? parseFloat(order.payout.salePrice) - parseFloat(order.payout.totalPayout) : 0
 
   return (
     <tr className="hover:bg-muted/50 border-b border-border/50">
@@ -246,12 +282,12 @@ function OrderRow({
       </td>
 
       {/* Size */}
-      <td className="px-4 py-3 text-sm">{order.variant?.variantValue || order.variant?.variantName}</td>
+      <td className="px-4 py-3 text-sm">{parseSize(order.variant)}</td>
 
       {/* Sale Price */}
       <td className="px-4 py-3 text-right">
         <div className="text-sm font-medium">
-          {formatCurrency(order.amount, order.currencyCode || 'USD')}
+          {formatCurrency(order.amount, order.currencyCode || 'GBP')}
         </div>
       </td>
 
@@ -262,11 +298,9 @@ function OrderRow({
             <div className="text-sm text-emerald-500 font-medium">
               {formatCurrency(order.payout.totalPayout, order.payout.currencyCode)}
             </div>
-            {order.payout.adjustments?.length > 0 && (
+            {netFees !== 0 && (
               <div className="text-xs text-muted">
-                {order.payout.totalAdjustments !== '0' && (
-                  <>{formatCurrency(order.payout.totalAdjustments, order.payout.currencyCode)} fees</>
-                )}
+                {netFees > 0 ? '-' : '+'}{formatCurrency(Math.abs(netFees), order.payout.currencyCode)}
               </div>
             )}
           </>
@@ -291,18 +325,36 @@ function OrderRow({
         )}
       </td>
 
-      {/* Created */}
-      <td className="px-4 py-3 text-sm text-muted">
-        {order.createdAt ? formatDate(order.createdAt) : '—'}
-      </td>
-
       {/* Actions */}
       <td className="px-4 py-3 text-right">
-        <OrderActions
-          order={order}
-          onDownloadLabel={() => onDownloadLabel(order.orderNumber)}
-          onCopyOrderId={handleCopyOrderId}
-        />
+        <div className="flex items-center justify-end gap-1">
+          {canDownloadLabel && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDownloadLabel(order.orderNumber)}
+              disabled={isDownloading}
+              title="Download shipping label"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+          {order.shipment?.trackingUrl && (
+            <Button variant="ghost" size="sm" asChild title="Track package">
+              <a href={order.shipment.trackingUrl} target="_blank" rel="noopener noreferrer">
+                <MapPin className="h-4 w-4" />
+              </a>
+            </Button>
+          )}
+          <OrderActions
+            order={order}
+            onDownloadLabel={() => onDownloadLabel(order.orderNumber)}
+          />
+        </div>
       </td>
     </tr>
   )
@@ -312,9 +364,11 @@ function OrderRow({
 function OrderCard({
   order,
   onDownloadLabel,
+  isDownloading,
 }: {
   order: Order
   onDownloadLabel: (orderNumber: string) => void
+  isDownloading?: boolean
 }) {
   const handleCopyOrderId = () => {
     navigator.clipboard.writeText(order.orderNumber)
@@ -346,7 +400,7 @@ function OrderCard({
             {order.product?.productName || styleId}
           </h3>
           <p className="text-xs text-muted">{styleId}</p>
-          <span className="text-xs text-muted">Size: {order.variant?.variantValue || order.variant?.variantName}</span>
+          <span className="text-xs text-muted">Size: {parseSize(order.variant)}</span>
         </div>
       </div>
 
@@ -355,7 +409,7 @@ function OrderCard({
         <div>
           <div className="text-[11px] text-muted mb-0.5">Sale Price</div>
           <div className="text-sm font-medium">
-            {formatCurrency(order.amount, order.currencyCode || 'USD')}
+            {formatCurrency(order.amount, order.currencyCode || 'GBP')}
           </div>
         </div>
         <div>
@@ -386,15 +440,27 @@ function OrderCard({
             size="sm"
             className="flex-1"
             onClick={() => onDownloadLabel(order.orderNumber)}
+            disabled={isDownloading}
           >
-            <Download className="h-4 w-4 mr-1.5" />
-            Download Label
+            {isDownloading ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-1.5" />
+            )}
+            {isDownloading ? 'Downloading...' : 'Download Label'}
+          </Button>
+        )}
+        {order.shipment?.trackingUrl && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={order.shipment.trackingUrl} target="_blank" rel="noopener noreferrer">
+              <MapPin className="h-4 w-4 mr-1.5" />
+              Track
+            </a>
           </Button>
         )}
         <OrderActions
           order={order}
           onDownloadLabel={() => onDownloadLabel(order.orderNumber)}
-          onCopyOrderId={handleCopyOrderId}
         />
       </div>
     </div>
@@ -437,6 +503,7 @@ function EmptyState({ tab }: { tab: OrderTab }) {
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<OrderTab>('needs_shipping')
   const [autoSelling, setAutoSelling] = useState(false)
+  const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null)
   const [autoSellResult, setAutoSellResult] = useState<{
     auto_sold: number
     needs_match: number
@@ -456,21 +523,25 @@ export default function OrdersPage() {
   } = useStockxOrders({ tab: activeTab })
 
   const handleDownloadLabel = async (orderId: string) => {
+    setDownloadingOrderId(orderId)
     try {
       await downloadLabel(orderId)
       toast.success('Label downloaded')
     } catch (err: any) {
       console.error('Failed to download label:', err)
       toast.error(err.message || 'Failed to download label')
+    } finally {
+      setDownloadingOrderId(null)
     }
   }
 
   const handleSync = async () => {
     try {
       await syncOrders()
-    } catch (err) {
+      toast.success('Orders synced')
+    } catch (err: any) {
       console.error('Failed to sync orders:', err)
-      // TODO: Show toast error
+      toast.error(err.message || 'Failed to sync orders')
     }
   }
 
@@ -483,9 +554,12 @@ export default function OrdersPage() {
         auto_sold: result.auto_sold,
         needs_match: result.needs_match,
       })
-    } catch (err) {
+      if (result.auto_sold > 0) {
+        toast.success(`${result.auto_sold} item${result.auto_sold !== 1 ? 's' : ''} marked as sold`)
+      }
+    } catch (err: any) {
       console.error('Failed to auto mark sold:', err)
-      // TODO: Show toast error
+      toast.error(err.message || 'Failed to auto mark sold')
     } finally {
       setAutoSelling(false)
     }
@@ -505,7 +579,7 @@ export default function OrdersPage() {
         <div className="flex items-center gap-3">
           {lastSyncedAt && (
             <span className="text-xs text-muted hidden sm:inline">
-              Last synced: {formatDate(lastSyncedAt)}
+              Synced {formatDateTime(lastSyncedAt)}
             </span>
           )}
           <Button
@@ -517,7 +591,7 @@ export default function OrdersPage() {
             <RefreshCw className={cn('h-4 w-4 mr-1.5', syncing && 'animate-spin')} />
             {syncing ? 'Syncing...' : 'Sync'}
           </Button>
-          {counts.completed > 0 && (
+          {activeTab === 'completed' && counts.completed > 0 && (
             <Button
               variant="default"
               size="sm"
@@ -635,7 +709,6 @@ export default function OrdersPage() {
                         <th className="px-4 py-3 text-right text-sm font-medium">Payout</th>
                         <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
                         <th className="px-4 py-3 text-left text-sm font-medium">Ship By</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
                         <th className="px-4 py-3 text-right text-sm font-medium"></th>
                       </tr>
                     </thead>
@@ -645,6 +718,7 @@ export default function OrdersPage() {
                           key={order.orderNumber}
                           order={order}
                           onDownloadLabel={handleDownloadLabel}
+                          isDownloading={downloadingOrderId === order.orderNumber}
                         />
                       ))}
                     </tbody>
@@ -659,6 +733,7 @@ export default function OrdersPage() {
                     key={order.orderNumber}
                     order={order}
                     onDownloadLabel={handleDownloadLabel}
+                    isDownloading={downloadingOrderId === order.orderNumber}
                   />
                 ))}
               </div>
