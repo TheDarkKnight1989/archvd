@@ -408,8 +408,9 @@ export class StockxClient {
 
         clearTimeout(timeoutId)
 
-        const responseText = await response.text()
-        console.log('STOCKX RAW RESPONSE:', response.status, responseText)
+        // Check content type BEFORE reading body
+        const contentType = response.headers.get('Content-Type') || ''
+        const isBinary = contentType.includes('application/pdf') || contentType.includes('application/octet-stream')
 
         // Handle rate limiting (429)
         if (response.status === 429) {
@@ -425,6 +426,24 @@ export class StockxClient {
           await this.sleep(backoff)
           continue
         }
+
+        // For binary responses (PDFs), handle differently
+        if (isBinary) {
+          if (!response.ok) {
+            throw new Error(`StockX API error: ${response.status} ${response.statusText}`)
+          }
+          console.log('[StockX] API Success (binary)', {
+            endpoint,
+            status: response.status,
+            contentType,
+          })
+          const blob = await response.blob()
+          return blob as unknown as T
+        }
+
+        // For JSON responses, read as text and parse
+        const responseText = await response.text()
+        console.log('STOCKX RAW RESPONSE:', response.status, responseText.substring(0, 500))
 
         // Handle other errors
         if (!response.ok) {
@@ -446,7 +465,6 @@ export class StockxClient {
           throw new Error(`StockX API error: ${response.status} ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`)
         }
 
-        // Success
         const data = JSON.parse(responseText)
         console.log('[StockX] API Success', {
           endpoint,
