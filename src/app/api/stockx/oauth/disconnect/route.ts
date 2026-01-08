@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
@@ -24,7 +24,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete StockX account record
-    const { error: deleteError } = await supabase
+    // Use service role client to bypass RLS - ensures delete actually happens
+    const adminSupabase = createServiceRoleClient();
+    const { error: deleteError } = await adminSupabase
       .from('stockx_accounts')
       .delete()
       .eq('user_id', user.id);
