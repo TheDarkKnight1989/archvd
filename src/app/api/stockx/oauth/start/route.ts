@@ -127,8 +127,11 @@ export async function GET(request: NextRequest) {
 
     // Store PKCE verifier and state in session/cookie
     // Note: In production, store these securely (Redis, encrypted cookie, etc.)
-    // Use minimal required scopes per StockX documentation
-    const scopes = 'offline_access openid'
+    // Scopes needed for full functionality:
+    // - offline_access: for refresh tokens
+    // - openid: for user info
+    // - selling: for orders, listings, and selling operations
+    const scopes = 'offline_access openid selling'
 
     const response = NextResponse.redirect(
       `${STOCKX_OAUTH_AUTHORIZE_URL}?` +
