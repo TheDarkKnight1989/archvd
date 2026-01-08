@@ -260,7 +260,7 @@ export default function SalesPage() {
           {/* Revenue - Secondary */}
           <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
             <div className="text-xs text-muted/70 uppercase tracking-wider mb-1">Revenue</div>
-            <div className="text-xl font-semibold text-accent mono">
+            <div className="text-xl font-semibold text-fg mono">
               {format(convert(kpis.totalSales, 'GBP'))}
             </div>
             <div className="text-xs text-muted/60 mt-1">Gross sales</div>
@@ -269,7 +269,7 @@ export default function SalesPage() {
           {/* COGS - Secondary */}
           <div className="bg-elev-1 border border-border/30 rounded-xl p-4">
             <div className="text-xs text-muted/70 uppercase tracking-wider mb-1">COGS</div>
-            <div className="text-xl font-semibold text-red-400 mono">
+            <div className="text-xl font-semibold text-fg mono">
               {format(convert(kpis.totalCOGS, 'GBP'))}
             </div>
             <div className="text-xs text-muted/60 mt-1">Cost of goods</div>
