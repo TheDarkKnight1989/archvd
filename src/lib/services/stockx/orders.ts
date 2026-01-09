@@ -15,10 +15,12 @@ import { withStockxRetry } from './retry'
 export type ActiveOrderStatus =
   | 'CREATED'
   | 'CCAUTHORIZATIONFAILED'
+  | 'DIDNOTSHIP'      // Seller didn't ship in time
   | 'SHIPPED'
   | 'RECEIVED'
   | 'AUTHENTICATING'
   | 'AUTHENTICATED'
+  | 'AUTHFAILED'      // Auth failed, item returning to seller
   | 'PAYOUTPENDING'
   | 'PAYOUTCOMPLETED'
   | 'SYSTEMFULFILLED'
@@ -87,14 +89,13 @@ export interface Order {
 /**
  * Map raw API status to UI-friendly tab
  */
-export type OrderTab = 'needs_shipping' | 'in_progress' | 'completed'
+export type OrderTab = 'needs_shipping' | 'in_progress' | 'completed' | 'cancelled'
 
 export function getOrderTab(status: OrderStatus): OrderTab {
   switch (status) {
     // Needs shipping - order created, waiting for seller to ship
     case 'CREATED':
     case 'PENDING':
-    case 'CCAUTHORIZATIONFAILED':
       return 'needs_shipping'
     // In progress - shipped, at StockX for authentication
     case 'SHIPPED':
@@ -103,15 +104,20 @@ export function getOrderTab(status: OrderStatus): OrderTab {
     case 'AUTHENTICATED':
     case 'PAYOUTPENDING':
       return 'in_progress'
-    // Completed - done or failed states
+    // Completed - successfully paid out
     case 'PAYOUTCOMPLETED':
     case 'SYSTEMFULFILLED':
     case 'COMPLETED':
     case 'DELIVERED':
+      return 'completed'
+    // Cancelled - failed or cancelled orders
     case 'CANCELLED':
+    case 'AUTHFAILED':           // Auth failed, item returning
+    case 'CCAUTHORIZATIONFAILED': // Payment failed, never shipped
+    case 'DIDNOTSHIP':           // Seller didn't ship in time
     case 'PAYOUTFAILED':
     case 'SUSPENDED':
-      return 'completed'
+      return 'cancelled'
     default:
       return 'needs_shipping'
   }
@@ -125,7 +131,7 @@ export class StockxOrdersService {
   }
 
   /**
-   * Get all orders (active or historical)
+   * Get all orders (active or historical) with full pagination
    * GET /v2/selling/orders/active or /v2/selling/orders/history
    * Note: All StockX selling endpoints use /v2/ prefix
    */
@@ -135,21 +141,59 @@ export class StockxOrdersService {
   ): Promise<Order[]> {
     console.log('[StockX Orders] Fetching orders:', { status, pageSize })
 
+    const allOrders: Order[] = []
+    let pageNumber = 1
+    const MAX_PAGES = 20 // Safety limit: 20 pages * 100 = 2000 orders max
+
     // All selling endpoints use /v2/ prefix (same as listings, batch, etc.)
-    const endpoint = status === 'ACTIVE'
-      ? `/v2/selling/orders/active?pageSize=${pageSize}`
-      : `/v2/selling/orders/history?pageSize=${pageSize}`
+    const baseEndpoint = status === 'ACTIVE'
+      ? '/v2/selling/orders/active'
+      : '/v2/selling/orders/history'
 
-    const response = await withStockxRetry(
-      () =>
-        this.client.request<{ orders: Order[] }>(
-          endpoint,
-          { method: 'GET' }
-        ),
-      { label: `Get ${status} orders` }
-    )
+    while (pageNumber <= MAX_PAGES) {
+      const endpoint = `${baseEndpoint}?pageSize=${pageSize}&pageNumber=${pageNumber}`
 
-    return response.orders || []
+      console.log('[StockX Orders] Fetching page:', { status, pageNumber, endpoint })
+
+      const response = await withStockxRetry(
+        () =>
+          this.client.request<{
+            orders: Order[]
+            hasNextPage?: boolean
+            pageNumber?: number
+            pageSize?: number
+            count?: number
+          }>(endpoint, { method: 'GET' }),
+        { label: `Get ${status} orders (page ${pageNumber})` }
+      )
+
+      const pageOrders = response.orders || []
+      allOrders.push(...pageOrders)
+
+      console.log('[StockX Orders] Page result:', {
+        status,
+        pageNumber,
+        pageOrders: pageOrders.length,
+        totalSoFar: allOrders.length,
+        hasNextPage: response.hasNextPage,
+        responseCount: response.count,
+      })
+
+      // Stop if no more pages or empty page
+      if (!response.hasNextPage || pageOrders.length === 0) {
+        break
+      }
+
+      pageNumber += 1
+    }
+
+    console.log('[StockX Orders] Fetch complete:', {
+      status,
+      totalOrders: allOrders.length,
+      pagesUsed: pageNumber,
+    })
+
+    return allOrders
   }
 
   /**
